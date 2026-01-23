@@ -12,6 +12,8 @@ import {
   ArrowRight,
   SkipForward,
   CheckCircle,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { useTimer } from "@/hooks/useTimer";
 import { Question, AnswerEvaluation } from "@/types";
 
 interface InterviewData {
@@ -38,6 +41,8 @@ interface InterviewData {
   }>;
 }
 
+const TIMER_DURATION = 180; // 3 minutes per question
+
 export default function InterviewStartPage() {
   const params = useParams();
   const router = useRouter();
@@ -52,6 +57,32 @@ export default function InterviewStartPage() {
   const [feedback, setFeedback] = useState<AnswerEvaluation | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [useVoice, setUseVoice] = useState(true);
+  const [timedMode, setTimedMode] = useState(false);
+
+  // Timer hook
+  const handleTimeUp = useCallback(() => {
+    toast.warning("Time's up! Moving to the next question.", {
+      icon: <Clock className="h-4 w-4" />,
+    });
+    // Auto-submit if there's an answer, otherwise skip
+    if (userAnswer.trim()) {
+      handleSubmitAnswer();
+    } else {
+      handleNextQuestion();
+    }
+  }, [userAnswer]);
+
+  const {
+    timeLeft,
+    start: startTimer,
+    pause: pauseTimer,
+    reset: resetTimer,
+    formatTime,
+    percentageLeft,
+  } = useTimer({
+    initialTime: TIMER_DURATION,
+    onTimeUp: handleTimeUp,
+  });
 
   // Speech hooks
   const {
@@ -120,6 +151,21 @@ export default function InterviewStartPage() {
     }
   }, [currentQuestionIndex, data, useVoice, ttsSupported, showFeedback, speak]);
 
+  // Start timer when question changes (if timed mode)
+  useEffect(() => {
+    if (timedMode && !showFeedback && !loading) {
+      resetTimer();
+      startTimer();
+    }
+  }, [currentQuestionIndex, timedMode, showFeedback, loading]);
+
+  // Pause timer when showing feedback
+  useEffect(() => {
+    if (showFeedback) {
+      pauseTimer();
+    }
+  }, [showFeedback, pauseTimer]);
+
   const handleToggleRecording = () => {
     if (isListening) {
       stopListening();
@@ -141,6 +187,7 @@ export default function InterviewStartPage() {
     setSubmitting(true);
     stopListening();
     cancelSpeech();
+    pauseTimer();
 
     try {
       const question = data.interview.questions[currentQuestionIndex];
@@ -177,6 +224,7 @@ export default function InterviewStartPage() {
     if (!data) return;
 
     cancelSpeech();
+    pauseTimer();
     const nextIndex = currentQuestionIndex + 1;
 
     if (nextIndex >= data.interview.questions.length) {
@@ -211,6 +259,33 @@ export default function InterviewStartPage() {
     }
   };
 
+  const toggleTimedMode = () => {
+    if (!timedMode) {
+      setTimedMode(true);
+      resetTimer();
+      startTimer();
+      toast.success("Timed mode enabled! 3 minutes per question.", {
+        icon: <Clock className="h-4 w-4" />,
+      });
+    } else {
+      setTimedMode(false);
+      pauseTimer();
+      toast.info("Timed mode disabled");
+    }
+  };
+
+  const getTimerColor = () => {
+    if (percentageLeft > 50) return "text-green-500";
+    if (percentageLeft > 25) return "text-yellow-500";
+    return "text-red-500";
+  };
+
+  const getTimerBgColor = () => {
+    if (percentageLeft > 50) return "bg-green-500";
+    if (percentageLeft > 25) return "bg-yellow-500";
+    return "bg-red-500";
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -239,8 +314,50 @@ export default function InterviewStartPage() {
         <Progress value={progress} className="h-2" />
       </div>
 
-      {/* Voice Toggle */}
-      <div className="mb-6 flex items-center justify-end gap-2">
+      {/* Timer Display (when timed mode is on) */}
+      {timedMode && !showFeedback && (
+        <Card className={`mb-6 border-2 ${percentageLeft <= 25 ? "border-red-500/50 animate-pulse" : "border-slate-700"} bg-slate-800/50`}>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-full ${getTimerBgColor()}/20`}>
+                  <Clock className={`h-6 w-6 ${getTimerColor()}`} />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">Time Remaining</p>
+                  <p className={`text-2xl font-bold font-mono ${getTimerColor()}`}>
+                    {formatTime(timeLeft)}
+                  </p>
+                </div>
+              </div>
+              {percentageLeft <= 25 && (
+                <div className="flex items-center gap-2 text-red-400">
+                  <AlertTriangle className="h-5 w-5" />
+                  <span className="text-sm font-medium">Hurry up!</span>
+                </div>
+              )}
+              <div className="w-32">
+                <Progress
+                  value={percentageLeft}
+                  className={`h-2 ${percentageLeft <= 25 ? "[&>div]:bg-red-500" : percentageLeft <= 50 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500"}`}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Controls Row */}
+      <div className="mb-6 flex items-center justify-between gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleTimedMode}
+          className={`gap-2 border-slate-600 ${timedMode ? "bg-blue-500/10 border-blue-500/50 text-blue-400" : ""}`}
+        >
+          <Clock className="h-4 w-4" />
+          {timedMode ? "Timer On" : "Timer Off"}
+        </Button>
         <Button
           variant="outline"
           size="sm"

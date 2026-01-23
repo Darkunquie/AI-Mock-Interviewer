@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Brain, Home, History, LogOut } from "lucide-react";
+import { Brain, Home, History, BarChart3, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function DashboardLayout({
@@ -61,6 +61,13 @@ export default function DashboardLayout({
             >
               <History className="h-4 w-4" />
               <span className="hidden sm:inline">History</span>
+            </Link>
+            <Link
+              href="/dashboard/analytics"
+              className="flex items-center gap-2 text-slate-400 transition-colors hover:text-white"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Analytics</span>
             </Link>
             <div className="relative">
               <button
