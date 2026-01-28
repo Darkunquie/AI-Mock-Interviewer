@@ -296,7 +296,7 @@ export default function AnalyticsPage() {
                       border: "1px solid #334155",
                       borderRadius: "8px",
                     }}
-                    formatter={(value: number) => [`${value}%`, "Avg Score"]}
+                    formatter={(value) => [`${value ?? 0}%`, "Avg Score"]}
                   />
                   <Bar dataKey="avgScore" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                 </BarChart>
@@ -330,7 +330,7 @@ export default function AnalyticsPage() {
                       border: "1px solid #334155",
                       borderRadius: "8px",
                     }}
-                    formatter={(value: number) => [`${value}%`, "Avg Score"]}
+                    formatter={(value) => [`${value ?? 0}%`, "Avg Score"]}
                   />
                   <Bar dataKey="avgScore" radius={[4, 4, 0, 0]}>
                     {scoreByType.map((_, index) => (

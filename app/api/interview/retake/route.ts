@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews } from "@/utils/schema";
 import { generateCompletion } from "@/lib/groq";
 import { getQuestionGeneratorPrompt } from "@/utils/prompts";
-import { CreateInterviewRequest, DURATION_CONFIG } from "@/types";
+import { DURATION_CONFIG, InterviewDuration } from "@/types";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
@@ -15,30 +16,57 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body: CreateInterviewRequest = await request.json();
-    const { role, experienceLevel, interviewType, duration, techStack, mode, topics } = body;
+    const { interviewId } = await request.json();
 
-    // Validate input
-    if (!role || !experienceLevel || !interviewType) {
+    if (!interviewId) {
       return NextResponse.json(
-        { error: "Missing required fields: role, experienceLevel, interviewType" },
+        { error: "Missing interviewId" },
         { status: 400 }
       );
     }
 
-    const interviewDuration = duration && DURATION_CONFIG[duration] ? duration : "15";
-    const questionCount = DURATION_CONFIG[interviewDuration].questionCount;
-    const interviewMode = mode || "interview";
+    // Fetch the original interview
+    const original = await db
+      .select()
+      .from(interviews)
+      .where(eq(interviews.mockId, interviewId))
+      .limit(1);
 
-    // Generate questions using AI
+    if (!original.length) {
+      return NextResponse.json({ error: "Interview not found" }, { status: 404 });
+    }
+
+    const originalInterview = original[0];
+
+    // Verify user owns this interview
+    if (originalInterview.userId !== user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    // Use the same parameters from the original interview
+    const role = originalInterview.role;
+    const experienceLevel = originalInterview.experienceLevel;
+    const interviewType = originalInterview.interviewType;
+    const duration = (originalInterview.duration || "15") as InterviewDuration;
+    const mode = originalInterview.mode || "interview";
+    const techStack: string[] = originalInterview.techStack
+      ? JSON.parse(originalInterview.techStack)
+      : [];
+    const topics: string[] = originalInterview.topics
+      ? JSON.parse(originalInterview.topics)
+      : [];
+
+    const questionCount = DURATION_CONFIG[duration]?.questionCount || 10;
+
+    // Generate fresh questions using AI
     const prompt = getQuestionGeneratorPrompt({
       role,
       experience: experienceLevel,
       interviewType,
       questionCount,
-      techStack: techStack && techStack.length > 0 ? techStack : undefined,
-      mode: interviewMode,
-      topics: topics && topics.length > 0 ? topics : undefined,
+      techStack: techStack.length > 0 ? techStack : undefined,
+      mode,
+      topics: topics.length > 0 ? topics : undefined,
     });
 
     let questionsJson: string;
@@ -48,8 +76,7 @@ export async function POST(request: NextRequest) {
         { role: "user", content: prompt },
       ]);
     } catch (aiError) {
-      console.error("AI generation error:", aiError);
-      // Fallback to default questions if AI fails
+      console.error("AI generation error on retake:", aiError);
       const fallbackBase = [
         { text: `Tell me about yourself and your experience with ${role} development.`, difficulty: "easy", topic: "introduction", expectedTime: 60 },
         { text: `What are the key skills required for a ${role} role?`, difficulty: "medium", topic: "technical", expectedTime: 90 },
@@ -61,16 +88,6 @@ export async function POST(request: NextRequest) {
         { text: `How do you handle tight deadlines and pressure?`, difficulty: "medium", topic: "soft-skills", expectedTime: 90 },
         { text: `What tools and technologies are you most proficient in?`, difficulty: "easy", topic: "technical", expectedTime: 60 },
         { text: `Describe your ideal work environment and team culture.`, difficulty: "easy", topic: "culture", expectedTime: 60 },
-        { text: `How do you prioritize tasks when working on multiple projects?`, difficulty: "medium", topic: "management", expectedTime: 90 },
-        { text: `Tell me about a time you had to learn a new technology quickly.`, difficulty: "medium", topic: "adaptability", expectedTime: 90 },
-        { text: `What is your approach to code reviews and collaboration?`, difficulty: "medium", topic: "teamwork", expectedTime: 90 },
-        { text: `Describe a situation where you disagreed with a team member. How did you resolve it?`, difficulty: "hard", topic: "conflict-resolution", expectedTime: 120 },
-        { text: `What architectural decisions have you made and what was the outcome?`, difficulty: "hard", topic: "architecture", expectedTime: 120 },
-        { text: `How do you ensure the quality and reliability of your code?`, difficulty: "medium", topic: "quality", expectedTime: 90 },
-        { text: `What is the most complex system you have designed or contributed to?`, difficulty: "hard", topic: "system-design", expectedTime: 120 },
-        { text: `How do you approach performance optimization?`, difficulty: "hard", topic: "performance", expectedTime: 120 },
-        { text: `What motivates you to keep growing in your career?`, difficulty: "easy", topic: "motivation", expectedTime: 60 },
-        { text: `If you could improve one thing about your current skill set, what would it be?`, difficulty: "medium", topic: "self-awareness", expectedTime: 90 },
       ];
       const fallbackQuestions = fallbackBase.slice(0, questionCount).map((q, i) => ({ ...q, id: i + 1 }));
       questionsJson = JSON.stringify({ questions: fallbackQuestions });
@@ -91,7 +108,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create interview in database
+    // Create new interview with same parameters
     const mockId = uuidv4();
 
     await db.insert(interviews).values({
@@ -100,10 +117,10 @@ export async function POST(request: NextRequest) {
       role,
       experienceLevel,
       interviewType,
-      duration: interviewDuration,
-      mode: interviewMode,
-      techStack: techStack && techStack.length > 0 ? JSON.stringify(techStack) : null,
-      topics: topics && topics.length > 0 ? JSON.stringify(topics) : null,
+      duration,
+      mode,
+      techStack: techStack.length > 0 ? JSON.stringify(techStack) : null,
+      topics: topics.length > 0 ? JSON.stringify(topics) : null,
       status: "pending",
       questionsJson: JSON.stringify(parsedQuestions),
     });
@@ -114,9 +131,9 @@ export async function POST(request: NextRequest) {
       questions: parsedQuestions.questions,
     });
   } catch (error) {
-    console.error("Create interview error:", error);
+    console.error("Retake interview error:", error);
     return NextResponse.json(
-      { error: "Failed to create interview" },
+      { error: "Failed to create retake interview" },
       { status: 500 }
     );
   }

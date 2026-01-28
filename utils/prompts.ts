@@ -4,6 +4,10 @@ export interface QuestionGeneratorInput {
   role: string;
   experience: string;
   interviewType: string;
+  questionCount: number;
+  techStack?: string[];
+  mode?: string;
+  topics?: string[];
 }
 
 export interface AnswerEvaluatorInput {
@@ -26,29 +30,63 @@ export interface SummaryGeneratorInput {
 
 // Prompt 1: Question Generator
 export function getQuestionGeneratorPrompt(input: QuestionGeneratorInput): string {
-  return `You are a senior technical interviewer at a top tech company conducting a ${input.interviewType} interview.
+  const count = input.questionCount;
+  const easyCount = Math.max(1, Math.round(count * 0.2));
+  const hardCount = Math.max(1, Math.round(count * 0.3));
+  const mediumCount = count - easyCount - hardCount;
 
-Generate exactly 5 interview questions for:
+  // Build example entries for the JSON format
+  const examples: string[] = [];
+  let id = 1;
+  for (let i = 0; i < easyCount; i++, id++) {
+    examples.push(`    {"id": ${id}, "text": "question text here", "difficulty": "easy", "topic": "topic name", "expectedTime": 60}`);
+  }
+  for (let i = 0; i < mediumCount; i++, id++) {
+    examples.push(`    {"id": ${id}, "text": "question text here", "difficulty": "medium", "topic": "topic name", "expectedTime": 90}`);
+  }
+  for (let i = 0; i < hardCount; i++, id++) {
+    examples.push(`    {"id": ${id}, "text": "question text here", "difficulty": "hard", "topic": "topic name", "expectedTime": 120}`);
+  }
+
+  const isPractice = input.mode === "practice";
+  const techStackLine = input.techStack && input.techStack.length > 0
+    ? `\n- Tech Stack: ${input.techStack.join(", ")}`
+    : "";
+  const topicsLine = input.topics && input.topics.length > 0
+    ? `\n- Focus Topics: ${input.topics.join(", ")}`
+    : "";
+
+  const contextHeader = isPractice
+    ? `You are a senior technical mentor conducting a focused practice session.`
+    : `You are a senior technical interviewer at a top tech company conducting a ${input.interviewType} interview.`;
+
+  const techStackRule = input.techStack && input.techStack.length > 0
+    ? `\n8. Focus questions specifically on these technologies: ${input.techStack.join(", ")}. Ask about real-world usage, best practices, and common patterns for each technology.`
+    : "";
+
+  const topicsRule = input.topics && input.topics.length > 0
+    ? `\n${input.techStack && input.techStack.length > 0 ? "9" : "8"}. Focus questions specifically on these topics: ${input.topics.join(", ")}. Dive deep into each topic with practical scenarios.`
+    : "";
+
+  return `${contextHeader}
+
+Generate exactly ${count} ${isPractice ? "practice" : "interview"} questions for:
 - Role: ${input.role}
-- Experience Level: ${input.experience} years
-- Interview Type: ${input.interviewType}
+- Experience Level: ${input.experience} years${isPractice ? "" : `\n- Interview Type: ${input.interviewType}`}${techStackLine}${topicsLine}
 
 Rules:
-1. Start with 1 easy question to warm up, then 2 medium difficulty, then 2 hard questions
+1. Start with ${easyCount} easy question(s) to warm up, then ${mediumCount} medium difficulty, then ${hardCount} hard questions
 2. Be specific to the ${input.role} role (not generic questions)
 3. For technical interviews: focus on concepts, problem-solving, and real-world scenarios
 4. For HR interviews: focus on behavioral, situational, and cultural fit questions
 5. Questions should be clear, concise, and spoken conversationally (this is a voice interview)
-6. Each question should take about 1-3 minutes to answer properly
+6. Each question should take about 1-2 minutes to answer properly
+7. Cover diverse topics within the role — avoid repeating the same topic${techStackRule}${topicsRule}
 
 Return ONLY valid JSON in this exact format:
 {
   "questions": [
-    {"id": 1, "text": "question text here", "difficulty": "easy", "topic": "topic name", "expectedTime": 60},
-    {"id": 2, "text": "question text here", "difficulty": "medium", "topic": "topic name", "expectedTime": 120},
-    {"id": 3, "text": "question text here", "difficulty": "medium", "topic": "topic name", "expectedTime": 120},
-    {"id": 4, "text": "question text here", "difficulty": "hard", "topic": "topic name", "expectedTime": 180},
-    {"id": 5, "text": "question text here", "difficulty": "hard", "topic": "topic name", "expectedTime": 180}
+${examples.join(",\n")}
   ]
 }`;
 }

@@ -25,9 +25,12 @@ import {
   InterviewRole,
   ExperienceLevel,
   InterviewType,
+  InterviewDuration,
   ROLE_DISPLAY_NAMES,
   EXPERIENCE_DISPLAY_NAMES,
   INTERVIEW_TYPE_DISPLAY_NAMES,
+  DURATION_CONFIG,
+  TECH_STACK_OPTIONS,
 } from "@/types";
 
 export default function AddNewInterview() {
@@ -37,6 +40,22 @@ export default function AddNewInterview() {
   const [role, setRole] = useState<InterviewRole | "">("");
   const [experience, setExperience] = useState<ExperienceLevel | "">("");
   const [interviewType, setInterviewType] = useState<InterviewType | "">("");
+  const [duration, setDuration] = useState<InterviewDuration>("15");
+  const [selectedTechStack, setSelectedTechStack] = useState<string[]>([]);
+
+  const availableTechStack = role ? TECH_STACK_OPTIONS[role] || [] : [];
+  const showTechStack = role && interviewType === "technical" && availableTechStack.length > 0;
+
+  const toggleTech = (tech: string) => {
+    setSelectedTechStack((prev) =>
+      prev.includes(tech) ? prev.filter((t) => t !== tech) : [...prev, tech]
+    );
+  };
+
+  const handleRoleChange = (v: string) => {
+    setRole(v as InterviewRole);
+    setSelectedTechStack([]);
+  };
 
   const handleSubmit = async () => {
     if (!role || !experience || !interviewType) {
@@ -53,6 +72,8 @@ export default function AddNewInterview() {
           role,
           experienceLevel: experience,
           interviewType,
+          duration,
+          techStack: selectedTechStack.length > 0 ? selectedTechStack : undefined,
         }),
       });
 
@@ -87,7 +108,7 @@ export default function AddNewInterview() {
           </div>
         </div>
       </DialogTrigger>
-      <DialogContent className="border-slate-700 bg-slate-800 text-white sm:max-w-md">
+      <DialogContent className="border-slate-700 bg-slate-800 text-white sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Mock Interview</DialogTitle>
           <DialogDescription className="text-slate-400">
@@ -100,7 +121,7 @@ export default function AddNewInterview() {
             <Label htmlFor="role" className="text-slate-300">
               Target Role
             </Label>
-            <Select value={role} onValueChange={(v) => setRole(v as InterviewRole)}>
+            <Select value={role} onValueChange={handleRoleChange}>
               <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
@@ -146,6 +167,58 @@ export default function AddNewInterview() {
                 {Object.entries(INTERVIEW_TYPE_DISPLAY_NAMES).map(([value, label]) => (
                   <SelectItem key={value} value={value} className="text-white hover:bg-slate-600">
                     {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Tech Stack Selection - shown only for technical interviews with a role that has tech options */}
+          {showTechStack && (
+            <div className="grid gap-2">
+              <Label className="text-slate-300">
+                Tech Stack <span className="text-slate-500">(optional)</span>
+              </Label>
+              <p className="text-xs text-slate-500">
+                Select technologies to focus your interview questions on
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {availableTechStack.map((tech) => (
+                  <button
+                    key={tech}
+                    type="button"
+                    onClick={() => toggleTech(tech)}
+                    className={`rounded-full px-3 py-1 text-sm transition-all ${
+                      selectedTechStack.includes(tech)
+                        ? "bg-blue-500 text-white"
+                        : "border border-slate-600 bg-slate-700 text-slate-300 hover:border-blue-500 hover:text-white"
+                    }`}
+                  >
+                    {tech}
+                  </button>
+                ))}
+              </div>
+              {selectedTechStack.length > 0 && (
+                <p className="text-xs text-blue-400">
+                  {selectedTechStack.length} selected: {selectedTechStack.join(", ")}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Duration Selection */}
+          <div className="grid gap-2">
+            <Label htmlFor="duration" className="text-slate-300">
+              Interview Duration
+            </Label>
+            <Select value={duration} onValueChange={(v) => setDuration(v as InterviewDuration)}>
+              <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
+                <SelectValue placeholder="Select duration" />
+              </SelectTrigger>
+              <SelectContent className="border-slate-600 bg-slate-700">
+                {Object.entries(DURATION_CONFIG).map(([value, config]) => (
+                  <SelectItem key={value} value={value} className="text-white hover:bg-slate-600">
+                    {config.label} ({config.questionCount} questions)
                   </SelectItem>
                 ))}
               </SelectContent>

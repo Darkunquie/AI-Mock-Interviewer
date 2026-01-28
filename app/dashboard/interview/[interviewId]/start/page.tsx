@@ -57,14 +57,12 @@ export default function InterviewStartPage() {
   const [feedback, setFeedback] = useState<AnswerEvaluation | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [useVoice, setUseVoice] = useState(true);
-  const [timedMode, setTimedMode] = useState(false);
 
-  // Timer hook
+  // Timer hook - always on
   const handleTimeUp = useCallback(() => {
     toast.warning("Time's up! Moving to the next question.", {
       icon: <Clock className="h-4 w-4" />,
     });
-    // Auto-submit if there's an answer, otherwise skip
     if (userAnswer.trim()) {
       handleSubmitAnswer();
     } else {
@@ -111,7 +109,6 @@ export default function InterviewStartPage() {
       const result = await response.json();
       setData(result);
 
-      // Find the next unanswered question
       const answeredIndices = new Set(
         result.answers.map((a: { questionIndex: number }) => a.questionIndex)
       );
@@ -129,7 +126,6 @@ export default function InterviewStartPage() {
     }
   }, [interviewId, router]);
 
-  // Fetch interview data
   useEffect(() => {
     fetchInterview();
   }, [fetchInterview]);
@@ -151,13 +147,13 @@ export default function InterviewStartPage() {
     }
   }, [currentQuestionIndex, data, useVoice, ttsSupported, showFeedback, speak]);
 
-  // Start timer when question changes (if timed mode)
+  // Auto-start timer when question changes
   useEffect(() => {
-    if (timedMode && !showFeedback && !loading) {
+    if (!showFeedback && !loading) {
       resetTimer();
       startTimer();
     }
-  }, [currentQuestionIndex, timedMode, showFeedback, loading]);
+  }, [currentQuestionIndex, showFeedback, loading]);
 
   // Pause timer when showing feedback
   useEffect(() => {
@@ -208,7 +204,6 @@ export default function InterviewStartPage() {
       setFeedback(result.evaluation);
       setShowFeedback(true);
 
-      // Speak feedback if using voice
       if (useVoice && ttsSupported) {
         const feedbackText = `You scored ${result.evaluation.overallScore} out of 100. ${result.evaluation.encouragement}`;
         speak(feedbackText);
@@ -228,7 +223,6 @@ export default function InterviewStartPage() {
     const nextIndex = currentQuestionIndex + 1;
 
     if (nextIndex >= data.interview.questions.length) {
-      // All questions answered - generate summary
       handleFinishInterview();
     } else {
       setCurrentQuestionIndex(nextIndex);
@@ -259,31 +253,10 @@ export default function InterviewStartPage() {
     }
   };
 
-  const toggleTimedMode = () => {
-    if (!timedMode) {
-      setTimedMode(true);
-      resetTimer();
-      startTimer();
-      toast.success("Timed mode enabled! 3 minutes per question.", {
-        icon: <Clock className="h-4 w-4" />,
-      });
-    } else {
-      setTimedMode(false);
-      pauseTimer();
-      toast.info("Timed mode disabled");
-    }
-  };
-
   const getTimerColor = () => {
     if (percentageLeft > 50) return "text-green-500";
     if (percentageLeft > 25) return "text-yellow-500";
     return "text-red-500";
-  };
-
-  const getTimerBgColor = () => {
-    if (percentageLeft > 50) return "bg-green-500";
-    if (percentageLeft > 25) return "bg-yellow-500";
-    return "bg-red-500";
   };
 
   if (loading) {
@@ -302,118 +275,93 @@ export default function InterviewStartPage() {
   const isLastQuestion = currentQuestionIndex === interview.questions.length - 1;
 
   return (
-    <div className="mx-auto max-w-3xl">
-      {/* Progress Header */}
-      <div className="mb-8">
-        <div className="mb-2 flex items-center justify-between text-sm text-slate-400">
-          <span>
-            Question {currentQuestionIndex + 1} of {interview.questions.length}
-          </span>
-          <span>{Math.round(progress)}% Complete</span>
+    <div className="mx-auto flex h-[calc(100vh-80px)] max-w-3xl flex-col">
+      {/* Progress Header + Timer Row */}
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <div className="flex-1">
+          <div className="mb-1 flex items-center justify-between text-sm text-slate-400">
+            <span>
+              Question {currentQuestionIndex + 1} of {interview.questions.length}
+            </span>
+            <span>{Math.round(progress)}% Complete</span>
+          </div>
+          <Progress value={progress} className="h-2" />
         </div>
-        <Progress value={progress} className="h-2" />
+        {!showFeedback && (
+          <div className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 ${percentageLeft <= 25 ? "border-red-500/50 animate-pulse" : "border-slate-700"}`}>
+            <Clock className={`h-4 w-4 ${getTimerColor()}`} />
+            <span className={`text-lg font-bold font-mono ${getTimerColor()}`}>
+              {formatTime(timeLeft)}
+            </span>
+            {percentageLeft <= 25 && (
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Timer Display (when timed mode is on) */}
-      {timedMode && !showFeedback && (
-        <Card className={`mb-6 border-2 ${percentageLeft <= 25 ? "border-red-500/50 animate-pulse" : "border-slate-700"} bg-slate-800/50`}>
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-full ${getTimerBgColor()}/20`}>
-                  <Clock className={`h-6 w-6 ${getTimerColor()}`} />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400">Time Remaining</p>
-                  <p className={`text-2xl font-bold font-mono ${getTimerColor()}`}>
-                    {formatTime(timeLeft)}
-                  </p>
-                </div>
-              </div>
-              {percentageLeft <= 25 && (
-                <div className="flex items-center gap-2 text-red-400">
-                  <AlertTriangle className="h-5 w-5" />
-                  <span className="text-sm font-medium">Hurry up!</span>
-                </div>
-              )}
-              <div className="w-32">
-                <Progress
-                  value={percentageLeft}
-                  className={`h-2 ${percentageLeft <= 25 ? "[&>div]:bg-red-500" : percentageLeft <= 50 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500"}`}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Controls Row */}
-      <div className="mb-6 flex items-center justify-between gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleTimedMode}
-          className={`gap-2 border-slate-600 ${timedMode ? "bg-blue-500/10 border-blue-500/50 text-blue-400" : ""}`}
-        >
-          <Clock className="h-4 w-4" />
-          {timedMode ? "Timer On" : "Timer Off"}
-        </Button>
+      {/* Voice Toggle - compact */}
+      <div className="mb-3 flex justify-end">
         <Button
           variant="outline"
           size="sm"
           onClick={() => setUseVoice(!useVoice)}
-          className="gap-2 border-slate-600"
+          className="gap-2 border-slate-600 h-8 text-xs"
         >
           {useVoice ? (
             <>
-              <Volume2 className="h-4 w-4" /> Voice On
+              <Volume2 className="h-3 w-3" /> Voice On
             </>
           ) : (
             <>
-              <VolumeX className="h-4 w-4" /> Voice Off
+              <VolumeX className="h-3 w-3" /> Voice Off
             </>
           )}
         </Button>
       </div>
 
-      {/* Question Card */}
-      <Card className="mb-6 border-slate-700 bg-slate-800/50">
-        <CardContent className="pt-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Badge variant="outline">{currentQuestion.difficulty}</Badge>
-            <Badge variant="outline">{currentQuestion.topic}</Badge>
+      {/* Question Card - compact */}
+      <Card className="mb-3 border-slate-700 bg-slate-800/50 shrink-0">
+        <CardContent className="py-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Badge variant="outline" className="text-slate-300 border-slate-500">
+              {currentQuestion.difficulty}
+            </Badge>
+            <Badge variant="outline" className="text-slate-300 border-slate-500">
+              {currentQuestion.topic}
+            </Badge>
           </div>
-          <h2 className="text-xl font-medium text-white">{currentQuestion.text}</h2>
+          <h2 className="text-lg font-medium text-white leading-snug">{currentQuestion.text}</h2>
           {isSpeaking && (
-            <div className="mt-4 flex items-center gap-2 text-blue-400">
-              <Volume2 className="h-4 w-4 animate-pulse" />
-              <span className="text-sm">Speaking...</span>
+            <div className="mt-2 flex items-center gap-2 text-blue-400">
+              <Volume2 className="h-3 w-3 animate-pulse" />
+              <span className="text-xs">Speaking...</span>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Answer Section */}
+      {/* Answer / Feedback Section - fills remaining space */}
       {!showFeedback ? (
-        <Card className="mb-6 border-slate-700 bg-slate-800/50">
-          <CardContent className="pt-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-medium text-white">Your Answer</h3>
+        <Card className="flex min-h-0 flex-1 flex-col border-slate-700 bg-slate-800/50">
+          <CardContent className="flex flex-1 flex-col py-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-medium text-white">Your Answer</h3>
               {sttSupported && (
                 <Button
                   variant={isListening ? "destructive" : "outline"}
                   size="sm"
                   onClick={handleToggleRecording}
-                  className="gap-2"
+                  className="gap-2 h-8 text-xs"
                   disabled={submitting}
                 >
                   {isListening ? (
                     <>
-                      <MicOff className="h-4 w-4" /> Stop Recording
+                      <MicOff className="h-3 w-3" /> Stop Recording
                     </>
                   ) : (
                     <>
-                      <Mic className="h-4 w-4" /> Start Recording
+                      <Mic className="h-3 w-3" /> Start Recording
                     </>
                   )}
                 </Button>
@@ -421,9 +369,9 @@ export default function InterviewStartPage() {
             </div>
 
             {isListening && (
-              <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-500/10 p-3 text-red-400">
-                <div className="h-3 w-3 animate-pulse rounded-full bg-red-500" />
-                <span className="text-sm">Recording... Speak your answer clearly</span>
+              <div className="mb-2 flex items-center gap-2 rounded-lg bg-red-500/10 p-2 text-red-400">
+                <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                <span className="text-xs">Recording... Speak your answer clearly</span>
               </div>
             )}
 
@@ -435,15 +383,16 @@ export default function InterviewStartPage() {
                   ? "Click 'Start Recording' to speak or type your answer here..."
                   : "Type your answer here..."
               }
-              className="min-h-[150px] border-slate-600 bg-slate-700 text-white placeholder:text-slate-500"
+              className="flex-1 resize-none border-slate-600 bg-slate-700 text-white placeholder:text-slate-500"
               disabled={isListening || submitting}
             />
 
-            {sttError && <p className="mt-2 text-sm text-red-400">{sttError}</p>}
+            {sttError && <p className="mt-1 text-xs text-red-400">{sttError}</p>}
 
-            <div className="mt-4 flex justify-end gap-3">
+            <div className="mt-3 flex justify-end gap-3">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={handleNextQuestion}
                 className="gap-2 border-slate-600"
                 disabled={submitting}
@@ -451,6 +400,7 @@ export default function InterviewStartPage() {
                 <SkipForward className="h-4 w-4" /> Skip
               </Button>
               <Button
+                size="sm"
                 onClick={handleSubmitAnswer}
                 disabled={!userAnswer.trim() || submitting}
                 className="gap-2"
@@ -469,45 +419,45 @@ export default function InterviewStartPage() {
           </CardContent>
         </Card>
       ) : (
-        /* Feedback Section */
-        <Card className="mb-6 border-slate-700 bg-slate-800/50">
-          <CardContent className="pt-6">
-            <div className="mb-6 flex items-center gap-3">
-              <CheckCircle className="h-8 w-8 text-green-500" />
+        /* Feedback Section - scrollable within viewport */
+        <Card className="flex min-h-0 flex-1 flex-col border-slate-700 bg-slate-800/50">
+          <CardContent className="flex-1 overflow-y-auto py-4">
+            <div className="mb-4 flex items-center gap-3">
+              <CheckCircle className="h-6 w-6 text-green-500" />
               <div>
-                <h3 className="text-lg font-medium text-white">Answer Evaluated</h3>
-                <p className="text-slate-400">Here&apos;s your feedback</p>
+                <h3 className="font-medium text-white">Answer Evaluated</h3>
+                <p className="text-xs text-slate-400">Here&apos;s your feedback</p>
               </div>
             </div>
 
             {feedback && (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Scores */}
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-3">
                   <ScoreCard label="Technical" score={feedback.technicalScore} />
                   <ScoreCard label="Communication" score={feedback.communicationScore} />
                   <ScoreCard label="Depth" score={feedback.depthScore} />
                 </div>
 
                 {/* Overall Score */}
-                <div className="rounded-lg bg-slate-700/50 p-4 text-center">
-                  <p className="text-sm text-slate-400">Overall Score</p>
-                  <p className="text-4xl font-bold text-white">{feedback.overallScore}%</p>
+                <div className="rounded-lg bg-slate-700/50 p-3 text-center">
+                  <p className="text-xs text-slate-400">Overall Score</p>
+                  <p className="text-3xl font-bold text-white">{feedback.overallScore}%</p>
                 </div>
 
                 {/* Strengths & Weaknesses */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-lg bg-green-500/10 p-4">
-                    <h4 className="mb-2 font-medium text-green-400">Strengths</h4>
-                    <ul className="space-y-1 text-sm text-slate-300">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg bg-green-500/10 p-3">
+                    <h4 className="mb-1 text-sm font-medium text-green-400">Strengths</h4>
+                    <ul className="space-y-1 text-xs text-slate-300">
                       {feedback.strengths.map((s, i) => (
                         <li key={i}>• {s}</li>
                       ))}
                     </ul>
                   </div>
-                  <div className="rounded-lg bg-yellow-500/10 p-4">
-                    <h4 className="mb-2 font-medium text-yellow-400">Areas to Improve</h4>
-                    <ul className="space-y-1 text-sm text-slate-300">
+                  <div className="rounded-lg bg-yellow-500/10 p-3">
+                    <h4 className="mb-1 text-sm font-medium text-yellow-400">Areas to Improve</h4>
+                    <ul className="space-y-1 text-xs text-slate-300">
                       {feedback.weaknesses.map((w, i) => (
                         <li key={i}>• {w}</li>
                       ))}
@@ -516,20 +466,20 @@ export default function InterviewStartPage() {
                 </div>
 
                 {/* Ideal Answer */}
-                <div className="rounded-lg bg-blue-500/10 p-4">
-                  <h4 className="mb-2 font-medium text-blue-400">Model Answer</h4>
-                  <p className="text-sm text-slate-300">{feedback.idealAnswer}</p>
+                <div className="rounded-lg bg-blue-500/10 p-3">
+                  <h4 className="mb-1 text-sm font-medium text-blue-400">Model Answer</h4>
+                  <p className="text-xs text-slate-300">{feedback.idealAnswer}</p>
                 </div>
 
                 {/* Encouragement */}
-                <div className="rounded-lg bg-purple-500/10 p-4">
-                  <p className="text-sm text-slate-300">{feedback.encouragement}</p>
+                <div className="rounded-lg bg-purple-500/10 p-3">
+                  <p className="text-xs text-slate-300">{feedback.encouragement}</p>
                 </div>
               </div>
             )}
 
-            <div className="mt-6 flex justify-end">
-              <Button onClick={handleNextQuestion} className="gap-2" disabled={submitting}>
+            <div className="mt-4 flex justify-end">
+              <Button size="sm" onClick={handleNextQuestion} className="gap-2" disabled={submitting}>
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" /> Processing...
@@ -560,9 +510,9 @@ function ScoreCard({ label, score }: { label: string; score: number }) {
   };
 
   return (
-    <div className="rounded-lg bg-slate-700/50 p-4 text-center">
-      <p className="text-sm text-slate-400">{label}</p>
-      <p className={`text-2xl font-bold ${getColor(score)}`}>{score}/10</p>
+    <div className="rounded-lg bg-slate-700/50 p-3 text-center">
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className={`text-xl font-bold ${getColor(score)}`}>{score}/10</p>
     </div>
   );
 }

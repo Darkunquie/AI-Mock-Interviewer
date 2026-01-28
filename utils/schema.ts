@@ -18,6 +18,10 @@ export const interviews = pgTable("interviews", {
   role: varchar("role", { length: 100 }).notNull(), // frontend, backend, fullstack, data, hr
   experienceLevel: varchar("experience_level", { length: 20 }).notNull(), // 0-1, 1-3, 3-5, 5+
   interviewType: varchar("interview_type", { length: 50 }).notNull(), // technical, hr, behavioral
+  duration: varchar("duration", { length: 10 }).default("15"), // 15 or 30 minutes
+  mode: varchar("mode", { length: 20 }).default("interview"), // interview or practice
+  techStack: text("tech_stack"), // JSON array of selected technologies
+  topics: text("topics"), // JSON array of practice topics
   totalScore: integer("total_score").default(0),
   status: varchar("status", { length: 20 }).default("pending"), // pending, in_progress, completed
   questionsJson: text("questions_json"), // JSON string of generated questions

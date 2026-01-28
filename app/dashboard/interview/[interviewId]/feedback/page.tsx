@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronUp,
   Home,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +69,7 @@ export default function FeedbackPage() {
   const interviewId = params.interviewId as string;
 
   const [loading, setLoading] = useState(true);
+  const [retaking, setRetaking] = useState(false);
   const [data, setData] = useState<FeedbackData | null>(null);
   const [expandedAnswers, setExpandedAnswers] = useState<Set<number>>(new Set());
 
@@ -109,6 +111,27 @@ export default function FeedbackPage() {
     if (rating.toLowerCase().includes("good") || rating.toLowerCase().includes("very")) return "bg-blue-500";
     if (rating.toLowerCase().includes("average")) return "bg-yellow-500";
     return "bg-red-500";
+  };
+
+  const handleRetake = async () => {
+    setRetaking(true);
+    try {
+      const response = await fetch("/api/interview/retake", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interviewId }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create retake");
+      }
+      toast.success("Retake created with fresh questions!");
+      router.push(`/dashboard/interview/${result.interviewId}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to retake interview");
+    } finally {
+      setRetaking(false);
+    }
   };
 
   if (loading) {
@@ -372,6 +395,19 @@ export default function FeedbackPage() {
             Back to Dashboard
           </Button>
         </Link>
+        <Button
+          onClick={handleRetake}
+          disabled={retaking}
+          variant="outline"
+          className="w-full gap-2 border-blue-600 text-blue-400 hover:bg-blue-500/10 sm:w-auto"
+        >
+          {retaking ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RotateCcw className="h-4 w-4" />
+          )}
+          {retaking ? "Creating Retake..." : "Retake Interview"}
+        </Button>
         <Link href="/dashboard">
           <Button className="w-full gap-2 sm:w-auto">
             Start New Interview

@@ -12,9 +12,62 @@ export type ExperienceLevel = "0-1" | "1-3" | "3-5" | "5+";
 
 export type InterviewType = "technical" | "hr" | "behavioral";
 
+export type InterviewDuration = "15" | "30";
+
 export type InterviewStatus = "pending" | "in_progress" | "completed";
 
 export type Difficulty = "easy" | "medium" | "hard";
+
+export type InterviewMode = "interview" | "practice";
+
+// Tech Stack Options per Role
+export const TECH_STACK_OPTIONS: Record<string, string[]> = {
+  frontend: [
+    "React", "Next.js", "Vue.js", "Angular", "TypeScript", "JavaScript",
+    "HTML/CSS", "Tailwind CSS", "Redux", "GraphQL", "Webpack", "Vite",
+  ],
+  backend: [
+    "Node.js", "Express.js", "Python", "Django", "FastAPI", "Java",
+    "Spring Boot", "Go", "Ruby on Rails", "PostgreSQL", "MongoDB", "Redis",
+  ],
+  fullstack: [
+    "React", "Next.js", "Node.js", "TypeScript", "Python", "PostgreSQL",
+    "MongoDB", "GraphQL", "Docker", "AWS", "REST APIs", "Redis",
+  ],
+  data: [
+    "Python", "Pandas", "NumPy", "SQL", "TensorFlow", "PyTorch",
+    "Scikit-learn", "Tableau", "Spark", "R", "Machine Learning", "Statistics",
+  ],
+  devops: [
+    "Docker", "Kubernetes", "AWS", "Azure", "GCP", "Terraform",
+    "CI/CD", "Jenkins", "Linux", "Ansible", "Prometheus", "Grafana",
+  ],
+  mobile: [
+    "React Native", "Flutter", "Swift", "Kotlin", "iOS", "Android",
+    "Dart", "Expo", "Firebase", "REST APIs", "SQLite", "TypeScript",
+  ],
+  hr: [],
+};
+
+// Practice Topic Options
+export const PRACTICE_TOPICS = [
+  "Data Structures & Algorithms",
+  "System Design",
+  "Object-Oriented Programming",
+  "Database Design & SQL",
+  "REST APIs & Web Services",
+  "Design Patterns",
+  "Operating Systems",
+  "Networking Basics",
+  "Security Best Practices",
+  "Testing & QA",
+  "Git & Version Control",
+  "Agile & Scrum",
+  "Problem Solving",
+  "Code Review & Clean Code",
+  "Cloud Computing Basics",
+  "Performance Optimization",
+];
 
 // Question Types
 export interface Question {
@@ -71,11 +124,21 @@ export interface AnswerWithFeedback {
   evaluation: AnswerEvaluation | null;
 }
 
+// Duration Configuration
+export const DURATION_CONFIG: Record<InterviewDuration, { label: string; questionCount: number }> = {
+  "15": { label: "15 Minutes", questionCount: 10 },
+  "30": { label: "30 Minutes", questionCount: 20 },
+};
+
 // API Request/Response Types
 export interface CreateInterviewRequest {
   role: InterviewRole;
   experienceLevel: ExperienceLevel;
   interviewType: InterviewType;
+  duration: InterviewDuration;
+  techStack?: string[];
+  mode?: InterviewMode;
+  topics?: string[];
 }
 
 export interface CreateInterviewResponse {
