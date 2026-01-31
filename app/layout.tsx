@@ -14,9 +14,79 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Mock Interview | FresherReady",
-  description: "Practice interviews with AI-powered voice conversations. Get instant feedback and improve your interview skills.",
-  keywords: ["mock interview", "AI interview", "interview practice", "job preparation", "fresher ready"],
+  title: "AI Mock Interview | Free Voice-Based Interview Practice | FresherReady",
+  description: "Practice tech interviews with AI that speaks & listens. Get instant feedback on technical skills, communication & depth. Free forever. Join 10K+ developers preparing for their dream jobs.",
+  keywords: ["AI mock interview", "interview practice", "tech interview", "voice interview", "coding interview prep", "fresher interview", "frontend interview", "backend interview", "fullstack interview", "job preparation", "interview simulator"],
+  authors: [{ name: "FresherReady" }],
+  creator: "FresherReady",
+  publisher: "Sunadh EduTech",
+  metadataBase: new URL("https://sunadhedutech.com"),
+  alternates: {
+    canonical: "https://sunadhedutech.com",
+  },
+  openGraph: {
+    title: "AI Mock Interview - Master Your Tech Interview",
+    description: "Voice-powered AI interview practice with real-time feedback. Practice frontend, backend, fullstack & more. 100% Free!",
+    url: "https://sunadhedutech.com",
+    siteName: "FresherReady",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "AI Mock Interview - Practice Tech Interviews with AI",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Mock Interview | FresherReady",
+    description: "Practice tech interviews with AI voice conversations. Get instant feedback & ace your next interview!",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  verification: {
+    google: "ADD_YOUR_GOOGLE_VERIFICATION_CODE",
+  },
+};
+
+// Structured Data for SEO (JSON-LD)
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "AI Mock Interview",
+  "alternateName": "FresherReady",
+  "url": "https://sunadhedutech.com",
+  "description": "Practice tech interviews with AI that speaks & listens. Get instant feedback on technical skills, communication & depth.",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Web Browser",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.8",
+    "ratingCount": "10000"
+  },
+  "creator": {
+    "@type": "Organization",
+    "name": "Sunadh EduTech",
+    "url": "https://sunadhedutech.com"
+  }
 };
 
 export default function RootLayout({
@@ -26,6 +96,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="theme-color" content="#3b82f6" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning

@@ -1,0 +1,20 @@
+# Robots.txt for sunadhedutech.com
+# AI Mock Interview Platform
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/interview/*/start
+Disallow: /dashboard/interview/*/feedback
+
+# Allow search engines to crawl main pages
+Allow: /dashboard$
+Allow: /dashboard/analytics$
+Allow: /dashboard/history$
+Allow: /dashboard/practice$
+
+# Sitemap location
+Sitemap: https://sunadhedutech.com/sitemap.xml
+
+# Crawl delay (optional - be nice to the server)
+Crawl-delay: 1
