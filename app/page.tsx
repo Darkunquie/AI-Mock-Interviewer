@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Mic, Brain, BarChart3, ArrowRight, BookOpen, Target, Upload, Building2, TrendingUp, Layers, GraduationCap, Zap } from "lucide-react";
+import { MotionDiv, MotionStagger, motion, fadeUpVariants, scaleUpVariants } from "@/components/ui/motion";
 
 // Hydration-safe mounting check
 const emptySubscribe = () => () => {};
@@ -53,130 +54,176 @@ export default function HomePage() {
       {/* Hero Section */}
       <main className="container mx-auto px-4 py-16 text-center">
         <div className="mx-auto max-w-4xl">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-blue-500/10 px-4 py-2 text-sm text-blue-400">
-            <Mic className="h-4 w-4" />
-            Voice-Powered AI Interviews
-          </div>
-          <h1 className="mb-6 text-5xl font-bold leading-tight text-white md:text-6xl">
-            Master Your Next
-            <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              {" "}Tech Interview
-            </span>
-          </h1>
-          <p className="mb-8 text-xl text-slate-400">
-            Practice with our AI interviewer that speaks and listens. Get real-time feedback,
-            personalized questions, and improve your interview skills—all for free.
-          </p>
-          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href={showDashboardLink ? "/dashboard" : "/sign-up"}>
-              <Button size="lg" className="gap-2 text-lg">
-                Start Free Interview <ArrowRight className="h-5 w-5" />
+          <MotionDiv delay={0}>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-blue-500/10 px-4 py-2 text-sm text-blue-400">
+              <Mic className="h-4 w-4" />
+              Voice-Powered AI Interviews
+            </div>
+          </MotionDiv>
+          <MotionDiv delay={0.1}>
+            <h1 className="mb-6 text-5xl font-bold leading-tight text-white md:text-6xl">
+              Master Your Next
+              <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                {" "}Tech Interview
+              </span>
+            </h1>
+          </MotionDiv>
+          <MotionDiv delay={0.2}>
+            <p className="mb-8 text-xl text-slate-400">
+              Practice with our AI interviewer that speaks and listens. Get real-time feedback,
+              personalized questions, and improve your interview skills—all for free.
+            </p>
+          </MotionDiv>
+          <MotionDiv delay={0.3}>
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Link href={showDashboardLink ? "/dashboard" : "/sign-up"}>
+                <Button size="lg" className="gap-2 text-lg">
+                  Start Free Interview <ArrowRight className="h-5 w-5" />
+                </Button>
+              </Link>
+              <Button size="lg" variant="outline" className="text-lg">
+                Watch Demo
               </Button>
-            </Link>
-            <Button size="lg" variant="outline" className="text-lg">
-              Watch Demo
-            </Button>
-          </div>
+            </div>
+          </MotionDiv>
         </div>
 
         {/* Features Grid */}
-        <div className="mx-auto mt-24 grid max-w-5xl gap-8 md:grid-cols-3">
-          <FeatureCard
-            icon={<Mic className="h-8 w-8 text-blue-500" />}
-            title="Voice Conversations"
-            description="Speak naturally with our AI interviewer. No typing required—just talk like a real interview."
-          />
-          <FeatureCard
-            icon={<Brain className="h-8 w-8 text-purple-500" />}
-            title="Smart AI Evaluation"
-            description="Get instant scoring on technical accuracy, communication skills, and depth of knowledge."
-          />
-          <FeatureCard
-            icon={<BarChart3 className="h-8 w-8 text-green-500" />}
-            title="Detailed Feedback"
-            description="Receive personalized improvement tips, ideal answers, and topics to study after each interview."
-          />
-        </div>
+        <MotionStagger className="mx-auto mt-24 grid max-w-5xl gap-8 md:grid-cols-3">
+          <motion.div variants={fadeUpVariants}>
+            <FeatureCard
+              icon={<Mic className="h-8 w-8 text-blue-500" />}
+              title="Voice Conversations"
+              description="Speak naturally with our AI interviewer. No typing required—just talk like a real interview."
+            />
+          </motion.div>
+          <motion.div variants={fadeUpVariants}>
+            <FeatureCard
+              icon={<Brain className="h-8 w-8 text-purple-500" />}
+              title="Smart AI Evaluation"
+              description="Get instant scoring on technical accuracy, communication skills, and depth of knowledge."
+            />
+          </motion.div>
+          <motion.div variants={fadeUpVariants}>
+            <FeatureCard
+              icon={<BarChart3 className="h-8 w-8 text-green-500" />}
+              title="Detailed Feedback"
+              description="Receive personalized improvement tips, ideal answers, and topics to study after each interview."
+            />
+          </motion.div>
+        </MotionStagger>
 
         {/* Stats Section */}
-        <div className="mx-auto mt-24 grid max-w-4xl gap-8 rounded-2xl bg-slate-800/50 p-8 md:grid-cols-4">
-          <StatCard number="10K+" label="Users Practicing" />
-          <StatCard number="50K+" label="Interviews Completed" />
-          <StatCard number="85%" label="Success Rate" />
-          <StatCard number="Free" label="Forever" />
-        </div>
+        <MotionDiv variants={scaleUpVariants}>
+          <div className="mx-auto mt-24 grid max-w-4xl gap-8 rounded-2xl bg-slate-800/50 p-8 md:grid-cols-4">
+            <StatCard number="10K+" label="Users Practicing" />
+            <StatCard number="50K+" label="Interviews Completed" />
+            <StatCard number="85%" label="Success Rate" />
+            <StatCard number="Free" label="Forever" />
+          </div>
+        </MotionDiv>
 
         {/* What We Offer Section */}
         <div className="mx-auto mt-24 max-w-6xl">
-          <h2 className="mb-4 text-3xl font-bold text-white">What We Offer</h2>
-          <p className="mb-12 text-lg text-slate-400">Everything you need to ace your tech interview</p>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <OfferCard
-              icon={<Layers className="h-6 w-6 text-blue-400" />}
-              title="64+ Tech Stacks"
-              description="Python, Java, React, AWS, Docker, Kubernetes, and 60+ more technologies with 900+ subtopics"
-            />
-            <OfferCard
-              icon={<GraduationCap className="h-6 w-6 text-purple-400" />}
-              title="20 Learning Paths"
-              description="Structured paths for Full Stack, Data Science, DevOps, ML Engineer, and more roles"
-            />
-            <OfferCard
-              icon={<Zap className="h-6 w-6 text-yellow-400" />}
-              title="Tech Deep Dive"
-              description="Focus on specific technologies with subtopic-level questions for targeted practice"
-            />
-            <OfferCard
-              icon={<Building2 className="h-6 w-6 text-cyan-400" />}
-              title="Company Patterns"
-              description="Questions styled for Google, Amazon, Meta, Microsoft, and other top companies"
-            />
-            <OfferCard
-              icon={<TrendingUp className="h-6 w-6 text-green-400" />}
-              title="Speech Analytics"
-              description="Track filler words (um, uh), speaking pace (WPM), and improve communication"
-            />
-            <OfferCard
-              icon={<Upload className="h-6 w-6 text-orange-400" />}
-              title="PDF Upload"
-              description="Upload your own interview questions from PDFs for personalized practice"
-            />
-            <OfferCard
-              icon={<Target className="h-6 w-6 text-red-400" />}
-              title="Progress Tracking"
-              description="Track your scores, completion rates, and improvement over time"
-            />
-            <OfferCard
-              icon={<BookOpen className="h-6 w-6 text-pink-400" />}
-              title="Detailed Feedback"
-              description="Get ideal answers, improvement tips, and topics to study after each question"
-            />
-          </div>
+          <MotionDiv>
+            <h2 className="mb-4 text-3xl font-bold text-white">What We Offer</h2>
+            <p className="mb-12 text-lg text-slate-400">Everything you need to ace your tech interview</p>
+          </MotionDiv>
+          <MotionStagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <motion.div variants={fadeUpVariants}>
+              <OfferCard
+                icon={<Layers className="h-6 w-6 text-blue-400" />}
+                title="64+ Tech Stacks"
+                description="Python, Java, React, AWS, Docker, Kubernetes, and 60+ more technologies with 900+ subtopics"
+              />
+            </motion.div>
+            <motion.div variants={fadeUpVariants}>
+              <OfferCard
+                icon={<GraduationCap className="h-6 w-6 text-purple-400" />}
+                title="20 Learning Paths"
+                description="Structured paths for Full Stack, Data Science, DevOps, ML Engineer, and more roles"
+              />
+            </motion.div>
+            <motion.div variants={fadeUpVariants}>
+              <OfferCard
+                icon={<Zap className="h-6 w-6 text-yellow-400" />}
+                title="Tech Deep Dive"
+                description="Focus on specific technologies with subtopic-level questions for targeted practice"
+              />
+            </motion.div>
+            <motion.div variants={fadeUpVariants}>
+              <OfferCard
+                icon={<Building2 className="h-6 w-6 text-cyan-400" />}
+                title="Company Patterns"
+                description="Questions styled for Google, Amazon, Meta, Microsoft, and other top companies"
+              />
+            </motion.div>
+            <motion.div variants={fadeUpVariants}>
+              <OfferCard
+                icon={<TrendingUp className="h-6 w-6 text-green-400" />}
+                title="Speech Analytics"
+                description="Track filler words (um, uh), speaking pace (WPM), and improve communication"
+              />
+            </motion.div>
+            <motion.div variants={fadeUpVariants}>
+              <OfferCard
+                icon={<Upload className="h-6 w-6 text-orange-400" />}
+                title="PDF Upload"
+                description="Upload your own interview questions from PDFs for personalized practice"
+              />
+            </motion.div>
+            <motion.div variants={fadeUpVariants}>
+              <OfferCard
+                icon={<Target className="h-6 w-6 text-red-400" />}
+                title="Progress Tracking"
+                description="Track your scores, completion rates, and improvement over time"
+              />
+            </motion.div>
+            <motion.div variants={fadeUpVariants}>
+              <OfferCard
+                icon={<BookOpen className="h-6 w-6 text-pink-400" />}
+                title="Detailed Feedback"
+                description="Get ideal answers, improvement tips, and topics to study after each question"
+              />
+            </motion.div>
+          </MotionStagger>
         </div>
 
         {/* How It Works */}
         <div className="mx-auto mt-24 max-w-4xl">
-          <h2 className="mb-12 text-3xl font-bold text-white">How It Works</h2>
-          <div className="grid gap-6 md:grid-cols-4">
-            <StepCard step={1} title="Select Role" description="Choose your target role and experience level" />
-            <StepCard step={2} title="Start Interview" description="AI generates personalized questions for you" />
-            <StepCard step={3} title="Answer & Speak" description="Respond using your voice—just like a real interview" />
-            <StepCard step={4} title="Get Feedback" description="Receive instant scores and improvement tips" />
-          </div>
+          <MotionDiv>
+            <h2 className="mb-12 text-3xl font-bold text-white">How It Works</h2>
+          </MotionDiv>
+          <MotionStagger className="grid gap-6 md:grid-cols-4">
+            <motion.div variants={fadeUpVariants}>
+              <StepCard step={1} title="Select Role" description="Choose your target role and experience level" />
+            </motion.div>
+            <motion.div variants={fadeUpVariants}>
+              <StepCard step={2} title="Start Interview" description="AI generates personalized questions for you" />
+            </motion.div>
+            <motion.div variants={fadeUpVariants}>
+              <StepCard step={3} title="Answer & Speak" description="Respond using your voice—just like a real interview" />
+            </motion.div>
+            <motion.div variants={fadeUpVariants}>
+              <StepCard step={4} title="Get Feedback" description="Receive instant scores and improvement tips" />
+            </motion.div>
+          </MotionStagger>
         </div>
 
         {/* CTA Section */}
-        <div className="mx-auto mt-24 max-w-2xl rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 p-12">
-          <h2 className="mb-4 text-3xl font-bold text-white">Ready to Ace Your Interview?</h2>
-          <p className="mb-8 text-lg text-blue-100">
-            Join thousands of developers who improved their interview skills with AI practice.
-          </p>
-          <Link href={showDashboardLink ? "/dashboard" : "/sign-up"}>
-            <Button size="lg" variant="secondary" className="gap-2 text-lg">
-              Start Practicing Now <ArrowRight className="h-5 w-5" />
-            </Button>
-          </Link>
-        </div>
+        <MotionDiv variants={scaleUpVariants}>
+          <div className="mx-auto mt-24 max-w-2xl rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 p-12">
+            <h2 className="mb-4 text-3xl font-bold text-white">Ready to Ace Your Interview?</h2>
+            <p className="mb-8 text-lg text-blue-100">
+              Join thousands of developers who improved their interview skills with AI practice.
+            </p>
+            <Link href={showDashboardLink ? "/dashboard" : "/sign-up"}>
+              <Button size="lg" variant="secondary" className="gap-2 text-lg">
+                Start Practicing Now <ArrowRight className="h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        </MotionDiv>
       </main>
 
       {/* Footer */}

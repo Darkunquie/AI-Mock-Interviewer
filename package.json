@@ -26,6 +26,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
+    "framer-motion": "^12.31.0",
     "groq-sdk": "^0.37.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.562.0",
