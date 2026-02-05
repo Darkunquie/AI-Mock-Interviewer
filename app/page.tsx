@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Mic, Brain, BarChart3, ArrowRight } from "lucide-react";
+import { Mic, Brain, BarChart3, ArrowRight, BookOpen, Target, Upload, Building2, TrendingUp, Layers, GraduationCap, Zap } from "lucide-react";
 
 // Hydration-safe mounting check
 const emptySubscribe = () => () => {};
@@ -106,6 +106,54 @@ export default function HomePage() {
           <StatCard number="Free" label="Forever" />
         </div>
 
+        {/* What We Offer Section */}
+        <div className="mx-auto mt-24 max-w-6xl">
+          <h2 className="mb-4 text-3xl font-bold text-white">What We Offer</h2>
+          <p className="mb-12 text-lg text-slate-400">Everything you need to ace your tech interview</p>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <OfferCard
+              icon={<Layers className="h-6 w-6 text-blue-400" />}
+              title="64+ Tech Stacks"
+              description="Python, Java, React, AWS, Docker, Kubernetes, and 60+ more technologies with 900+ subtopics"
+            />
+            <OfferCard
+              icon={<GraduationCap className="h-6 w-6 text-purple-400" />}
+              title="20 Learning Paths"
+              description="Structured paths for Full Stack, Data Science, DevOps, ML Engineer, and more roles"
+            />
+            <OfferCard
+              icon={<Zap className="h-6 w-6 text-yellow-400" />}
+              title="Tech Deep Dive"
+              description="Focus on specific technologies with subtopic-level questions for targeted practice"
+            />
+            <OfferCard
+              icon={<Building2 className="h-6 w-6 text-cyan-400" />}
+              title="Company Patterns"
+              description="Questions styled for Google, Amazon, Meta, Microsoft, and other top companies"
+            />
+            <OfferCard
+              icon={<TrendingUp className="h-6 w-6 text-green-400" />}
+              title="Speech Analytics"
+              description="Track filler words (um, uh), speaking pace (WPM), and improve communication"
+            />
+            <OfferCard
+              icon={<Upload className="h-6 w-6 text-orange-400" />}
+              title="PDF Upload"
+              description="Upload your own interview questions from PDFs for personalized practice"
+            />
+            <OfferCard
+              icon={<Target className="h-6 w-6 text-red-400" />}
+              title="Progress Tracking"
+              description="Track your scores, completion rates, and improvement over time"
+            />
+            <OfferCard
+              icon={<BookOpen className="h-6 w-6 text-pink-400" />}
+              title="Detailed Feedback"
+              description="Get ideal answers, improvement tips, and topics to study after each question"
+            />
+          </div>
+        </div>
+
         {/* How It Works */}
         <div className="mx-auto mt-24 max-w-4xl">
           <h2 className="mb-12 text-3xl font-bold text-white">How It Works</h2>
@@ -165,6 +213,18 @@ function StepCard({ step, title, description }: { step: number; title: string; d
         {step}
       </div>
       <h3 className="mb-2 font-semibold text-white">{title}</h3>
+      <p className="text-sm text-slate-400">{description}</p>
+    </div>
+  );
+}
+
+function OfferCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+  return (
+    <div className="rounded-xl border border-slate-700 bg-slate-800/30 p-5 text-left transition-all hover:border-blue-500/50 hover:bg-slate-800/50">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700/50">
+        {icon}
+      </div>
+      <h3 className="mb-2 text-lg font-semibold text-white">{title}</h3>
       <p className="text-sm text-slate-400">{description}</p>
     </div>
   );
