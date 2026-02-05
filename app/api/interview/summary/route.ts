@@ -48,6 +48,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No answers found" }, { status: 400 });
     }
 
+    // Get total number of questions
+    const questionsData = JSON.parse(interviewData.questionsJson as string);
+    const totalQuestions = questionsData.questions?.length || 0;
+
     // Prepare answers for summary generation
     const answersData = interviewAnswers.map((a) => ({
       question: a.questionText,
@@ -56,6 +60,16 @@ export async function POST(request: NextRequest) {
       communicationScore: a.communicationScore || 0,
       depthScore: a.depthScore || 0,
     }));
+
+    // Calculate accurate scores accounting for unanswered questions
+    const totalAnsweredScore = answersData.reduce((sum, a) =>
+      sum + (a.technicalScore * 0.4 + a.communicationScore * 0.3 + a.depthScore * 0.3), 0
+    );
+
+    // Accurate overall score: (sum of answered scores + 0 for unanswered) / total questions
+    const accurateOverallScore = totalQuestions > 0
+      ? Math.round((totalAnsweredScore / totalQuestions) * 10)
+      : 0;
 
     // Generate summary using AI
     const prompt = getSummaryGeneratorPrompt({
@@ -71,40 +85,61 @@ export async function POST(request: NextRequest) {
       ]);
 
       summaryData = JSON.parse(summaryJson);
+      // Override AI score with accurate calculation
+      summaryData.overallScore = accurateOverallScore;
     } catch (aiError) {
       console.error("AI summary error:", aiError);
 
-      // Calculate average scores
-      const avgTechnical = answersData.reduce((sum, a) => sum + a.technicalScore, 0) / answersData.length;
-      const avgCommunication = answersData.reduce((sum, a) => sum + a.communicationScore, 0) / answersData.length;
-      const avgDepth = answersData.reduce((sum, a) => sum + a.depthScore, 0) / answersData.length;
-      const overallScore = Math.round((avgTechnical * 0.4 + avgCommunication * 0.3 + avgDepth * 0.3) * 10);
+      // Fallback summary with accurate score
+      const answeredCount = interviewAnswers.length;
+      const unansweredCount = totalQuestions - answeredCount;
 
-      // Fallback summary
       summaryData = {
-        overallScore,
-        rating: overallScore >= 70 ? "Good" : overallScore >= 50 ? "Average" : "Needs Improvement",
-        performanceSummary: "You completed the interview. Review your answers to identify areas for improvement.",
-        strengths: ["Completed all questions", "Showed willingness to answer"],
-        weaknesses: ["Review technical concepts", "Practice providing more detailed answers"],
+        overallScore: accurateOverallScore,
+        rating: accurateOverallScore >= 70 ? "Good" : accurateOverallScore >= 50 ? "Average" : "Needs Improvement",
+        performanceSummary: unansweredCount > 0
+          ? `You answered ${answeredCount} out of ${totalQuestions} questions. ${unansweredCount} unanswered question(s) were scored as 0.`
+          : "You completed the interview. Review your answers to identify areas for improvement.",
+        strengths: ["Completed the interview", "Showed willingness to answer"],
+        weaknesses: unansweredCount > 0
+          ? [`${unansweredCount} question(s) left unanswered`, "Review technical concepts", "Practice providing more detailed answers"]
+          : ["Review technical concepts", "Practice providing more detailed answers"],
         recommendedTopics: ["Interview preparation", "Technical fundamentals", "Communication skills"],
         actionPlan: "Practice more mock interviews and review common questions for your target role.",
         encouragement: "Every interview is a learning opportunity. Keep practicing!",
-        readinessLevel: overallScore >= 70 ? "Almost Ready" : "Not Ready",
+        readinessLevel: accurateOverallScore >= 70 ? "Almost Ready" : "Not Ready",
       };
     }
 
-    // Calculate final score
-    const totalScore = summaryData.overallScore ||
-      Math.round(answersData.reduce((sum, a) =>
-        sum + (a.technicalScore * 0.4 + a.communicationScore * 0.3 + a.depthScore * 0.3), 0
-      ) / answersData.length * 10);
+    // Use the accurate calculated score
+    const totalScore = accurateOverallScore;
+
+    // Determine accurate rating based on score
+    let accurateRating: string;
+    if (totalScore >= 90) {
+      accurateRating = "Excellent";
+    } else if (totalScore >= 80) {
+      accurateRating = "Very Good";
+    } else if (totalScore >= 70) {
+      accurateRating = "Good";
+    } else if (totalScore >= 60) {
+      accurateRating = "Above Average";
+    } else if (totalScore >= 50) {
+      accurateRating = "Average";
+    } else if (totalScore >= 40) {
+      accurateRating = "Below Average";
+    } else {
+      accurateRating = "Needs Improvement";
+    }
+
+    // Override rating with accurate calculation
+    summaryData.rating = accurateRating;
 
     // Save summary to database
     await db.insert(interviewSummaries).values({
       interviewId: interviewData.id,
       overallScore: totalScore,
-      rating: summaryData.rating,
+      rating: accurateRating,
       strengthsJson: JSON.stringify(summaryData.strengths || []),
       weaknessesJson: JSON.stringify(summaryData.weaknesses || []),
       recommendedTopicsJson: JSON.stringify(summaryData.recommendedTopics || []),
