@@ -85,7 +85,7 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 // Sign up a new user
-export async function signUp(email: string, password: string, name: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> {
+export async function signUp(email: string, password: string, name: string, phone?: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> {
   try {
     // Check if user already exists
     const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -100,6 +100,7 @@ export async function signUp(email: string, password: string, name: string): Pro
       email,
       password: hashedPassword,
       name,
+      phone: phone || null,
     }).returning();
 
     const authUser: AuthUser = {

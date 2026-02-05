@@ -3,11 +3,11 @@ import { signUp } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name } = await request.json();
+    const { email, password, name, phone } = await request.json();
 
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !phone) {
       return NextResponse.json(
-        { success: false, error: "Email, password, and name are required" },
+        { success: false, error: "Email, password, name, and phone are required" },
         { status: 400 }
       );
     }
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await signUp(email, password, name);
+    const result = await signUp(email, password, name, phone);
 
     if (!result.success) {
       return NextResponse.json(
