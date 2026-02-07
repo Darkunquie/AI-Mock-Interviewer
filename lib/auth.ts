@@ -5,7 +5,17 @@ import { db } from "./db";
 import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+// JWT Secret - MUST be set in production
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET environment variable is required in production");
+  }
+  console.warn("[Auth] WARNING: JWT_SECRET not set. Using insecure default for development only.");
+}
+
+const getJwtSecret = () => JWT_SECRET || "dev-only-secret-do-not-use-in-production";
 const COOKIE_NAME = "auth_token";
 
 export interface AuthUser {
@@ -28,7 +38,7 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 export function generateToken(user: AuthUser): string {
   return jwt.sign(
     { id: user.id, email: user.email, name: user.name },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: "7d" }
   );
 }
@@ -36,7 +46,7 @@ export function generateToken(user: AuthUser): string {
 // Verify JWT token
 export function verifyToken(token: string): AuthUser | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
+    const decoded = jwt.verify(token, getJwtSecret()) as unknown as AuthUser;
     return decoded;
   } catch {
     return null;
