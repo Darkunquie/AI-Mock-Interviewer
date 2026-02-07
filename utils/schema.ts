@@ -59,6 +59,16 @@ export const interviewSummaries = pgTable("interview_summaries", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Generated Projects table - stores AI-generated project specifications
+// One-time generation per technology + domain combination (no regeneration)
+export const generatedProjects = pgTable("generated_projects", {
+  id: serial("id").primaryKey(),
+  technology: varchar("technology", { length: 255 }).notNull(),
+  domain: varchar("domain", { length: 255 }).notNull(),
+  projectsJson: text("projects_json").notNull(), // Full ProjectSpecification[] JSON
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Types for TypeScript
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -68,3 +78,5 @@ export type Answer = typeof answers.$inferSelect;
 export type NewAnswer = typeof answers.$inferInsert;
 export type InterviewSummary = typeof interviewSummaries.$inferSelect;
 export type NewInterviewSummary = typeof interviewSummaries.$inferInsert;
+export type GeneratedProject = typeof generatedProjects.$inferSelect;
+export type NewGeneratedProject = typeof generatedProjects.$inferInsert;

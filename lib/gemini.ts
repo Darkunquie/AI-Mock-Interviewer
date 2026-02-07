@@ -6,6 +6,7 @@ const genAI = process.env.GOOGLE_GEMINI_API_KEY
   : null;
 
 export const GEMINI_MODEL = "gemini-2.0-flash-lite"; // Cheapest option
+export const GEMINI_MODEL_PRO = "gemini-2.0-flash"; // Better for detailed content
 
 export async function generateWithGemini(prompt: string): Promise<string> {
   if (!genAI) {
@@ -17,6 +18,26 @@ export async function generateWithGemini(prompt: string): Promise<string> {
     generationConfig: {
       temperature: 0.7,
       maxOutputTokens: 2048,
+      responseMimeType: "application/json",
+    },
+  });
+
+  const result = await model.generateContent(prompt);
+  const response = result.response;
+  return response.text();
+}
+
+// Enhanced Gemini for detailed project generation
+export async function generateDetailedWithGemini(prompt: string): Promise<string> {
+  if (!genAI) {
+    throw new Error("GOOGLE_GEMINI_API_KEY not configured");
+  }
+
+  const model = genAI.getGenerativeModel({
+    model: GEMINI_MODEL_PRO,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 65536, // Maximum for detailed content
       responseMimeType: "application/json",
     },
   });
