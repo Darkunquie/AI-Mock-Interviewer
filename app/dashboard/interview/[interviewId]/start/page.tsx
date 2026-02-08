@@ -15,12 +15,12 @@ import {
   Clock,
   AlertTriangle,
   Flag,
+  Pause,
+  Zap,
+  Info,
+  Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import Link from "next/link";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { useTimer } from "@/hooks/useTimer";
@@ -43,14 +43,13 @@ interface InterviewData {
   }>;
 }
 
-const TIMER_DURATION = 180; // 3 minutes per question
+const TIMER_DURATION = 180;
 
 export default function InterviewStartPage() {
   const params = useParams();
   const router = useRouter();
   const interviewId = params.interviewId as string;
 
-  // State
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [data, setData] = useState<InterviewData | null>(null);
@@ -61,11 +60,8 @@ export default function InterviewStartPage() {
   const [useVoice, setUseVoice] = useState(true);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
-  // Timer hook - always on
   const handleTimeUp = useCallback(() => {
-    toast.warning("Time's up! Moving to the next question.", {
-      icon: <Clock className="h-4 w-4" />,
-    });
+    toast.warning("Time's up! Moving to the next question.");
     if (userAnswer.trim()) {
       handleSubmitAnswer();
     } else {
@@ -85,7 +81,6 @@ export default function InterviewStartPage() {
     onTimeUp: handleTimeUp,
   });
 
-  // Groq Whisper speech-to-text (more accurate than Web Speech API)
   const {
     transcript,
     interimTranscript,
@@ -96,13 +91,11 @@ export default function InterviewStartPage() {
     startRecording: startListening,
     stopRecording: stopListening,
     resetTranscript,
-    requestPermission,
   } = useAudioRecorder({
-    chunkInterval: 4000, // Transcribe every 4 seconds
+    chunkInterval: 4000,
     language: "en",
   });
 
-  // Audio recording is supported in all modern browsers
   const sttSupported = typeof window !== "undefined" && !!navigator.mediaDevices;
 
   const {
@@ -112,7 +105,6 @@ export default function InterviewStartPage() {
     isSupported: ttsSupported,
   } = useTextToSpeech({ rate: 0.95 });
 
-  // Speech analysis for metrics
   const {
     metrics: speechMetrics,
     analyzeTranscript,
@@ -121,7 +113,6 @@ export default function InterviewStartPage() {
     resetMetrics,
   } = useSpeechAnalysis();
 
-  // Fetch interview data function
   const fetchInterview = useCallback(async () => {
     try {
       const response = await fetch(`/api/interview/${interviewId}`);
@@ -150,7 +141,6 @@ export default function InterviewStartPage() {
     fetchInterview();
   }, [fetchInterview]);
 
-  // Update user answer when transcript changes
   useEffect(() => {
     if (transcript) {
       setUserAnswer(transcript);
@@ -158,7 +148,6 @@ export default function InterviewStartPage() {
     }
   }, [transcript, analyzeTranscript]);
 
-  // Speak question when it changes
   useEffect(() => {
     if (data && useVoice && ttsSupported && !showFeedback) {
       const question = data.interview.questions[currentQuestionIndex];
@@ -168,7 +157,6 @@ export default function InterviewStartPage() {
     }
   }, [currentQuestionIndex, data, useVoice, ttsSupported, showFeedback, speak]);
 
-  // Auto-start timer when question changes
   useEffect(() => {
     if (!showFeedback && !loading) {
       resetTimer();
@@ -176,7 +164,6 @@ export default function InterviewStartPage() {
     }
   }, [currentQuestionIndex, showFeedback, loading]);
 
-  // Pause timer when showing feedback
   useEffect(() => {
     if (showFeedback) {
       pauseTimer();
@@ -294,7 +281,6 @@ export default function InterviewStartPage() {
     if (unansweredCount > 0) {
       setShowSubmitDialog(true);
     } else {
-      // All questions answered, submit directly
       handleFinishInterview();
     }
   };
@@ -307,16 +293,10 @@ export default function InterviewStartPage() {
     handleFinishInterview();
   };
 
-  const getTimerColor = () => {
-    if (percentageLeft > 50) return "text-green-500";
-    if (percentageLeft > 25) return "text-yellow-500";
-    return "text-red-500";
-  };
-
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      <div className="fixed inset-0 flex items-center justify-center bg-[#0f0f0f]">
+        <Loader2 className="h-8 w-8 animate-spin text-yellow-400" />
       </div>
     );
   }
@@ -329,454 +309,276 @@ export default function InterviewStartPage() {
   const isLastQuestion = currentQuestionIndex === interview.questions.length - 1;
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-80px)] max-w-3xl flex-col">
-      {/* Progress Header + Timer Row */}
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <div className="flex-1">
-          <div className="mb-1 flex items-center justify-between text-sm text-slate-400">
-            <span>
-              Question {currentQuestionIndex + 1} of {interview.questions.length}
-            </span>
-            <span>{Math.round(progress)}% Complete</span>
+    <div className="h-screen bg-[#0f0f0f] text-white flex flex-col overflow-hidden">
+      {/* Header */}
+      <header className="flex items-center justify-between border-b border-white/[0.08] px-4 py-1.5 bg-[#0f0f0f] shrink-0">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="size-6 bg-yellow-400 rounded flex items-center justify-center">
+            <Zap className="w-4 h-4 text-[#0f0f0f]" />
           </div>
-          <Progress value={progress} className="h-2" />
+          <span className="text-sm font-bold text-white hidden sm:inline">Interview</span>
+        </Link>
+
+        {/* Progress */}
+        <div className="flex flex-col items-center gap-0.5 min-w-[200px]">
+          <div className="flex justify-between w-full text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
+            <span>Q{currentQuestionIndex + 1}/{interview.questions.length}</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="h-full bg-yellow-400 transition-all" style={{ width: `${progress}%` }} />
+          </div>
         </div>
+
+        {/* Timer & Controls */}
         <div className="flex items-center gap-2">
           {!showFeedback && (
-            <div className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 ${percentageLeft <= 25 ? "border-red-500/50 animate-pulse" : "border-slate-700"}`}>
-              <Clock className={`h-4 w-4 ${getTimerColor()}`} />
-              <span className={`text-lg font-bold font-mono ${getTimerColor()}`}>
-                {formatTime(timeLeft)}
-              </span>
-              {percentageLeft <= 25 && (
-                <AlertTriangle className="h-4 w-4 text-red-400" />
-              )}
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded border text-sm ${
+              percentageLeft <= 25 ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-zinc-900 border-zinc-700 text-white"
+            }`}>
+              <Clock className="w-3 h-3" />
+              <span className="font-bold tabular-nums">{formatTime(timeLeft)}</span>
             </div>
           )}
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            onClick={() => setUseVoice(!useVoice)}
+            className="size-7 flex items-center justify-center rounded bg-zinc-800 border border-zinc-700 hover:bg-zinc-700"
+          >
+            {useVoice ? <Volume2 className="w-4 h-4 text-yellow-400" /> : <VolumeX className="w-4 h-4 text-zinc-500" />}
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 flex min-h-0">
+        {/* Left Sidebar */}
+        <aside className="hidden lg:flex flex-col w-52 border-r border-white/[0.08] bg-[#0f0f0f]">
+          <div className="p-3 overflow-y-auto">
+            <h3 className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">Transcript</h3>
+            <div className="space-y-3">
+              <div>
+                <p className="text-[9px] font-bold text-zinc-500 uppercase">Interviewer</p>
+                <p className="text-xs text-zinc-300 leading-relaxed">"{currentQuestion?.text}"</p>
+              </div>
+              {userAnswer && (
+                <div className="border-l-2 border-yellow-400/50 pl-2">
+                  <p className="text-[9px] font-bold text-yellow-400 uppercase">You</p>
+                  <p className="text-xs text-zinc-400 italic">"{userAnswer}"</p>
+                </div>
+              )}
+              {isListening && interimTranscript && (
+                <div className="border-l-2 border-orange-500 pl-2">
+                  <p className="text-[9px] font-bold text-orange-500 uppercase">Live</p>
+                  <p className="text-sm font-medium text-white">"{interimTranscript}"</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
+
+        {/* Center Content */}
+        <section className="flex-1 flex flex-col p-2 overflow-y-auto">
+          <div className="max-w-3xl w-full mx-auto space-y-2 flex-1 flex flex-col">
+            {/* Question Card */}
+            <div className="bg-[#161616] rounded-lg p-3 border border-white/[0.08]">
+              <div className="flex items-center justify-between mb-1">
+                <span className="px-2 py-0.5 bg-yellow-400/10 text-yellow-400 text-[9px] font-black rounded uppercase tracking-wider border border-yellow-400/20">
+                  {currentQuestion?.topic || interview.interviewType}
+                </span>
+                <span className="text-zinc-600 text-[9px] font-bold uppercase">Q{currentQuestionIndex + 1}</span>
+              </div>
+              <h1 className="text-lg font-bold leading-tight text-white">{currentQuestion?.text}</h1>
+              {currentQuestion?.difficulty && (
+                <div className="flex items-center gap-1 pt-1 mt-1 border-t border-white/[0.08]">
+                  <Info className="w-2.5 h-2.5 text-zinc-500" />
+                  <p className="text-[9px] text-zinc-500">Difficulty: <span className="text-zinc-300">{currentQuestion.difficulty}</span></p>
+                </div>
+              )}
+            </div>
+
+            {/* Answer/Feedback Section */}
+            {!showFeedback ? (
+              <div className="bg-[#161616] rounded-lg border border-white/[0.08] flex flex-col flex-1">
+                <div className="px-3 py-1.5 border-b border-white/[0.08] flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-yellow-400" />
+                    <span className="text-xs font-bold text-white">Your Answer</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[9px] font-bold uppercase text-zinc-500">
+                    {isListening && (
+                      <span className="flex items-center gap-1 text-green-400">
+                        <span className="size-1.5 bg-green-400 rounded-full animate-pulse" />
+                        REC
+                      </span>
+                    )}
+                    <span>{userAnswer.length}</span>
+                  </div>
+                </div>
+
+                <textarea
+                  value={userAnswer + (interimTranscript ? " " + interimTranscript : "")}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  placeholder="Type your answer or click mic to speak..."
+                  className="flex-1 p-2 bg-transparent border-none focus:ring-0 focus:outline-none text-sm leading-relaxed text-white placeholder:text-zinc-600 resize-none min-h-[60px]"
+                  disabled={isListening || submitting}
+                />
+
+                <div className="px-2 py-1.5 border-t border-white/[0.08] flex items-center justify-end gap-2">
+                  <button onClick={() => setUserAnswer("")} className="text-[9px] font-bold text-zinc-500 hover:text-white uppercase px-2 py-1">
+                    Clear
+                  </button>
+                  <button
+                    onClick={handleNextQuestion}
+                    disabled={submitting}
+                    className="text-[9px] font-bold text-zinc-400 hover:text-white uppercase px-2 py-1 flex items-center gap-1 border border-zinc-700 rounded"
+                  >
+                    <SkipForward className="w-3 h-3" /> Skip
+                  </button>
+                  <button
+                    onClick={handleSubmitAnswer}
+                    disabled={!userAnswer.trim() || submitting}
+                    className="bg-yellow-400 hover:bg-yellow-300 text-[#0f0f0f] text-[9px] font-black uppercase px-3 py-1.5 rounded disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <>Submit <ArrowRight className="w-3 h-3" /></>}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Feedback */
+              <div className="bg-[#161616] rounded-lg border border-white/[0.08] flex-1 overflow-y-auto">
+                <div className="px-3 py-1.5 border-b border-white/[0.08] flex items-center gap-1.5 bg-green-500/10">
+                  <CheckCircle className="w-3 h-3 text-green-400" />
+                  <span className="text-xs font-bold text-green-400">Evaluated</span>
+                </div>
+                {feedback && (
+                  <div className="p-3 space-y-2">
+                    <div className="grid gap-1.5 grid-cols-4">
+                      <ScoreCard label="Tech" score={feedback.technicalScore} />
+                      <ScoreCard label="Comm" score={feedback.communicationScore} />
+                      <ScoreCard label="Depth" score={feedback.depthScore} />
+                      <div className="rounded bg-yellow-400/10 border border-yellow-400/20 p-2 text-center">
+                        <p className="text-[8px] text-yellow-400/70 uppercase font-bold">Overall</p>
+                        <p className="text-lg font-black text-yellow-400">{feedback.overallScore}%</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-1.5 grid-cols-2">
+                      <div className="rounded bg-green-500/10 border border-green-500/20 p-2">
+                        <h4 className="text-[10px] font-bold text-green-400 mb-1">Strengths</h4>
+                        <ul className="space-y-0.5 text-[10px] text-zinc-300">
+                          {feedback.strengths.slice(0, 2).map((s, i) => <li key={i}>• {s}</li>)}
+                        </ul>
+                      </div>
+                      <div className="rounded bg-orange-500/10 border border-orange-500/20 p-2">
+                        <h4 className="text-[10px] font-bold text-orange-400 mb-1">Improve</h4>
+                        <ul className="space-y-0.5 text-[10px] text-zinc-300">
+                          {feedback.weaknesses.slice(0, 2).map((w, i) => <li key={i}>• {w}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleNextQuestion}
+                        disabled={submitting}
+                        className="bg-yellow-400 hover:bg-yellow-300 text-[#0f0f0f] text-[9px] font-black uppercase px-3 py-1.5 rounded disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : isLastQuestion ? <>Finish</> : <>Next <ArrowRight className="w-3 h-3" /></>}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Right Sidebar */}
+        <aside className="hidden xl:flex flex-col w-44 border-l border-white/[0.08] bg-[#0f0f0f]">
+          <div className="p-3 overflow-y-auto">
+            <h3 className="text-[9px] font-black text-zinc-500 uppercase mb-3">Feedback</h3>
+            <div className="space-y-2">
+              <div className="p-2 rounded bg-[#161616] border border-white/[0.08]">
+                <div className="flex justify-between items-center">
+                  <p className="text-zinc-500 text-[9px] font-bold uppercase">Pace</p>
+                  <Zap className="w-3 h-3 text-yellow-400" />
+                </div>
+                <p className="text-white text-xl font-black">{speechMetrics.averageWPM || 0} <span className="text-[10px] font-normal text-zinc-500">WPM</span></p>
+              </div>
+              <div className="p-2 rounded bg-[#161616] border border-white/[0.08]">
+                <div className="flex justify-between items-center">
+                  <p className="text-zinc-500 text-[9px] font-bold uppercase">Fillers</p>
+                  {speechMetrics.fillerWords.total > 3 ? <AlertTriangle className="w-3 h-3 text-orange-500" /> : <CheckCircle className="w-3 h-3 text-green-500" />}
+                </div>
+                <p className="text-white text-xl font-black">{speechMetrics.fillerWords.total}</p>
+              </div>
+              <div className="p-2 rounded bg-yellow-400/5 border border-yellow-400/10">
+                <p className="text-[9px] font-bold text-yellow-400 uppercase mb-1">AI Tip</p>
+                <p className="text-[10px] text-zinc-400">{isListening ? "Speak clearly." : "Click mic to speak."}</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      {/* Footer */}
+      <footer className="h-14 shrink-0 bg-[#161616] border-t border-white/[0.08] px-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleToggleRecording}
+            disabled={submitting || showFeedback || permissionStatus === 'denied'}
+            className={`size-10 rounded-full flex items-center justify-center transition-all ${
+              isListening ? "bg-red-500 hover:bg-red-600 animate-pulse" : "bg-yellow-400 hover:bg-yellow-300"
+            } disabled:opacity-50`}
+          >
+            {isListening ? <MicOff className="w-5 h-5 text-white" /> : <Mic className="w-5 h-5 text-[#0f0f0f]" />}
+          </button>
+          <span className={`text-[9px] font-black uppercase ${isListening ? "text-red-400" : "text-yellow-400"}`}>
+            {isListening ? (isTranscribing ? "..." : "REC") : "MIC"}
+          </span>
+          {isListening && (
+            <div className="flex items-center gap-0.5 h-6 px-2 bg-zinc-800 rounded-full">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="w-0.5 bg-yellow-400 rounded-full animate-pulse" style={{ height: `${6 + Math.random() * 10}px` }} />
+              ))}
+            </div>
+          )}
+          {sttError && <span className="text-orange-400 text-[10px]">{sttError}</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={pauseTimer} className="flex items-center gap-1 px-3 h-8 rounded border border-zinc-700 text-zinc-300 font-bold text-[10px] hover:bg-zinc-800 uppercase">
+            <Pause className="w-3 h-3" /> Pause
+          </button>
+          <button
             onClick={handleSubmitTest}
             disabled={submitting}
-            className="gap-2 border-slate-600 text-slate-300 hover:text-white hover:border-blue-500"
+            className="flex items-center gap-1 px-3 h-8 rounded bg-red-500 hover:bg-red-600 text-white font-bold text-[10px] disabled:opacity-50 uppercase"
           >
-            <Flag className="h-4 w-4" />
-            Submit Test
-          </Button>
+            <Flag className="w-3 h-3" /> End
+          </button>
         </div>
-      </div>
+      </footer>
 
-      {/* Voice Toggle - compact */}
-      <div className="mb-3 flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setUseVoice(!useVoice)}
-          className="gap-2 border-slate-600 h-8 text-xs"
-        >
-          {useVoice ? (
-            <>
-              <Volume2 className="h-3 w-3" /> Voice On
-            </>
-          ) : (
-            <>
-              <VolumeX className="h-3 w-3" /> Voice Off
-            </>
-          )}
-        </Button>
-      </div>
-
-      {/* Question Card - compact */}
-      <Card className="mb-3 border-slate-700 bg-slate-800/50 shrink-0">
-        <CardContent className="py-4">
-          <div className="mb-2 flex items-center gap-2">
-            <Badge variant="outline" className="text-slate-300 border-slate-500">
-              {currentQuestion.difficulty}
-            </Badge>
-            <Badge variant="outline" className="text-slate-300 border-slate-500">
-              {currentQuestion.topic}
-            </Badge>
-          </div>
-          <h2 className="text-lg font-medium text-white leading-snug">{currentQuestion.text}</h2>
-          {isSpeaking && (
-            <div className="mt-2 flex items-center gap-2 text-blue-400">
-              <Volume2 className="h-3 w-3 animate-pulse" />
-              <span className="text-xs">Speaking...</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Answer / Feedback Section - fills remaining space */}
-      {!showFeedback ? (
-        <Card className="flex min-h-0 flex-1 flex-col border-slate-700 bg-slate-800/50">
-          <CardContent className="flex flex-1 flex-col py-4">
-            <div className="mb-2 space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-white">Your Answer</h3>
-                {sttSupported ? (
-                  <Button
-                    variant={isListening ? "destructive" : "outline"}
-                    size="sm"
-                    onClick={handleToggleRecording}
-                    className="gap-2 h-8 text-xs"
-                    disabled={submitting}
-                  >
-                    {isListening ? (
-                      <>
-                        <MicOff className="h-3 w-3" /> Stop Recording
-                      </>
-                    ) : (
-                      <>
-                        <Mic className="h-3 w-3" /> Start Recording
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    Speech not supported
-                  </Badge>
-                )}
-              </div>
-              {/* Permission Status Warning */}
-              {permissionStatus === 'denied' && !sttError && (
-                <div className="rounded-lg bg-red-500/10 p-2 text-red-300 border border-red-500/20">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                    <div className="text-xs">
-                      <p className="font-medium">Microphone access is blocked</p>
-                      <p className="mt-1 text-red-400/80">
-                        Please allow microphone access in your browser settings and refresh the page.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {permissionStatus === 'prompt' && !isListening && (
-                <div className="rounded-lg bg-blue-500/10 p-2 text-blue-300 border border-blue-500/20">
-                  <div className="flex items-start gap-2">
-                    <Mic className="h-4 w-4 mt-0.5 shrink-0" />
-                    <div className="text-xs flex-1">
-                      <p className="font-medium">Microphone permission needed</p>
-                      <p className="mt-1 text-blue-400/80">
-                        Click "Start Recording" to allow microphone access for voice input.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {sttError && (
-                <div className="rounded-lg bg-yellow-500/10 p-2 text-yellow-300 border border-yellow-500/20">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                    <div className="text-xs">
-                      <p className="font-medium">{sttError}</p>
-                      {sttError.includes("denied") && (
-                        <p className="mt-1 text-yellow-400/80">
-                          Click the microphone icon in your browser's address bar to allow access, then refresh the page.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {isListening && (
-              <div className="mb-2 space-y-1">
-                {/* Compact recording indicator with inline metrics */}
-                <div className="flex items-center justify-between gap-2 rounded-lg bg-red-500/10 px-3 py-1.5 text-red-400">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
-                    <span className="text-xs">
-                      {isTranscribing ? "Transcribing..." : "Recording..."}
-                    </span>
-                  </div>
-                  {/* Inline speech metrics */}
-                  {speechMetrics.totalWords > 0 && (
-                    <div className="flex items-center gap-3 text-xs">
-                      <div className="flex items-center gap-1">
-                        <span className="text-slate-400">Fillers:</span>
-                        <span className={`font-bold ${
-                          speechMetrics.fillerWords.total > 5 ? "text-red-400" :
-                          speechMetrics.fillerWords.total > 2 ? "text-yellow-400" :
-                          "text-green-400"
-                        }`}>
-                          {speechMetrics.fillerWords.total}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-slate-400">Pace:</span>
-                        <span className={`font-bold ${
-                          speechMetrics.averageWPM < 120 ? "text-yellow-400" :
-                          speechMetrics.averageWPM > 180 ? "text-red-400" :
-                          "text-green-400"
-                        }`}>
-                          {speechMetrics.averageWPM} WPM
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Interim transcript - what's being heard */}
-                {interimTranscript && (
-                  <div className="rounded-lg bg-green-500/10 px-3 py-1.5 text-green-300 border border-green-500/20">
-                    <span className="text-xs font-medium">Hearing: </span>
-                    <span className="text-xs italic">{interimTranscript}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <Textarea
-              value={userAnswer + (interimTranscript ? " " + interimTranscript : "")}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              placeholder={
-                sttSupported
-                  ? "Click 'Start Recording' to speak or type your answer here..."
-                  : "Type your answer here..."
-              }
-              className="flex-1 resize-none border-slate-600 bg-slate-700 text-white placeholder:text-slate-500"
-              disabled={isListening || submitting}
-            />
-
-            <div className="mt-3 flex justify-end gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNextQuestion}
-                className="gap-2 border-slate-600"
-                disabled={submitting}
-              >
-                <SkipForward className="h-4 w-4" /> Skip
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSubmitAnswer}
-                disabled={!userAnswer.trim() || submitting}
-                className="gap-2"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Evaluating...
-                  </>
-                ) : (
-                  <>
-                    Submit Answer <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        /* Feedback Section - scrollable within viewport */
-        <Card className="flex min-h-0 flex-1 flex-col border-slate-700 bg-slate-800/50">
-          <CardContent className="flex-1 overflow-y-auto py-4">
-            <div className="mb-4 flex items-center gap-3">
-              <CheckCircle className="h-6 w-6 text-green-500" />
-              <div>
-                <h3 className="font-medium text-white">Answer Evaluated</h3>
-                <p className="text-xs text-slate-400">Here&apos;s your feedback</p>
-              </div>
-            </div>
-
-            {feedback && (
-              <div className="space-y-4">
-                {/* Scores */}
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <ScoreCard label="Technical" score={feedback.technicalScore} />
-                  <ScoreCard label="Communication" score={feedback.communicationScore} />
-                  <ScoreCard label="Depth" score={feedback.depthScore} />
-                </div>
-
-                {/* Overall Score */}
-                <div className="rounded-lg bg-slate-700/50 p-3 text-center">
-                  <p className="text-xs text-slate-400">Overall Score</p>
-                  <p className="text-3xl font-bold text-white">{feedback.overallScore}%</p>
-                </div>
-
-                {/* Speech Metrics */}
-                {(feedback.fillerWordCount !== undefined || feedback.wordsPerMinute !== undefined) && (
-                  <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3">
-                    <h4 className="mb-2 text-sm font-medium text-purple-400">Communication Metrics</h4>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {feedback.fillerWordCount !== undefined && (
-                        <div className="rounded bg-slate-700/30 p-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-400">Filler Words</span>
-                            <span className={`text-lg font-bold ${
-                              feedback.fillerWordCount > 5 ? "text-red-400" :
-                              feedback.fillerWordCount > 2 ? "text-yellow-400" :
-                              "text-green-400"
-                            }`}>
-                              {feedback.fillerWordCount}
-                            </span>
-                          </div>
-                          {feedback.fillerWords && Object.keys(feedback.fillerWords).length > 0 && (
-                            <div className="mt-1 text-xs text-slate-500">
-                              {Object.entries(feedback.fillerWords)
-                                .slice(0, 3)
-                                .map(([word, count]) => (
-                                  <span key={word} className="mr-2">
-                                    "{word}": {count}
-                                  </span>
-                                ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {feedback.wordsPerMinute !== undefined && (
-                        <div className="rounded bg-slate-700/30 p-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-400">Speaking Pace</span>
-                            <span className={`text-lg font-bold ${
-                              feedback.wordsPerMinute < 120 ? "text-yellow-400" :
-                              feedback.wordsPerMinute > 180 ? "text-red-400" :
-                              feedback.wordsPerMinute >= 140 && feedback.wordsPerMinute <= 160 ? "text-green-400" :
-                              "text-blue-400"
-                            }`}>
-                              {feedback.wordsPerMinute} WPM
-                            </span>
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {feedback.wordsPerMinute < 120 ? "Too slow" :
-                             feedback.wordsPerMinute > 180 ? "Too fast" :
-                             feedback.wordsPerMinute >= 140 && feedback.wordsPerMinute <= 160 ? "Perfect!" :
-                             "Good"}
-                            {" • Optimal: 140-160 WPM"}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Strengths & Weaknesses */}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg bg-green-500/10 p-3">
-                    <h4 className="mb-1 text-sm font-medium text-green-400">Strengths</h4>
-                    <ul className="space-y-1 text-xs text-slate-300">
-                      {feedback.strengths.map((s, i) => (
-                        <li key={i}>• {s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="rounded-lg bg-yellow-500/10 p-3">
-                    <h4 className="mb-1 text-sm font-medium text-yellow-400">Areas to Improve</h4>
-                    <ul className="space-y-1 text-xs text-slate-300">
-                      {feedback.weaknesses.map((w, i) => (
-                        <li key={i}>• {w}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Ideal Answer */}
-                <div className="rounded-lg bg-blue-500/10 p-3">
-                  <h4 className="mb-1 text-sm font-medium text-blue-400">Model Answer</h4>
-                  <p className="text-xs text-slate-300">{feedback.idealAnswer}</p>
-                </div>
-
-                {/* Encouragement */}
-                <div className="rounded-lg bg-purple-500/10 p-3">
-                  <p className="text-xs text-slate-300">{feedback.encouragement}</p>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-4 flex justify-end">
-              <Button size="sm" onClick={handleNextQuestion} className="gap-2" disabled={submitting}>
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Processing...
-                  </>
-                ) : isLastQuestion ? (
-                  <>
-                    Finish Interview <CheckCircle className="h-4 w-4" />
-                  </>
-                ) : (
-                  <>
-                    Next Question <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Submit Test Confirmation Dialog */}
+      {/* Dialog */}
       {showSubmitDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-md border-slate-700 bg-slate-800 shadow-2xl">
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="rounded-full bg-yellow-500/20 p-2">
-                  <AlertTriangle className="h-6 w-6 text-yellow-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Submit Test Early?</h3>
-                  <p className="text-sm text-slate-400">
-                    You have unanswered questions remaining
-                  </p>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="w-full max-w-xs bg-[#161616] border border-white/[0.08] rounded-lg p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+              <h3 className="text-sm font-bold text-white">Submit Early?</h3>
+            </div>
+            {data && (
+              <div className="mb-3 rounded bg-zinc-800/50 p-2 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-zinc-500">Total:</span><span className="text-white">{data.interview.questions.length}</span></div>
+                <div className="flex justify-between"><span className="text-zinc-500">Done:</span><span className="text-green-400">{data.answers.length}</span></div>
+                <div className="flex justify-between"><span className="text-zinc-500">Skip:</span><span className="text-orange-400">{data.interview.questions.length - data.answers.length}</span></div>
               </div>
-
-              {data && (
-                <div className="mb-6 space-y-2 rounded-lg bg-slate-700/50 p-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Total Questions:</span>
-                    <span className="font-medium text-white">{data.interview.questions.length}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Answered:</span>
-                    <span className="font-medium text-green-400">{data.answers.length}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Unanswered:</span>
-                    <span className="font-medium text-yellow-400">
-                      {data.interview.questions.length - data.answers.length}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <p className="mb-6 text-sm text-slate-300">
-                Are you sure you want to submit the test now? Unanswered questions will be skipped and won&apos;t be scored.
-              </p>
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSubmitDialog(false)}
-                  className="flex-1 border-slate-600 text-slate-300 hover:text-white"
-                  disabled={submitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={confirmSubmitTest}
-                  disabled={submitting}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Flag className="mr-2 h-4 w-4" />
-                      Submit Now
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => setShowSubmitDialog(false)} className="flex-1 px-2 py-1.5 rounded border border-zinc-700 text-zinc-300 text-[10px] font-bold uppercase">Cancel</button>
+              <button onClick={confirmSubmitTest} disabled={submitting} className="flex-1 px-2 py-1.5 rounded bg-yellow-400 text-[#0f0f0f] text-[10px] font-bold uppercase flex items-center justify-center gap-1">
+                {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Flag className="w-3 h-3" /> Submit</>}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -784,16 +586,17 @@ export default function InterviewStartPage() {
 }
 
 function ScoreCard({ label, score }: { label: string; score: number }) {
-  const getColor = (score: number) => {
-    if (score >= 8) return "text-green-500";
-    if (score >= 6) return "text-yellow-500";
-    return "text-red-500";
+  const color = score >= 8 ? "green" : score >= 6 ? "yellow" : "red";
+  const colorClasses = {
+    green: "text-green-400 border-green-500/20 bg-green-500/10",
+    yellow: "text-yellow-400 border-yellow-500/20 bg-yellow-500/10",
+    red: "text-red-400 border-red-500/20 bg-red-500/10",
   };
 
   return (
-    <div className="rounded-lg bg-slate-700/50 p-3 text-center">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className={`text-xl font-bold ${getColor(score)}`}>{score}/10</p>
+    <div className={`rounded border p-2 text-center ${colorClasses[color]}`}>
+      <p className="text-[8px] opacity-70 uppercase font-bold">{label}</p>
+      <p className="text-lg font-black">{score}/10</p>
     </div>
   );
 }
