@@ -311,7 +311,7 @@ export default function InterviewStartPage() {
   return (
     <div className="h-screen bg-[#0f0f0f] text-white flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-white/[0.08] px-4 py-1.5 bg-[#0f0f0f] shrink-0">
+      <header className="flex items-center justify-between border-b border-white/[0.08] px-6 py-3 bg-[#0f0f0f] shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="size-6 bg-yellow-400 rounded flex items-center justify-center">
             <Zap className="w-4 h-4 text-[#0f0f0f]" />
@@ -352,24 +352,24 @@ export default function InterviewStartPage() {
       {/* Main Content */}
       <main className="flex-1 flex min-h-0">
         {/* Left Sidebar */}
-        <aside className="hidden lg:flex flex-col w-52 border-r border-white/[0.08] bg-[#0f0f0f]">
-          <div className="p-3 overflow-y-auto">
-            <h3 className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">Transcript</h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-[9px] font-bold text-zinc-500 uppercase">Interviewer</p>
-                <p className="text-xs text-zinc-300 leading-relaxed">"{currentQuestion?.text}"</p>
+        <aside className="hidden lg:flex flex-col w-64 border-r border-white/[0.08] bg-[#0f0f0f]">
+          <div className="p-4 overflow-y-auto">
+            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Transcript</h3>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-zinc-400">Interviewer</p>
+                <p className="text-sm text-zinc-300 leading-relaxed">"{currentQuestion?.text}"</p>
               </div>
               {userAnswer && (
-                <div className="border-l-2 border-yellow-400/50 pl-2">
-                  <p className="text-[9px] font-bold text-yellow-400 uppercase">You</p>
-                  <p className="text-xs text-zinc-400 italic">"{userAnswer}"</p>
+                <div className="space-y-1 border-l-2 border-yellow-400/30 pl-3">
+                  <p className="text-xs font-bold text-yellow-400">You</p>
+                  <p className="text-sm text-zinc-400 italic">"{userAnswer}"</p>
                 </div>
               )}
               {isListening && interimTranscript && (
-                <div className="border-l-2 border-orange-500 pl-2">
-                  <p className="text-[9px] font-bold text-orange-500 uppercase">Live</p>
-                  <p className="text-sm font-medium text-white">"{interimTranscript}"</p>
+                <div className="space-y-1 border-l-2 border-yellow-400 pl-3">
+                  <p className="text-xs font-bold text-yellow-400">You (Live)</p>
+                  <p className="text-lg font-medium text-white leading-snug">"{interimTranscript}"</p>
                 </div>
               )}
             </div>
@@ -377,10 +377,10 @@ export default function InterviewStartPage() {
         </aside>
 
         {/* Center Content */}
-        <section className="flex-1 flex flex-col p-2 overflow-y-auto">
-          <div className="max-w-3xl w-full mx-auto space-y-2 flex-1 flex flex-col">
+        <section className="flex-1 flex flex-col p-4 overflow-hidden">
+          <div className="max-w-4xl w-full mx-auto space-y-4 flex-1 flex flex-col">
             {/* Question Card */}
-            <div className="bg-[#161616] rounded-lg p-3 border border-white/[0.08]">
+            <div className="bg-[#161616] rounded-xl p-5 border border-white/[0.08] shadow-sm shrink-0">
               <div className="flex items-center justify-between mb-1">
                 <span className="px-2 py-0.5 bg-yellow-400/10 text-yellow-400 text-[9px] font-black rounded uppercase tracking-wider border border-yellow-400/20">
                   {currentQuestion?.topic || interview.interviewType}
@@ -398,8 +398,8 @@ export default function InterviewStartPage() {
 
             {/* Answer/Feedback Section */}
             {!showFeedback ? (
-              <div className="bg-[#161616] rounded-lg border border-white/[0.08] flex flex-col flex-1">
-                <div className="px-3 py-1.5 border-b border-white/[0.08] flex items-center justify-between">
+              <div className="bg-[#161616] rounded-xl border border-white/[0.08] flex flex-col flex-1 min-h-0">
+                <div className="px-3 py-1 border-b border-white/[0.08] flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="w-3 h-3 text-yellow-400" />
                     <span className="text-xs font-bold text-white">Your Answer</span>
@@ -419,11 +419,11 @@ export default function InterviewStartPage() {
                   value={userAnswer + (interimTranscript ? " " + interimTranscript : "")}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   placeholder="Type your answer or click mic to speak..."
-                  className="flex-1 p-2 bg-transparent border-none focus:ring-0 focus:outline-none text-sm leading-relaxed text-white placeholder:text-zinc-600 resize-none min-h-[60px]"
+                  className="p-4 bg-transparent border-none focus:ring-0 focus:outline-none text-base leading-relaxed text-white placeholder:text-zinc-600 resize-none flex-1"
                   disabled={isListening || submitting}
                 />
 
-                <div className="px-2 py-1.5 border-t border-white/[0.08] flex items-center justify-end gap-2">
+                <div className="px-2 py-1 border-t border-white/[0.08] flex items-center justify-end gap-2">
                   <button onClick={() => setUserAnswer("")} className="text-[9px] font-bold text-zinc-500 hover:text-white uppercase px-2 py-1">
                     Clear
                   </button>
@@ -492,27 +492,30 @@ export default function InterviewStartPage() {
         </section>
 
         {/* Right Sidebar */}
-        <aside className="hidden xl:flex flex-col w-44 border-l border-white/[0.08] bg-[#0f0f0f]">
-          <div className="p-3 overflow-y-auto">
-            <h3 className="text-[9px] font-black text-zinc-500 uppercase mb-3">Feedback</h3>
-            <div className="space-y-2">
-              <div className="p-2 rounded bg-[#161616] border border-white/[0.08]">
-                <div className="flex justify-between items-center">
-                  <p className="text-zinc-500 text-[9px] font-bold uppercase">Pace</p>
-                  <Zap className="w-3 h-3 text-yellow-400" />
+        <aside className="hidden xl:flex flex-col w-56 border-l border-white/[0.08] bg-[#0f0f0f]">
+          <div className="p-4 overflow-y-auto">
+            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Feedback</h3>
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-[#161616] border border-white/[0.08]">
+                <div className="flex justify-between items-center mb-1">
+                  <p className="text-zinc-500 text-[10px] font-bold uppercase">Pace</p>
+                  <Zap className="w-4 h-4 text-yellow-400" />
                 </div>
-                <p className="text-white text-xl font-black">{speechMetrics.averageWPM || 0} <span className="text-[10px] font-normal text-zinc-500">WPM</span></p>
+                <p className="text-white text-2xl font-bold tabular-nums">{speechMetrics.averageWPM || 0} <span className="text-xs font-normal text-zinc-400">WPM</span></p>
               </div>
-              <div className="p-2 rounded bg-[#161616] border border-white/[0.08]">
-                <div className="flex justify-between items-center">
-                  <p className="text-zinc-500 text-[9px] font-bold uppercase">Fillers</p>
-                  {speechMetrics.fillerWords.total > 3 ? <AlertTriangle className="w-3 h-3 text-orange-500" /> : <CheckCircle className="w-3 h-3 text-green-500" />}
+              <div className="p-3 rounded-lg bg-[#161616] border border-white/[0.08]">
+                <div className="flex justify-between items-center mb-1">
+                  <p className="text-zinc-500 text-[10px] font-bold uppercase">Fillers</p>
+                  {speechMetrics.fillerWords.total > 3 ? <AlertTriangle className="w-4 h-4 text-orange-500" /> : <CheckCircle className="w-4 h-4 text-green-500" />}
                 </div>
-                <p className="text-white text-xl font-black">{speechMetrics.fillerWords.total}</p>
+                <p className="text-white text-2xl font-bold tabular-nums">{speechMetrics.fillerWords.total}</p>
               </div>
-              <div className="p-2 rounded bg-yellow-400/5 border border-yellow-400/10">
-                <p className="text-[9px] font-bold text-yellow-400 uppercase mb-1">AI Tip</p>
-                <p className="text-[10px] text-zinc-400">{isListening ? "Speak clearly." : "Click mic to speak."}</p>
+              <div className="p-3 rounded-lg bg-yellow-400/5 border border-yellow-400/10">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Sparkles className="w-3 h-3 text-yellow-400" />
+                  <p className="text-[10px] font-bold text-yellow-400 uppercase">AI Tip</p>
+                </div>
+                <p className="text-[11px] leading-relaxed text-zinc-400">{isListening ? "Speak clearly." : "Click mic to speak."}</p>
               </div>
             </div>
           </div>
@@ -520,39 +523,41 @@ export default function InterviewStartPage() {
       </main>
 
       {/* Footer */}
-      <footer className="h-14 shrink-0 bg-[#161616] border-t border-white/[0.08] px-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleToggleRecording}
-            disabled={submitting || showFeedback || permissionStatus === 'denied'}
-            className={`size-10 rounded-full flex items-center justify-center transition-all ${
-              isListening ? "bg-red-500 hover:bg-red-600 animate-pulse" : "bg-yellow-400 hover:bg-yellow-300"
-            } disabled:opacity-50`}
-          >
-            {isListening ? <MicOff className="w-5 h-5 text-white" /> : <Mic className="w-5 h-5 text-[#0f0f0f]" />}
-          </button>
-          <span className={`text-[9px] font-black uppercase ${isListening ? "text-red-400" : "text-yellow-400"}`}>
-            {isListening ? (isTranscribing ? "..." : "REC") : "MIC"}
-          </span>
+      <footer className="h-20 shrink-0 bg-[#161616] border-t border-white/[0.08] px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4 flex-1">
+          <div className="flex flex-col items-center gap-0.5">
+            <button
+              onClick={handleToggleRecording}
+              disabled={submitting || showFeedback || permissionStatus === 'denied'}
+              className={`size-12 rounded-full flex items-center justify-center transition-all ${
+                isListening ? "bg-red-500 hover:bg-red-600 animate-pulse" : "bg-yellow-400 hover:bg-yellow-300"
+              } disabled:opacity-50`}
+            >
+              {isListening ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-[#0f0f0f]" />}
+            </button>
+            <span className={`text-[8px] font-black uppercase ${isListening ? "text-red-400" : "text-yellow-400"}`}>
+              {isListening ? "REC" : "MIC"}
+            </span>
+          </div>
           {isListening && (
-            <div className="flex items-center gap-0.5 h-6 px-2 bg-zinc-800 rounded-full">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="w-0.5 bg-yellow-400 rounded-full animate-pulse" style={{ height: `${6 + Math.random() * 10}px` }} />
+            <div className="flex items-center gap-0.5 h-8 px-3 bg-zinc-800/50 rounded-full">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="w-0.5 bg-yellow-400 rounded-full animate-pulse" style={{ height: `${6 + Math.random() * 14}px` }} />
               ))}
             </div>
           )}
-          {sttError && <span className="text-orange-400 text-[10px]">{sttError}</span>}
+          {sttError && <span className="text-orange-400 text-xs">{sttError}</span>}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={pauseTimer} className="flex items-center gap-1 px-3 h-8 rounded border border-zinc-700 text-zinc-300 font-bold text-[10px] hover:bg-zinc-800 uppercase">
-            <Pause className="w-3 h-3" /> Pause
+          <button onClick={pauseTimer} className="flex items-center gap-1.5 px-4 h-9 rounded-lg border border-zinc-700 text-zinc-300 font-bold text-xs hover:bg-zinc-800 transition-colors">
+            <Pause className="w-3.5 h-3.5" /> Pause
           </button>
           <button
             onClick={handleSubmitTest}
             disabled={submitting}
-            className="flex items-center gap-1 px-3 h-8 rounded bg-red-500 hover:bg-red-600 text-white font-bold text-[10px] disabled:opacity-50 uppercase"
+            className="flex items-center gap-1.5 px-4 h-9 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-xs disabled:opacity-50 transition-all"
           >
-            <Flag className="w-3 h-3" /> End
+            <Flag className="w-3.5 h-3.5" /> End
           </button>
         </div>
       </footer>
