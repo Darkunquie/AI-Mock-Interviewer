@@ -23,7 +23,6 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
   const { lang = "en-US", rate = 1, pitch = 1, volume = 1 } = options;
 
   const [isSpeaking, setIsSpeaking] = useState(false);
-  // Initialize isSupported synchronously to avoid setState in effect
   const [isSupported] = useState(() =>
     typeof window !== "undefined" && !!window.speechSynthesis
   );
@@ -31,74 +30,112 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
 
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const voiceSelectedRef = useRef(false);
 
+  // Load voices once on mount
   useEffect(() => {
-    if (isSupported) {
+    if (!isSupported) return;
 
-      const loadVoices = () => {
-        const availableVoices = window.speechSynthesis.getVoices();
-        setVoices(availableVoices);
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      if (availableVoices.length === 0) return;
 
-        // Select a good default voice (prefer natural-sounding English voices)
-        if (!selectedVoice && availableVoices.length > 0) {
-          const preferredVoice =
-            availableVoices.find(
-              (v) =>
-                v.lang.startsWith("en") &&
-                (v.name.includes("Natural") ||
-                  v.name.includes("Google") ||
-                  v.name.includes("Microsoft") ||
-                  v.name.includes("Samantha") ||
-                  v.name.includes("Daniel"))
-            ) ||
-            availableVoices.find((v) => v.lang.startsWith("en")) ||
-            availableVoices[0];
+      setVoices(availableVoices);
 
-          setSelectedVoice(preferredVoice);
-        }
-      };
+      // Only set voice once to prevent re-render loops
+      if (!voiceSelectedRef.current) {
+        voiceSelectedRef.current = true;
+        const preferredVoice =
+          availableVoices.find(
+            (v) =>
+              v.lang.startsWith("en") &&
+              (v.name.includes("Natural") ||
+                v.name.includes("Google") ||
+                v.name.includes("Microsoft") ||
+                v.name.includes("Samantha") ||
+                v.name.includes("Daniel"))
+          ) ||
+          availableVoices.find((v) => v.lang.startsWith("en")) ||
+          availableVoices[0];
 
-      // Load voices immediately if available
-      loadVoices();
+        setSelectedVoice(preferredVoice);
+      }
+    };
 
-      // Also listen for voices changed event (Chrome loads voices asynchronously)
-      window.speechSynthesis.onvoiceschanged = loadVoices;
+    // Try loading immediately
+    loadVoices();
 
-      return () => {
-        window.speechSynthesis.onvoiceschanged = null;
-      };
-    }
-  }, [isSupported, selectedVoice]);
+    // Chrome loads voices async - listen for the event
+    const handleVoicesChanged = () => loadVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged);
+
+    return () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
+    };
+  }, [isSupported]);
 
   const speak = useCallback(
     (text: string) => {
       if (!isSupported || !text) return;
 
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
+      try {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;
-      utterance.rate = rate;
-      utterance.pitch = pitch;
-      utterance.volume = volume;
-
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-      }
-
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = (event) => {
-        // Only log actual errors, not interruptions (which happen on navigation/cancel)
-        if (event.error && event.error !== "interrupted" && event.error !== "canceled") {
-          console.warn("Speech synthesis error:", event.error);
+        // Chrome bug fix: resume if paused
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
         }
-        setIsSpeaking(false);
-      };
 
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        utterance.rate = rate;
+        utterance.pitch = pitch;
+        utterance.volume = volume;
+
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = (event) => {
+          if (event.error && event.error !== "interrupted" && event.error !== "canceled") {
+            console.warn("Speech synthesis error:", event.error);
+          }
+          setIsSpeaking(false);
+        };
+
+        // Chrome bug: speech stops after ~15 seconds
+        // Workaround: pause/resume every 10 seconds
+        let resumeInterval: NodeJS.Timeout | null = null;
+        utterance.onstart = () => {
+          setIsSpeaking(true);
+          resumeInterval = setInterval(() => {
+            if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+              window.speechSynthesis.pause();
+              window.speechSynthesis.resume();
+            }
+          }, 10000);
+        };
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          if (resumeInterval) clearInterval(resumeInterval);
+        };
+        utterance.onerror = (event) => {
+          if (event.error && event.error !== "interrupted" && event.error !== "canceled") {
+            console.warn("Speech synthesis error:", event.error);
+          }
+          setIsSpeaking(false);
+          if (resumeInterval) clearInterval(resumeInterval);
+        };
+
+        utteranceRef.current = utterance;
+        window.speechSynthesis.speak(utterance);
+      } catch (error) {
+        console.warn("TTS speak failed:", error);
+        setIsSpeaking(false);
+      }
     },
     [isSupported, lang, rate, pitch, volume, selectedVoice]
   );
@@ -108,6 +145,15 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
     }
+  }, [isSupported]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isSupported) {
+        window.speechSynthesis.cancel();
+      }
+    };
   }, [isSupported]);
 
   return {

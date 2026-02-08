@@ -111,6 +111,7 @@ export default function FlashCardsPage() {
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<StudySession | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   const technologies = Object.keys(TECH_TOPICS);
   const topics = technology ? TECH_TOPICS[technology] || [] : [];
@@ -158,11 +159,11 @@ export default function FlashCardsPage() {
     if (!session) return;
 
     const newStats = { ...session.stats };
-    if (wasCorrect !== undefined) {
-      newStats.reviewed++;
-      if (wasCorrect) newStats.correct++;
-      else newStats.incorrect++;
-    }
+    // Always count as reviewed (including skips)
+    newStats.reviewed++;
+    if (wasCorrect === true) newStats.correct++;
+    else if (wasCorrect === false) newStats.incorrect++;
+    // Skip (undefined) = reviewed but neither correct nor incorrect
 
     if (session.currentIndex < session.cards.length - 1) {
       setSession({
@@ -172,7 +173,7 @@ export default function FlashCardsPage() {
       });
       setIsFlipped(false);
     } else {
-      // Session complete
+      // Session complete - update stats to trigger completion screen
       setSession({ ...session, stats: newStats });
     }
   };
@@ -194,8 +195,14 @@ export default function FlashCardsPage() {
   };
 
   const endSession = () => {
+    // Show results before ending
+    setShowResults(true);
+  };
+
+  const finalEndSession = () => {
     setSession(null);
     setIsFlipped(false);
+    setShowResults(false);
   };
 
   // Study mode
@@ -203,14 +210,21 @@ export default function FlashCardsPage() {
     const currentCard = session.cards[session.currentIndex];
     const isComplete = session.stats.reviewed === session.cards.length;
 
-    if (isComplete) {
-      const percentage = Math.round((session.stats.correct / session.stats.total) * 100);
+    // Show results screen when complete OR when user clicks "End Session"
+    if (isComplete || showResults) {
+      const reviewed = session.stats.reviewed || 0;
+      const correct = session.stats.correct || 0;
+      const incorrect = session.stats.incorrect || 0;
+      const skipped = reviewed - correct - incorrect;
+      const percentage = reviewed > 0 ? Math.round((correct / reviewed) * 100) : 0;
 
       return (
         <div className="mx-auto max-w-4xl">
           <Card className="border-slate-700 bg-slate-800/50">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl text-white">Session Complete!</CardTitle>
+              <CardTitle className="text-2xl text-white">
+                {isComplete ? "Session Complete!" : "Session Summary"}
+              </CardTitle>
               <CardDescription>
                 {session.technology} - {session.topic}
               </CardDescription>
@@ -221,27 +235,37 @@ export default function FlashCardsPage() {
                 <p className="text-slate-400">Accuracy</p>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-4 gap-3 text-center">
                 <div className="bg-slate-900/50 rounded-lg p-4">
                   <div className="text-2xl font-bold text-white">{session.stats.total}</div>
-                  <p className="text-xs text-slate-400">Total Cards</p>
+                  <p className="text-xs text-slate-400">Total</p>
                 </div>
                 <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
-                  <div className="text-2xl font-bold text-green-400">{session.stats.correct}</div>
+                  <div className="text-2xl font-bold text-green-400">{correct}</div>
                   <p className="text-xs text-slate-400">Correct</p>
                 </div>
                 <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/20">
-                  <div className="text-2xl font-bold text-red-400">{session.stats.incorrect}</div>
-                  <p className="text-xs text-slate-400">Incorrect</p>
+                  <div className="text-2xl font-bold text-red-400">{incorrect}</div>
+                  <p className="text-xs text-slate-400">Wrong</p>
+                </div>
+                <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
+                  <div className="text-2xl font-bold text-yellow-400">{skipped}</div>
+                  <p className="text-xs text-slate-400">Skipped</p>
                 </div>
               </div>
+
+              {!isComplete && (
+                <div className="text-center text-sm text-slate-400">
+                  You reviewed {reviewed} of {session.stats.total} cards
+                </div>
+              )}
 
               <div className="flex gap-3 justify-center">
                 <Button onClick={resetSession} variant="outline" className="border-slate-600 text-slate-300 hover:text-white">
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Study Again
                 </Button>
-                <Button onClick={endSession} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button onClick={finalEndSession} className="bg-blue-600 hover:bg-blue-700 text-white">
                   New Topic
                 </Button>
               </div>
