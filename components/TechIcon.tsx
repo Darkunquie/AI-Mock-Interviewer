@@ -49,6 +49,14 @@ import {
   SiExpress,
   SiFlask,
   SiDotnet,
+  SiOracle,
+  SiCypress,
+  SiSelenium,
+  SiFigma,
+  SiAdobexd,
+  SiCisco,
+  SiSnowflake,
+  SiDatabricks,
 } from "react-icons/si";
 import {
   FaJava,
@@ -74,6 +82,14 @@ import {
   FaMicrosoft,
   FaGoogle,
   FaPython,
+  FaMobileAlt,
+  FaPalette,
+  FaNetworkWired,
+  FaBriefcase,
+  FaBullhorn,
+  FaVial,
+  FaHeadset,
+  FaSearch,
 } from "react-icons/fa";
 import { IconType } from "react-icons";
 
@@ -183,14 +199,63 @@ const techIconMap: Record<string, IconType> = {
   "testing-qa": FaTools,
   "software-testing": FaTools,
   "agile-scrum": FaUsersCog,
-  "snowflake": FaDatabase,
-  "databricks": FaDatabase,
+  "snowflake": SiSnowflake,
+  "databricks": SiDatabricks,
   "jenkins": SiJenkins,
   "nextjs": SiNextdotjs,
   "tailwind": SiTailwindcss,
   "sass": SiSass,
   "css": SiCss3,
   "pytorch": SiPytorch,
+
+  // Oracle Technologies
+  "oracle-sql": SiOracle,
+  "oracle-plsql": SiOracle,
+  "oracle-dba": SiOracle,
+  "oracle-fusion": SiOracle,
+  "oci": SiOracle,
+
+  // Microsoft Technologies
+  "csharp": FaMicrosoft,
+  "dotnet-core": SiDotnet,
+  "azure-fundamentals": FaMicrosoft,
+  "sql-server": FaDatabase,
+  "power-platform": FaMicrosoft,
+  "dynamics-365": FaMicrosoft,
+
+  // SAP Expanded
+  "sap-abap": FaBuilding,
+  "sap-fico": FaBuilding,
+  "sap-mm": FaBuilding,
+
+  // UI/UX
+  "ui-ux-design": FaPalette,
+  "figma": SiFigma,
+
+  // Testing
+  "selenium": SiSelenium,
+  "cypress": SiCypress,
+  "api-testing": FaVial,
+
+  // Networking
+  "computer-networks": FaNetworkWired,
+  "linux-admin": SiLinux,
+
+  // Digital Marketing
+  "digital-marketing": FaBullhorn,
+  "seo": FaSearch,
+
+  // Databases
+  "sql-fundamentals": FaDatabase,
+
+  // IT Support
+  "it-support-fundamentals": FaHeadset,
+  "help-desk": FaHeadset,
+  "itil": FaBriefcase,
+  "service-desk": FaHeadset,
+  "servicenow": FaHeadset,
+  "business-analysis": FaBriefcase,
+  "project-management": FaUsersCog,
 };
 
 // Custom colors for each technology
@@ -295,6 +360,46 @@ const techColorMap: Record<string, string> = {
   "testing-qa": "#43B02A",
   "software-testing": "#43B02A",
   "agile-scrum": "#009FDA",
+  // Oracle Technologies
+  "oracle-sql": "#F80000",
+  "oracle-plsql": "#F80000",
+  "oracle-dba": "#F80000",
+  "oracle-fusion": "#F80000",
+  "oci": "#F80000",
+  // Microsoft Technologies
+  "csharp": "#239120",
+  "dotnet-core": "#512BD4",
+  "azure-fundamentals": "#0078D4",
+  "sql-server": "#CC2927",
+  "power-platform": "#742774",
+  "dynamics-365": "#002050",
+  // SAP Expanded
+  "sap-abap": "#0FAAFF",
+  "sap-fico": "#0FAAFF",
+  "sap-mm": "#0FAAFF",
+  // UI/UX
+  "ui-ux-design": "#FF61F6",
+  "figma": "#F24E1E",
+  // Testing
+  "selenium": "#43B02A",
+  "cypress": "#17202C",
+  "api-testing": "#FF6C37",
+  // Networking
+  "computer-networks": "#1BA0D8",
+  "linux-admin": "#FCC624",
+  // Digital Marketing
+  "digital-marketing": "#4285F4",
+  "seo": "#47C51D",
+  // Databases
+  "sql-fundamentals": "#336791",
+  // IT Support
+  "it-support-fundamentals": "#00B388",
+  "help-desk": "#00B388",
+  "itil": "#5C2D91",
+  "service-desk": "#00B388",
+  "servicenow": "#81B5A1",
+  "business-analysis": "#2E86AB",
+  "project-management": "#F18F01",
 };
 
 interface TechIconProps {
@@ -342,6 +447,16 @@ export const categoryIconMap: Record<string, IconType> = {
   "ai": FaBrain,
   "enterprise": FaBuilding,
   "security": FaLock,
+  // New categories
+  "mobile": FaMobileAlt,
+  "database": FaDatabase,
+  "uiux": FaPalette,
+  "networking": FaNetworkWired,
+  "itbusiness": FaBriefcase,
+  "digitalmarketing": FaBullhorn,
+  "oracle": SiOracle,
+  "microsoft": FaMicrosoft,
+  "testing": FaVial,
 };
 
 interface CategoryIconProps {
