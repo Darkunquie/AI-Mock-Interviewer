@@ -55,8 +55,11 @@ import {
   SiFigma,
   SiAdobexd,
   SiCisco,
+  SiVmware,
   SiSnowflake,
   SiDatabricks,
+  SiAndroid,
+  SiIonic,
 } from "react-icons/si";
 import {
   FaJava,
@@ -90,6 +93,19 @@ import {
   FaVial,
   FaHeadset,
   FaSearch,
+  FaWindows,
+  FaGlobe,
+  FaEnvelope,
+  FaFolder,
+  FaTabletAlt,
+  FaLink,
+  FaAtom,
+  FaVrCardboard,
+  FaMoneyBillWave,
+  FaHashtag,
+  FaPen,
+  FaHandshake,
+  FaRocket,
 } from "react-icons/fa";
 import { IconType } from "react-icons";
 
@@ -175,7 +191,8 @@ const techIconMap: Record<string, IconType> = {
   "go": SiGo,
   "golang": SiGo,
   "rust": SiRust,
-  "c-cpp": SiCplusplus,
+  "c-programming": SiCplusplus,
+  "cpp": SiCplusplus,
   "php-laravel": SiLaravel,
   "php": SiPhp,
   "ruby-rails": SiRubyonrails,
@@ -234,6 +251,27 @@ const techIconMap: Record<string, IconType> = {
   "sql-server": FaDatabase,
   "power-platform": FaMicrosoft,
   "dynamics-365": FaMicrosoft,
+  "aspnet-core": SiDotnet,
+  "blazor": SiDotnet,
+  "entity-framework": FaDatabase,
+  "ssis": FaDatabase,
+  "ssas": FaChartBar,
+  "ssrs": FaChartBar,
+  "azure-administrator": FaCloud,
+  "azure-developer": FaCode,
+  "azure-solutions-architect": FaCloud,
+  "azure-data-engineer": FaDatabase,
+  "azure-devops": FaCogs,
+  "microsoft-365-admin": FaEnvelope,
+  "sharepoint": FaFolder,
+  "intune": FaTabletAlt,
+  "azure-security": FaShieldAlt,
+
+  // Mobile Development
+  "android-development": SiAndroid,
+  "xamarin": FaMicrosoft,
+  "ionic": SiIonic,
+  "pwa": FaGlobe,
 
   // SAP Expanded
   "sap-abap": FaBuilding,
@@ -243,6 +281,14 @@ const techIconMap: Record<string, IconType> = {
   // UI/UX
   "ui-ux-design": FaPalette,
   "figma": SiFigma,
+  "ui-design": FaPalette,
+  "ux-design": FaSearch,
+  "interaction-design": FaMobileAlt,
+  "product-design": FaCubes,
+  "adobe-xd": SiAdobexd,
+  "wireframing": FaSitemap,
+  "prototyping": FaLayerGroup,
+  "usability-testing": FaVial,
 
   // Testing
   "selenium": SiSelenium,
@@ -252,6 +298,11 @@ const techIconMap: Record<string, IconType> = {
   // Networking
   "computer-networks": FaNetworkWired,
   "linux-admin": SiLinux,
+  "windows-server": FaWindows,
+  "virtualization": FaServer,
+  "vmware": SiVmware,
+  "network-security": FaShieldAlt,
+  "ccna": SiCisco,
 
   // Digital Marketing
   "digital-marketing": FaBullhorn,
@@ -268,6 +319,36 @@ const techIconMap: Record<string, IconType> = {
   "servicenow": FaHeadset,
   "business-analysis": FaBriefcase,
   "project-management": FaUsersCog,
+
+  // Enterprise Tools
+  "guidewire": FaBuilding,
+  "genesys": FaHeadset,
+  "workday": FaUsersCog,
+
+  // Emerging & Future Technologies
+  "blockchain": FaLink,
+  "web3": FaGlobe,
+  "iot": FaMicrochip,
+  "edge-computing": FaServer,
+  "quantum-computing": FaAtom,
+  "robotics": FaRobot,
+  "ar-vr-mr": FaVrCardboard,
+  "metaverse": FaGlobe,
+
+  // Digital Marketing Expanded
+  "sem-ppc": FaMoneyBillWave,
+  "social-media-marketing": FaHashtag,
+  "content-marketing": FaPen,
+  "email-marketing": FaEnvelope,
+  "affiliate-marketing": FaHandshake,
+  "marketing-automation": FaCogs,
+  "web-analytics": FaChartLine,
+  "cro": FaChartLine,
+  "ai-digital-marketing": FaRobot,
+
+  // IT Support Additions
+  "application-support": FaTools,
+  "product-management": FaCubes,
 };
 
 // Custom colors for each technology
@@ -364,7 +445,8 @@ const techColorMap: Record<string, string> = {
   "itsm-ticketing": "#0052CC",
   "rpa": "#FA4616",
   "emerging-tech": "#7C3AED",
-  "c-cpp": "#00599C",
+  "c-programming": "#A8B9CC",
+  "cpp": "#00599C",
   "flutter-dart": "#02569B",
   "react-native": "#61DAFB",
   "linux-shell": "#FCC624",
@@ -397,6 +479,26 @@ const techColorMap: Record<string, string> = {
   "sql-server": "#CC2927",
   "power-platform": "#742774",
   "dynamics-365": "#002050",
+  "aspnet-core": "#512BD4",
+  "blazor": "#512BD4",
+  "entity-framework": "#512BD4",
+  "ssis": "#CC2927",
+  "ssas": "#CC2927",
+  "ssrs": "#CC2927",
+  "azure-administrator": "#0078D4",
+  "azure-developer": "#0078D4",
+  "azure-solutions-architect": "#0078D4",
+  "azure-data-engineer": "#0078D4",
+  "azure-devops": "#0078D4",
+  "microsoft-365-admin": "#D83B01",
+  "sharepoint": "#036C70",
+  "intune": "#0078D4",
+  "azure-security": "#0078D4",
+  // Mobile Development
+  "android-development": "#3DDC84",
+  "xamarin": "#3498DB",
+  "ionic": "#3880FF",
+  "pwa": "#5A0FC8",
   // SAP Expanded
   "sap-abap": "#0FAAFF",
   "sap-fico": "#0FAAFF",
@@ -404,6 +506,14 @@ const techColorMap: Record<string, string> = {
   // UI/UX
   "ui-ux-design": "#FF61F6",
   "figma": "#F24E1E",
+  "ui-design": "#FF61F6",
+  "ux-design": "#6366F1",
+  "interaction-design": "#8B5CF6",
+  "product-design": "#EC4899",
+  "adobe-xd": "#FF61F6",
+  "wireframing": "#64748B",
+  "prototyping": "#14B8A6",
+  "usability-testing": "#F59E0B",
   // Testing
   "selenium": "#43B02A",
   "cypress": "#17202C",
@@ -411,6 +521,11 @@ const techColorMap: Record<string, string> = {
   // Networking
   "computer-networks": "#1BA0D8",
   "linux-admin": "#FCC624",
+  "windows-server": "#0078D4",
+  "virtualization": "#00979D",
+  "vmware": "#607078",
+  "network-security": "#E63946",
+  "ccna": "#1BA0D8",
   // Digital Marketing
   "digital-marketing": "#4285F4",
   "seo": "#47C51D",
@@ -424,6 +539,32 @@ const techColorMap: Record<string, string> = {
   "servicenow": "#81B5A1",
   "business-analysis": "#2E86AB",
   "project-management": "#F18F01",
+  // Enterprise Tools
+  "guidewire": "#002677",
+  "genesys": "#FF4F1F",
+  "workday": "#0875E1",
+  // Emerging & Future Technologies
+  "blockchain": "#F7931A",
+  "web3": "#8B5CF6",
+  "iot": "#00979D",
+  "edge-computing": "#4285F4",
+  "quantum-computing": "#6366F1",
+  "robotics": "#FF6F61",
+  "ar-vr-mr": "#7C3AED",
+  "metaverse": "#EC4899",
+  // Digital Marketing Expanded
+  "sem-ppc": "#34A853",
+  "social-media-marketing": "#1DA1F2",
+  "content-marketing": "#FF6B6B",
+  "email-marketing": "#EA4335",
+  "affiliate-marketing": "#2ECC71",
+  "marketing-automation": "#FF9500",
+  "web-analytics": "#F9AB00",
+  "cro": "#00C853",
+  "ai-digital-marketing": "#10A37F",
+  // IT Support Additions
+  "application-support": "#6366F1",
+  "product-management": "#7C3AED",
 };
 
 interface TechIconProps {
@@ -481,6 +622,7 @@ export const categoryIconMap: Record<string, IconType> = {
   "oracle": SiOracle,
   "microsoft": FaMicrosoft,
   "testing": FaVial,
+  "emerging": FaRocket,
 };
 
 interface CategoryIconProps {

@@ -17,6 +17,8 @@ import {
   Zap,
   Building2,
   Filter,
+  Search,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -76,6 +78,7 @@ export default function PracticePage() {
   const [techCategory, setTechCategory] = useState<TechCategory | "all">("all");
   const [selectedSubtopics, setSelectedSubtopics] = useState<string[]>([]);
   const [targetCompany, setTargetCompany] = useState<string>("");
+  const [techSearchQuery, setTechSearchQuery] = useState<string>("");
 
   // Progress tracking
   const {
@@ -122,9 +125,13 @@ export default function PracticePage() {
   };
 
   // Tech Deep Dive helper functions
-  const filteredTechStacks = techCategory === "all"
-    ? TECH_STACK_DEEP_DIVE
-    : TECH_STACK_DEEP_DIVE.filter((t) => t.category === techCategory);
+  const filteredTechStacks = TECH_STACK_DEEP_DIVE.filter((t) => {
+    const matchesCategory = techCategory === "all" || t.category === techCategory;
+    const matchesSearch = !techSearchQuery ||
+      t.name.toLowerCase().includes(techSearchQuery.toLowerCase()) ||
+      t.description.toLowerCase().includes(techSearchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const toggleSubtopic = (subtopicName: string) => {
     setSelectedSubtopics((prev) =>
@@ -688,6 +695,26 @@ export default function PracticePage() {
           {/* Tech Deep Dive Tab */}
           <TabsContent value="tech-deep-dive" className="mt-6">
             <div className="space-y-6">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search courses... (e.g., Python, React, AWS, Blockchain)"
+                  value={techSearchQuery}
+                  onChange={(e) => setTechSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3 rounded-lg border border-slate-600 bg-slate-700 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {techSearchQuery && (
+                  <button
+                    onClick={() => setTechSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+
               {/* Category Filter */}
               <div className="flex flex-wrap gap-2">
                 <button
