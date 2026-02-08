@@ -50,9 +50,6 @@ export default function HomePage() {
               <a href="#features" className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-yellow-400 transition-colors">
                 Features
               </a>
-              <a href="#practice" className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-yellow-400 transition-colors">
-                Practice
-              </a>
             </nav>
             {showDashboardLink ? (
               <Link href="/dashboard">
@@ -61,11 +58,18 @@ export default function HomePage() {
                 </button>
               </Link>
             ) : (
-              <Link href="/sign-in">
-                <button className="bg-white text-[#0f0f0f] px-5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-yellow-400 transition-all">
-                  Sign In
-                </button>
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link href="/sign-in">
+                  <button className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400 hover:text-yellow-400 transition-all">
+                    Login
+                  </button>
+                </Link>
+                <Link href="/sign-up">
+                  <button className="bg-white text-[#0f0f0f] px-5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-yellow-400 transition-all">
+                    Sign Up
+                  </button>
+                </Link>
+              </div>
             )}
           </div>
         </div>
