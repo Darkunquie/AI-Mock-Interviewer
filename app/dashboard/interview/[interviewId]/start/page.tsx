@@ -21,7 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { useSpeechToText } from "@/hooks/useSpeechToText";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { useTimer } from "@/hooks/useTimer";
 import { useSpeechAnalysis } from "@/hooks/useSpeechAnalysis";
@@ -85,25 +85,25 @@ export default function InterviewStartPage() {
     onTimeUp: handleTimeUp,
   });
 
-  // Speech hooks with improved settings
+  // Groq Whisper speech-to-text (more accurate than Web Speech API)
   const {
     transcript,
     interimTranscript,
-    isListening,
-    isSupported: sttSupported,
+    isRecording: isListening,
+    isTranscribing,
     error: sttError,
     permissionStatus,
-    startListening,
-    stopListening,
+    startRecording: startListening,
+    stopRecording: stopListening,
     resetTranscript,
     requestPermission,
-  } = useSpeechToText({
-    continuous: true,
-    interimResults: true,
-    lang: "en-US", // You can make this configurable based on user preference
-    confidenceThreshold: 0.4, // Lower threshold to be more accepting
-    maxAlternatives: 5, // More alternatives for better accuracy
+  } = useAudioRecorder({
+    chunkInterval: 4000, // Transcribe every 4 seconds
+    language: "en",
   });
+
+  // Audio recording is supported in all modern browsers
+  const sttSupported = typeof window !== "undefined" && !!navigator.mediaDevices;
 
   const {
     speak,
@@ -183,7 +183,7 @@ export default function InterviewStartPage() {
     }
   }, [showFeedback, pauseTimer]);
 
-  const handleToggleRecording = () => {
+  const handleToggleRecording = async () => {
     if (isListening) {
       stopListening();
       stopTracking();
@@ -191,7 +191,7 @@ export default function InterviewStartPage() {
       resetTranscript();
       setUserAnswer("");
       resetMetrics();
-      startListening();
+      await startListening();
       startTracking();
     }
   };
@@ -489,7 +489,9 @@ export default function InterviewStartPage() {
                 <div className="flex items-center justify-between gap-2 rounded-lg bg-red-500/10 px-3 py-1.5 text-red-400">
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
-                    <span className="text-xs">Recording...</span>
+                    <span className="text-xs">
+                      {isTranscribing ? "Transcribing..." : "Recording..."}
+                    </span>
                   </div>
                   {/* Inline speech metrics */}
                   {speechMetrics.totalWords > 0 && (
