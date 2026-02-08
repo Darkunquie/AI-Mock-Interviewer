@@ -104,26 +104,26 @@ export default function HistoryPage() {
   const hasActiveFilters = statusFilter !== "all" || roleFilter !== "all" || typeFilter !== "all" || searchQuery;
 
   const getScoreColor = (score: number | null) => {
-    if (score === null) return "text-slate-400";
-    if (score >= 80) return "text-green-500";
-    if (score >= 60) return "text-yellow-500";
+    if (score === null) return "text-zinc-500";
+    if (score >= 80) return "text-emerald-500";
+    if (score >= 60) return "text-yellow-400";
     return "text-red-500";
   };
 
   const getStatusBadge = (status: string | null) => {
     if (status === "completed") {
-      return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Completed</Badge>;
+      return <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Completed</Badge>;
     }
     if (status === "in_progress") {
-      return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">In Progress</Badge>;
+      return <Badge className="bg-yellow-400/10 text-yellow-400 border-yellow-400/20">In Progress</Badge>;
     }
-    return <Badge className="bg-slate-500/10 text-slate-400 border-slate-500/20">Pending</Badge>;
+    return <Badge className="bg-zinc-500/10 text-zinc-400 border-zinc-500/20">Pending</Badge>;
   };
 
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-yellow-400" />
       </div>
     );
   }
@@ -132,8 +132,9 @@ export default function HistoryPage() {
     <div className="mx-auto max-w-6xl">
       {/* Header */}
       <div className="mb-8">
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500 mb-1">Records</p>
         <h1 className="text-3xl font-bold text-white">Interview History</h1>
-        <p className="mt-2 text-slate-400">
+        <p className="mt-2 text-zinc-500 text-sm">
           View and filter all your past mock interviews
         </p>
       </div>
@@ -141,51 +142,51 @@ export default function HistoryPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-slate-700 bg-slate-800/50">
+          <Card className="border-white/[0.08] bg-[#161616]">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">Total Interviews</p>
-                  <p className="text-2xl font-bold text-white">{stats.totalInterviews}</p>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total Interviews</p>
+                  <p className="text-2xl font-black text-yellow-400">{stats.totalInterviews}</p>
                 </div>
-                <Briefcase className="h-8 w-8 text-blue-500 opacity-50" />
+                <Briefcase className="h-8 w-8 text-yellow-400 opacity-50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-slate-700 bg-slate-800/50">
+          <Card className="border-white/[0.08] bg-[#161616]">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">Completed</p>
-                  <p className="text-2xl font-bold text-white">{stats.completedInterviews}</p>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Completed</p>
+                  <p className="text-2xl font-black text-orange-500">{stats.completedInterviews}</p>
                 </div>
-                <Calendar className="h-8 w-8 text-green-500 opacity-50" />
+                <Calendar className="h-8 w-8 text-orange-500 opacity-50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-slate-700 bg-slate-800/50">
+          <Card className="border-white/[0.08] bg-[#161616]">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">Average Score</p>
-                  <p className={`text-2xl font-bold ${getScoreColor(stats.averageScore)}`}>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Average Score</p>
+                  <p className={`text-2xl font-black ${getScoreColor(stats.averageScore)}`}>
                     {stats.averageScore > 0 ? `${stats.averageScore}%` : "N/A"}
                   </p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-yellow-500 opacity-50" />
+                <TrendingUp className="h-8 w-8 text-yellow-400 opacity-50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-slate-700 bg-slate-800/50">
+          <Card className="border-white/[0.08] bg-[#161616]">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">Best Score</p>
-                  <p className={`text-2xl font-bold ${getScoreColor(stats.bestScore)}`}>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Best Score</p>
+                  <p className={`text-2xl font-black ${getScoreColor(stats.bestScore)}`}>
                     {stats.bestScore > 0 ? `${stats.bestScore}%` : "N/A"}
                   </p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-500 opacity-50" />
+                <TrendingUp className="h-8 w-8 text-emerald-500 opacity-50" />
               </div>
             </CardContent>
           </Card>
@@ -193,23 +194,23 @@ export default function HistoryPage() {
       )}
 
       {/* Filters */}
-      <Card className="mb-6 border-slate-700 bg-slate-800/50">
+      <Card className="mb-6 border-white/[0.08] bg-[#161616]">
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-4">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
               <Input
                 placeholder="Search by role..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 border-slate-600 bg-slate-700 text-white placeholder:text-slate-500"
+                className="pl-10 border-white/[0.08] bg-[#0f0f0f] text-white placeholder:text-zinc-600"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px] border-slate-600 bg-slate-700 text-white">
+              <SelectTrigger className="w-[150px] border-white/[0.08] bg-[#0f0f0f] text-white">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="border-slate-600 bg-slate-800">
+              <SelectContent className="border-white/[0.08] bg-[#161616]">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
@@ -217,10 +218,10 @@ export default function HistoryPage() {
               </SelectContent>
             </Select>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[150px] border-slate-600 bg-slate-700 text-white">
+              <SelectTrigger className="w-[150px] border-white/[0.08] bg-[#0f0f0f] text-white">
                 <SelectValue placeholder="Role" />
               </SelectTrigger>
-              <SelectContent className="border-slate-600 bg-slate-800">
+              <SelectContent className="border-white/[0.08] bg-[#161616]">
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="frontend">Frontend</SelectItem>
                 <SelectItem value="backend">Backend</SelectItem>
@@ -230,10 +231,10 @@ export default function HistoryPage() {
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[150px] border-slate-600 bg-slate-700 text-white">
+              <SelectTrigger className="w-[150px] border-white/[0.08] bg-[#0f0f0f] text-white">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
-              <SelectContent className="border-slate-600 bg-slate-800">
+              <SelectContent className="border-white/[0.08] bg-[#161616]">
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="technical">Technical</SelectItem>
                 <SelectItem value="behavioral">Behavioral</SelectItem>
@@ -245,7 +246,7 @@ export default function HistoryPage() {
                 variant="ghost"
                 size="sm"
                 onClick={clearFilters}
-                className="gap-2 text-slate-400 hover:text-white"
+                className="gap-2 text-zinc-500 hover:text-white"
               >
                 <X className="h-4 w-4" /> Clear
               </Button>
@@ -256,10 +257,10 @@ export default function HistoryPage() {
 
       {/* Results */}
       {interviews.length === 0 ? (
-        <Card className="border-slate-700 bg-slate-800/50">
+        <Card className="border-white/[0.08] bg-[#161616]">
           <CardContent className="py-12 text-center">
-            <Filter className="mx-auto h-12 w-12 text-slate-600 mb-4" />
-            <p className="text-slate-400">
+            <Filter className="mx-auto h-12 w-12 text-zinc-700 mb-4" />
+            <p className="text-zinc-500">
               {hasActiveFilters
                 ? "No interviews match your filters"
                 : "You haven't taken any interviews yet"}
@@ -269,7 +270,7 @@ export default function HistoryPage() {
                 variant="outline"
                 size="sm"
                 onClick={clearFilters}
-                className="mt-4 border-slate-600"
+                className="mt-4 border-white/[0.08] hover:border-yellow-400/50"
               >
                 Clear Filters
               </Button>
@@ -281,28 +282,28 @@ export default function HistoryPage() {
           {interviews.map((interview) => (
             <Card
               key={interview.mockId}
-              className="border-slate-700 bg-slate-800/50 transition-all hover:border-slate-600 hover:bg-slate-800"
+              className="border-white/[0.08] bg-[#161616] transition-all hover:border-yellow-400/30"
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg text-white">
+                  <CardTitle className="text-lg text-white font-bold">
                     {ROLE_DISPLAY_NAMES[interview.role as InterviewRole]}
                   </CardTitle>
                   {getStatusBadge(interview.status)}
                 </div>
-                <CardDescription className="text-slate-400">
+                <CardDescription className="text-zinc-500 text-xs">
                   {INTERVIEW_TYPE_DISPLAY_NAMES[interview.interviewType as InterviewType]} •{" "}
                   {EXPERIENCE_DISPLAY_NAMES[interview.experienceLevel as ExperienceLevel]}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pb-3">
                 <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
+                  <div className="flex items-center gap-2 text-zinc-500">
                     <Calendar className="h-4 w-4" />
                     {format(new Date(interview.createdAt), "MMM d, yyyy")}
                   </div>
                   {interview.status === "completed" && interview.totalScore !== null && (
-                    <div className={`font-semibold ${getScoreColor(interview.totalScore)}`}>
+                    <div className={`font-bold ${getScoreColor(interview.totalScore)}`}>
                       Score: {interview.totalScore}%
                     </div>
                   )}
@@ -310,7 +311,7 @@ export default function HistoryPage() {
               </CardContent>
               <CardFooter>
                 <Link href={`/dashboard/interview/${interview.mockId}`} className="w-full">
-                  <Button variant="outline" className="w-full gap-2 border-slate-600 hover:bg-slate-700">
+                  <Button variant="outline" className="w-full gap-2 border-white/[0.08] hover:bg-[#1a1a1a] hover:border-yellow-400/50">
                     {interview.status === "completed" ? "View Results" : "Continue"}
                     <ArrowRight className="h-4 w-4" />
                   </Button>

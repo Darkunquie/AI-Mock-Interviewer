@@ -41,29 +41,29 @@ function FlashCardDisplay({
       >
         {/* Front */}
         <div
-          className="absolute inset-0 backface-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 flex flex-col"
+          className="absolute inset-0 backface-hidden bg-[#161616] p-6 border border-white/[0.08] flex flex-col"
           style={{ backfaceVisibility: "hidden" }}
         >
           <div className="flex items-center justify-between mb-4">
             <Badge
               variant="outline"
-              className={`text-xs ${
+              className={`text-xs uppercase tracking-wider font-bold ${
                 card.difficulty === "easy"
-                  ? "border-green-500 text-green-400"
+                  ? "border-emerald-500 text-emerald-400"
                   : card.difficulty === "medium"
-                  ? "border-yellow-500 text-yellow-400"
+                  ? "border-yellow-400 text-yellow-400"
                   : "border-red-500 text-red-400"
               }`}
             >
               {card.difficulty}
             </Badge>
-            <span className="text-xs text-slate-500">Click to flip</span>
+            <span className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Click to flip</span>
           </div>
           <div className="flex-1 flex items-center justify-center">
             <p className="text-lg text-white text-center leading-relaxed">{card.front}</p>
           </div>
           {card.hint && (
-            <p className="text-sm text-slate-400 text-center mt-4 italic">
+            <p className="text-sm text-zinc-500 text-center mt-4 italic">
               Hint: {card.hint}
             </p>
           )}
@@ -71,29 +71,29 @@ function FlashCardDisplay({
 
         {/* Back */}
         <div
-          className="absolute inset-0 backface-hidden bg-gradient-to-br from-green-900/30 to-slate-900 rounded-xl p-6 border border-green-500/30 flex flex-col"
+          className="absolute inset-0 backface-hidden bg-[#161616] p-6 border border-yellow-400/30 flex flex-col"
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateY(180deg)",
           }}
         >
           <div className="flex items-center justify-between mb-4">
-            <Badge variant="outline" className="border-green-500 text-green-400 text-xs">
+            <Badge variant="outline" className="border-yellow-400 text-yellow-400 text-xs uppercase tracking-wider font-bold">
               Answer
             </Badge>
-            <span className="text-xs text-slate-500">Click to flip back</span>
+            <span className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Click to flip back</span>
           </div>
           <div className="flex-1 flex flex-col items-center justify-center">
             <p className="text-white text-center leading-relaxed">{card.back}</p>
             {card.codeSnippet && (
-              <pre className="mt-4 bg-slate-950 p-3 rounded-lg text-sm text-green-300 overflow-x-auto w-full">
+              <pre className="mt-4 bg-[#0f0f0f] p-3 text-sm text-yellow-400 overflow-x-auto w-full border border-white/[0.08]">
                 <code>{card.codeSnippet.replace(/\\n/g, "\n")}</code>
               </pre>
             )}
           </div>
           <div className="flex flex-wrap gap-2 mt-4 justify-center">
             {card.tags.map((tag, i) => (
-              <Badge key={i} variant="secondary" className="bg-slate-700 text-slate-300 text-xs">
+              <Badge key={i} variant="secondary" className="bg-zinc-800 text-zinc-400 text-xs">
                 {tag}
               </Badge>
             ))}
@@ -220,52 +220,52 @@ export default function FlashCardsPage() {
 
       return (
         <div className="mx-auto max-w-4xl">
-          <Card className="border-slate-700 bg-slate-800/50">
+          <Card className="border-white/[0.08] bg-[#161616]">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl text-white">
+              <CardTitle className="text-2xl text-white font-black">
                 {isComplete ? "Session Complete!" : "Session Summary"}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-zinc-500">
                 {session.technology} - {session.topic}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="text-center">
-                <div className="text-6xl font-bold text-white mb-2">{percentage}%</div>
-                <p className="text-slate-400">Accuracy</p>
+                <div className="text-6xl font-black text-yellow-400 mb-2">{percentage}%</div>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Accuracy</p>
               </div>
 
               <div className="grid grid-cols-4 gap-3 text-center">
-                <div className="bg-slate-900/50 rounded-lg p-4">
-                  <div className="text-2xl font-bold text-white">{session.stats.total}</div>
-                  <p className="text-xs text-slate-400">Total</p>
+                <div className="bg-[#0f0f0f] p-4 border border-white/[0.08]">
+                  <div className="text-2xl font-black text-white">{session.stats.total}</div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total</p>
                 </div>
-                <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
-                  <div className="text-2xl font-bold text-green-400">{correct}</div>
-                  <p className="text-xs text-slate-400">Correct</p>
+                <div className="bg-emerald-500/10 p-4 border border-emerald-500/20">
+                  <div className="text-2xl font-black text-emerald-400">{correct}</div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Correct</p>
                 </div>
-                <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/20">
-                  <div className="text-2xl font-bold text-red-400">{incorrect}</div>
-                  <p className="text-xs text-slate-400">Wrong</p>
+                <div className="bg-red-500/10 p-4 border border-red-500/20">
+                  <div className="text-2xl font-black text-red-400">{incorrect}</div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Wrong</p>
                 </div>
-                <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
-                  <div className="text-2xl font-bold text-yellow-400">{skipped}</div>
-                  <p className="text-xs text-slate-400">Skipped</p>
+                <div className="bg-yellow-400/10 p-4 border border-yellow-400/20">
+                  <div className="text-2xl font-black text-yellow-400">{skipped}</div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Skipped</p>
                 </div>
               </div>
 
               {!isComplete && (
-                <div className="text-center text-sm text-slate-400">
+                <div className="text-center text-sm text-zinc-500">
                   You reviewed {reviewed} of {session.stats.total} cards
                 </div>
               )}
 
               <div className="flex gap-3 justify-center">
-                <Button onClick={resetSession} variant="outline" className="border-slate-600 text-slate-300 hover:text-white">
+                <Button onClick={resetSession} variant="outline" className="border-white/[0.08] text-zinc-300 hover:text-white hover:border-yellow-400/50">
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Study Again
                 </Button>
-                <Button onClick={finalEndSession} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button onClick={finalEndSession} className="bg-yellow-400 hover:bg-yellow-300 text-[#0f0f0f] font-bold">
                   New Topic
                 </Button>
               </div>
@@ -281,22 +281,22 @@ export default function FlashCardsPage() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Layers className="h-6 w-6 text-blue-400" />
+              <Layers className="h-6 w-6 text-yellow-400" />
               {session.technology} - {session.topic}
             </h1>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mt-1">
               Card {session.currentIndex + 1} of {session.cards.length}
             </p>
           </div>
-          <Button onClick={endSession} variant="ghost" className="text-slate-400 hover:text-white">
+          <Button onClick={endSession} variant="ghost" className="text-zinc-500 hover:text-white font-bold uppercase tracking-wider text-xs">
             End Session
           </Button>
         </div>
 
         {/* Progress bar */}
-        <div className="h-2 bg-slate-800 rounded-full mb-6 overflow-hidden">
+        <div className="h-2 bg-zinc-800 mb-6 overflow-hidden">
           <div
-            className="h-full bg-blue-500 transition-all duration-300"
+            className="h-full bg-yellow-400 transition-all duration-300"
             style={{ width: `${((session.currentIndex + 1) / session.cards.length) * 100}%` }}
           />
         </div>
@@ -315,7 +315,7 @@ export default function FlashCardsPage() {
           <Button
             onClick={prevCard}
             variant="outline"
-            className="border-slate-600 text-slate-300 hover:text-white"
+            className="border-white/[0.08] text-zinc-400 hover:text-white hover:border-yellow-400/50"
             disabled={session.currentIndex === 0}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
@@ -334,7 +334,7 @@ export default function FlashCardsPage() {
               </Button>
               <Button
                 onClick={() => nextCard(true)}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
               >
                 <Check className="h-4 w-4 mr-1" />
                 Correct
@@ -344,7 +344,7 @@ export default function FlashCardsPage() {
             <Button
               onClick={() => nextCard()}
               variant="outline"
-              className="border-slate-600 text-slate-300 hover:text-white"
+              className="border-white/[0.08] text-zinc-400 hover:text-white hover:border-yellow-400/50"
             >
               Skip
               <ChevronRight className="h-4 w-4 ml-1" />
@@ -354,11 +354,11 @@ export default function FlashCardsPage() {
 
         {/* Stats */}
         <div className="mt-6 flex justify-center gap-6 text-sm">
-          <span className="text-green-400">
+          <span className="text-emerald-400 font-bold">
             <Check className="h-4 w-4 inline mr-1" />
             {session.stats.correct} correct
           </span>
-          <span className="text-red-400">
+          <span className="text-red-400 font-bold">
             <X className="h-4 w-4 inline mr-1" />
             {session.stats.incorrect} incorrect
           </span>
@@ -372,37 +372,42 @@ export default function FlashCardsPage() {
     <div className="mx-auto max-w-4xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-          <Layers className="h-8 w-8 text-blue-400" />
-          Flash Cards
-        </h1>
-        <p className="mt-2 text-slate-400">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="flex h-10 w-10 items-center justify-center bg-yellow-400 rotate-45">
+            <Layers className="h-5 w-5 text-[#0f0f0f] -rotate-45" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500">Study Mode</p>
+            <h1 className="text-3xl font-bold text-white">Flash Cards</h1>
+          </div>
+        </div>
+        <p className="text-zinc-500 text-sm">
           Master interview concepts with AI-generated flash cards
         </p>
       </div>
 
       {/* Selection Card */}
-      <Card className="border-slate-700 bg-slate-800/50 mb-6">
+      <Card className="border-white/[0.08] bg-[#161616] mb-6">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-yellow-400" />
             Generate Flash Cards
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-zinc-500">
             Select a technology and topic to generate interview flash cards
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Technology</label>
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Technology</label>
               <Select value={technology} onValueChange={(v) => { setTechnology(v); setTopic(""); }}>
-                <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                <SelectTrigger className="bg-[#0f0f0f] border-white/[0.08] text-white hover:border-yellow-400/50 transition-colors">
                   <SelectValue placeholder="Select technology" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectContent className="bg-[#161616] border-white/[0.08]">
                   {technologies.map((tech) => (
-                    <SelectItem key={tech} value={tech} className="text-white hover:bg-slate-800 focus:bg-slate-800 focus:text-white">
+                    <SelectItem key={tech} value={tech} className="text-white hover:bg-[#1a1a1a] focus:bg-[#1a1a1a] focus:text-white">
                       {tech}
                     </SelectItem>
                   ))}
@@ -411,14 +416,14 @@ export default function FlashCardsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Topic</label>
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Topic</label>
               <Select value={topic} onValueChange={setTopic} disabled={!technology}>
-                <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                <SelectTrigger className="bg-[#0f0f0f] border-white/[0.08] text-white hover:border-yellow-400/50 transition-colors">
                   <SelectValue placeholder={technology ? "Select topic" : "Select technology first"} />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectContent className="bg-[#161616] border-white/[0.08]">
                   {topics.map((t) => (
-                    <SelectItem key={t} value={t} className="text-white hover:bg-slate-800 focus:bg-slate-800 focus:text-white">
+                    <SelectItem key={t} value={t} className="text-white hover:bg-[#1a1a1a] focus:bg-[#1a1a1a] focus:text-white">
                       {t}
                     </SelectItem>
                   ))}
@@ -428,7 +433,7 @@ export default function FlashCardsPage() {
           </div>
 
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
               {error}
             </div>
           )}
@@ -436,7 +441,7 @@ export default function FlashCardsPage() {
           <Button
             onClick={generateCards}
             disabled={!technology || !topic || loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            className="w-full bg-yellow-400 hover:bg-yellow-300 text-[#0f0f0f] font-bold uppercase tracking-wider"
           >
             {loading ? (
               <>
@@ -454,7 +459,7 @@ export default function FlashCardsPage() {
       </Card>
 
       {/* Quick Topics */}
-      <Card className="border-slate-700 bg-slate-800/50">
+      <Card className="border-white/[0.08] bg-[#161616]">
         <CardHeader>
           <CardTitle className="text-white text-lg">Popular Topics</CardTitle>
         </CardHeader>
@@ -471,10 +476,10 @@ export default function FlashCardsPage() {
               <button
                 key={`${tech}-${t}`}
                 onClick={() => { setTechnology(tech); setTopic(t); }}
-                className="p-3 bg-slate-900/50 rounded-lg border border-slate-700 hover:border-blue-500/50 hover:bg-slate-900 transition-colors text-left"
+                className="p-3 bg-[#0f0f0f] border border-white/[0.08] hover:border-yellow-400/50 hover:bg-[#1a1a1a] transition-colors text-left"
               >
-                <div className="font-medium text-white">{tech}</div>
-                <div className="text-sm text-slate-400">{t}</div>
+                <div className="font-bold text-white">{tech}</div>
+                <div className="text-sm text-zinc-500">{t}</div>
               </button>
             ))}
           </div>

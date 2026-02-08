@@ -123,3 +123,83 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* SkillForge Landing Page Styles - Brutalist Grid Design */
+
+/* Color Variables */
+:root {
+  --charcoal: #0f0f0f;
+  --surface-dark: #161616;
+  --electric-yellow: #facc15;
+  --electric-orange: #f97316;
+  --grid-border: rgba(255, 255, 255, 0.08);
+}
+
+/* Grid Cell */
+.grid-cell {
+  padding: 3rem;
+  transition: all 0.3s ease;
+}
+
+@media (min-width: 768px) {
+  .grid-cell {
+    padding: 3rem;
+  }
+}
+
+/* Glitch Bar Animation */
+.glitch-bar {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 15px rgba(250, 204, 21, 0.3);
+}
+
+.glitch-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--electric-orange);
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.glitch-bar:hover::after {
+  opacity: 1;
+}
+
+/* Text Glow Effect */
+.text-glow {
+  text-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
+}
+
+/* Button Brutalist Style */
+.btn-brutalist {
+  position: relative;
+  transition: all 0.2s ease;
+  box-shadow: 4px 4px 0px var(--electric-orange);
+}
+
+.btn-brutalist:hover {
+  transform: translate(2px, -2px);
+  box-shadow: 6px 6px 0px var(--electric-orange);
+}
+
+/* Anvil spark animation */
+@keyframes spark {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.animate-spark {
+  animation: spark 1.5s ease-in-out infinite;
+}
+
+/* Bar animation */
+@keyframes barPulse {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.6); }
+}
+
+.animate-bar {
+  animation: barPulse 1s ease-in-out infinite;
+}

@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { interviews } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
 import Link from "next/link";
-import { CheckCircle, TrendingUp, Flame, Mic, ArrowRight, Map } from "lucide-react";
+import { CheckCircle, TrendingUp, Flame, Zap, ArrowRight, Map } from "lucide-react";
 import AddNewInterview from "./_components/AddNewInterview";
 
 export default async function DashboardPage() {
@@ -77,19 +77,22 @@ export default async function DashboardPage() {
       {/* Page Heading */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-400 mb-2">
+            Dashboard
+          </p>
           <h2 className="text-3xl font-black tracking-tight text-white">
             Welcome back, {firstName}!
           </h2>
-          <p className="text-slate-400 mt-1">
+          <p className="text-zinc-500 mt-1 text-sm">
             Ready for your next AI-powered technical session?
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard/practice"
-            className="flex items-center gap-2 px-4 py-2 border border-[#2d3139] rounded-lg text-sm font-semibold hover:bg-[#1c1f26] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 border border-white/[0.08] text-sm font-bold uppercase tracking-wider hover:bg-[#161616] hover:border-yellow-400/50 transition-colors"
           >
-            <Map className="h-5 w-5" />
+            <Map className="h-5 w-5 text-yellow-400" />
             Learning Paths
           </Link>
         </div>
@@ -97,57 +100,57 @@ export default async function DashboardPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#1c1f26] p-6 rounded-xl border border-[#2d3139]">
+        <div className="bg-[#161616] p-6 border border-white/[0.08] hover:bg-[#1a1a1a] transition-colors">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
               Interviews Completed
             </p>
-            <CheckCircle className="h-5 w-5 text-blue-500" />
+            <CheckCircle className="h-5 w-5 text-yellow-400" />
           </div>
           <div className="flex items-baseline gap-2">
-            <p className="text-3xl font-bold">{stats.totalInterviews}</p>
+            <p className="text-4xl font-black text-yellow-400">{stats.totalInterviews}</p>
             {stats.thisWeekCount > 0 && (
-              <p className="text-sm font-bold text-emerald-500">
+              <p className="text-xs font-bold text-emerald-500 uppercase">
                 +{stats.thisWeekCount} this week
               </p>
             )}
           </div>
         </div>
 
-        <div className="bg-[#1c1f26] p-6 rounded-xl border border-[#2d3139]">
+        <div className="bg-[#161616] p-6 border border-white/[0.08] hover:bg-[#1a1a1a] transition-colors">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
               Average Score
             </p>
-            <TrendingUp className="h-5 w-5 text-blue-500" />
+            <TrendingUp className="h-5 w-5 text-orange-500" />
           </div>
           <div className="flex items-baseline gap-2">
-            <p className="text-3xl font-bold">
+            <p className="text-4xl font-black text-orange-500">
               {stats.averageScore > 0 ? `${stats.averageScore}%` : "—"}
             </p>
             {stats.averageScore >= 80 && (
-              <p className="text-sm font-bold text-emerald-500">Great job!</p>
+              <p className="text-xs font-bold text-emerald-500 uppercase">Great job!</p>
             )}
           </div>
         </div>
 
-        <div className="bg-[#1c1f26] p-6 rounded-xl border border-[#2d3139]">
+        <div className="bg-[#161616] p-6 border border-white/[0.08] hover:bg-[#1a1a1a] transition-colors">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
               Practice Streak
             </p>
             <Flame className="h-5 w-5 text-orange-500" />
           </div>
           <div className="flex items-baseline gap-2">
-            <p className="text-3xl font-bold">{stats.thisWeekCount > 0 ? "Active" : "Start today!"}</p>
-            <p className="text-sm font-bold text-slate-400">Keep it up!</p>
+            <p className="text-4xl font-black text-white">{stats.thisWeekCount > 0 ? "Active" : "Start!"}</p>
+            <p className="text-xs font-bold text-zinc-500 uppercase">Keep forging!</p>
           </div>
         </div>
       </div>
 
       {/* Start New Interview Section */}
       <div>
-        <h3 className="text-xl font-bold mb-4">Start New Interview</h3>
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Start New Interview</h3>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <AddNewInterview />
         </div>
@@ -157,15 +160,15 @@ export default async function DashboardPage() {
       {userInterviews.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold">Recent Interviews</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Recent Interviews</h3>
             <Link
               href="/dashboard/history"
-              className="text-sm font-semibold text-blue-400 hover:underline"
+              className="text-xs font-bold text-yellow-400 hover:text-yellow-300 uppercase tracking-wider"
             >
-              View all history
+              View all history →
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {userInterviews.slice(0, 6).map((interview) => (
               <InterviewCard key={interview.mockId} interview={interview} />
             ))}
@@ -175,10 +178,10 @@ export default async function DashboardPage() {
 
       {/* Empty State */}
       {userInterviews.length === 0 && (
-        <div className="rounded-xl border border-[#2d3139] bg-[#1c1f26] p-8 text-center">
-          <Mic className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">No interviews completed yet</h3>
-          <p className="text-slate-400">
+        <div className="border border-white/[0.08] bg-[#161616] p-8 text-center">
+          <Zap className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-white mb-2">No interviews completed yet</h3>
+          <p className="text-zinc-500 text-sm">
             Click the card above to start your first mock interview!
           </p>
         </div>
@@ -227,20 +230,20 @@ function InterviewCard({
   };
 
   return (
-    <div className="bg-[#1c1f26] border border-[#2d3139] rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-[#161616] border border-white/[0.08] overflow-hidden hover:border-yellow-400/30 transition-colors">
       <div className="p-5 flex flex-col gap-4">
         <div className="flex justify-between items-start">
           <div>
-            <h4 className="font-bold text-lg">{formatRole(interview.role)}</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="font-bold text-lg text-white">{formatRole(interview.role)}</h4>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">
               {interview.experienceLevel} • {interview.interviewType}
             </p>
           </div>
           <div
-            className={`text-[10px] font-black px-2 py-1 rounded uppercase ${
+            className={`text-[10px] font-black px-2 py-1 uppercase tracking-wider ${
               isCompleted
                 ? "bg-emerald-500/20 text-emerald-400"
-                : "bg-yellow-500/20 text-yellow-400"
+                : "bg-yellow-400/20 text-yellow-400"
             }`}
           >
             {isCompleted ? "Completed" : "In Progress"}
@@ -253,7 +256,7 @@ function InterviewCard({
             <div className="relative w-16 h-16 flex items-center justify-center">
               <svg className="w-16 h-16 -rotate-90">
                 <circle
-                  className="text-slate-700"
+                  className="text-zinc-800"
                   cx="32"
                   cy="32"
                   r="28"
@@ -262,7 +265,7 @@ function InterviewCard({
                   strokeWidth="6"
                 />
                 <circle
-                  className="text-blue-500"
+                  className="text-yellow-400"
                   cx="32"
                   cy="32"
                   r="28"
@@ -271,20 +274,19 @@ function InterviewCard({
                   strokeWidth="6"
                   strokeDasharray={circumference}
                   strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
                 />
               </svg>
-              <span className="absolute text-sm font-bold">{score}%</span>
+              <span className="absolute text-sm font-black text-yellow-400">{score}%</span>
             </div>
 
             <div className="flex-1 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Overall Score</span>
-                <span className="font-bold">{score}%</span>
+                <span className="text-zinc-500 uppercase tracking-wider text-[10px] font-bold">Overall Score</span>
+                <span className="font-black text-white">{score}%</span>
               </div>
-              <div className="w-full bg-slate-700 rounded-full h-1.5">
+              <div className="w-full bg-zinc-800 h-1.5">
                 <div
-                  className="bg-blue-500 h-1.5 rounded-full"
+                  className="bg-yellow-400 h-1.5"
                   style={{ width: `${score}%` }}
                 ></div>
               </div>
@@ -292,8 +294,8 @@ function InterviewCard({
           </div>
         )}
 
-        <div className="pt-4 border-t border-[#2d3139] flex items-center justify-between">
-          <span className="text-xs text-slate-500">
+        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between">
+          <span className="text-[10px] text-zinc-600 uppercase tracking-wider font-bold">
             {formatDate(interview.createdAt)}
           </span>
           <Link
@@ -302,9 +304,9 @@ function InterviewCard({
                 ? `/dashboard/interview/${interview.mockId}/feedback`
                 : `/dashboard/interview/${interview.mockId}/start`
             }
-            className="text-xs font-bold text-blue-400 hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-yellow-400 hover:text-yellow-300 flex items-center gap-1 uppercase tracking-wider"
           >
-            {isCompleted ? "Review Feedback" : "Continue"}
+            {isCompleted ? "Review" : "Continue"}
             <ArrowRight className="h-3 w-3" />
           </Link>
         </div>

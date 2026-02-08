@@ -134,27 +134,30 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10">
-            <FolderKanban className="h-5 w-5 text-orange-500" />
+          <div className="flex h-10 w-10 items-center justify-center bg-orange-500 rotate-45">
+            <FolderKanban className="h-5 w-5 text-white -rotate-45" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Projects</h1>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-400">Builder</p>
+            <h1 className="text-3xl font-bold text-white">Projects</h1>
+          </div>
         </div>
-        <p className="text-slate-400">
+        <p className="text-zinc-500 text-sm">
           Generate 5 AI-powered project ideas with detailed explanations. Each project includes tech stack, workflow diagrams, database schemas, API endpoints, and implementation guides.
         </p>
       </div>
 
       <div className="space-y-6">
         {/* Technology & Domain Selection */}
-        <Card className="border-slate-700 bg-slate-800/50">
+        <Card className="border-white/[0.08] bg-[#161616]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
               <FolderKanban className="h-5 w-5 text-orange-400" />
               Generate Project Ideas
             </CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-zinc-400">
               Select a technology and domain to generate AI-powered project specifications with full implementation details.
-              <span className="block mt-1 text-xs text-slate-500">
+              <span className="block mt-1 text-xs text-zinc-500">
                 Projects are generated once per combination and saved permanently.
               </span>
             </CardDescription>
@@ -163,22 +166,22 @@ export default function ProjectsPage() {
             <div className="grid gap-6 md:grid-cols-2">
               {/* Technology Dropdown */}
               <div className="grid gap-2">
-                <Label className="text-slate-300">Technology / Course</Label>
+                <Label className="text-zinc-300 text-[10px] font-black uppercase tracking-widest">Technology / Course</Label>
                 <Select value={projectTech} onValueChange={setProjectTech}>
-                  <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
+                  <SelectTrigger className="border-white/[0.08] bg-[#0f0f0f] text-white focus:ring-yellow-400/50">
                     <SelectValue placeholder="Select technology" />
                   </SelectTrigger>
-                  <SelectContent className="border-slate-600 bg-slate-700 max-h-80">
+                  <SelectContent className="border-white/[0.08] bg-[#161616] max-h-80">
                     {TECH_CATEGORIES.map((category) => (
                       <div key={category.id}>
-                        <div className="px-2 py-1 text-xs text-slate-400 font-semibold mt-2 first:mt-0">
+                        <div className="px-2 py-1 text-xs text-zinc-500 font-bold uppercase tracking-wider mt-2 first:mt-0">
                           {category.icon} {category.name}
                         </div>
                         {TECH_STACK_DEEP_DIVE.filter((t) => t.category === category.id).map((tech) => (
                           <SelectItem
                             key={tech.id}
                             value={tech.name}
-                            className="text-white hover:bg-slate-600"
+                            className="text-white hover:bg-[#0f0f0f]"
                           >
                             {tech.icon} {tech.name}
                           </SelectItem>
@@ -191,17 +194,17 @@ export default function ProjectsPage() {
 
               {/* Domain Dropdown */}
               <div className="grid gap-2">
-                <Label className="text-slate-300">Domain / Industry</Label>
+                <Label className="text-zinc-300 text-[10px] font-black uppercase tracking-widest">Domain / Industry</Label>
                 <Select value={projectDomain} onValueChange={setProjectDomain}>
-                  <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
+                  <SelectTrigger className="border-white/[0.08] bg-[#0f0f0f] text-white focus:ring-yellow-400/50">
                     <SelectValue placeholder="Select domain" />
                   </SelectTrigger>
-                  <SelectContent className="border-slate-600 bg-slate-700">
+                  <SelectContent className="border-white/[0.08] bg-[#161616]">
                     {PROJECT_DOMAINS.map((domain) => (
                       <SelectItem
                         key={domain.id}
                         value={domain.id}
-                        className="text-white hover:bg-slate-600"
+                        className="text-white hover:bg-[#0f0f0f]"
                       >
                         <span className="flex items-center gap-2">
                           <span>{domain.icon}</span>
@@ -271,7 +274,7 @@ export default function ProjectsPage() {
 
             {/* Info message for already generated combinations */}
             {combinationExists && generatedProjects.length > 0 && !projectsLoading && (
-              <p className="text-xs text-slate-500 mt-2 text-center">
+              <p className="text-xs text-zinc-500 mt-2 text-center">
                 This combination has already been generated. Select a different technology or domain to generate new projects.
               </p>
             )}
@@ -280,13 +283,13 @@ export default function ProjectsPage() {
 
         {/* Loading State */}
         {projectsLoading && (
-          <Card className="border-slate-700 bg-slate-800/50">
+          <Card className="border-white/[0.08] bg-[#161616]">
             <CardContent className="py-12 text-center">
-              <Loader2 className="h-12 w-12 animate-spin text-orange-500 mx-auto" />
-              <p className="text-slate-300 mt-4 font-medium">
+              <Loader2 className="h-12 w-12 animate-spin text-yellow-400 mx-auto" />
+              <p className="text-white mt-4 font-bold">
                 {isCached ? "Loading cached projects..." : "Generating 5 project specifications with detailed explanations..."}
               </p>
-              <p className="text-slate-500 text-sm mt-2">
+              <p className="text-zinc-500 text-sm mt-2">
                 {isCached ? "Loading from database..." : "This may take 30-60 seconds. Each project includes 100+ lines of explanation."}
               </p>
             </CardContent>
@@ -295,11 +298,11 @@ export default function ProjectsPage() {
 
         {/* Empty State */}
         {!projectsLoading && generatedProjects.length === 0 && (
-          <Card className="border-slate-700 bg-slate-800/50">
+          <Card className="border-white/[0.08] bg-[#161616]">
             <CardContent className="py-12 text-center">
-              <FolderKanban className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">Generate Your First Project</h3>
-              <p className="text-slate-400 max-w-md mx-auto">
+              <FolderKanban className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-white mb-2">Generate Your First Project</h3>
+              <p className="text-zinc-400 max-w-md mx-auto">
                 Select a technology and domain above, then click &quot;Generate Project Ideas&quot; to get AI-powered project specifications with detailed explanations.
               </p>
             </CardContent>
@@ -314,7 +317,7 @@ export default function ProjectsPage() {
                 <h3 className="text-lg font-semibold text-white">
                   Generated Projects for {projectTech} in {PROJECT_DOMAINS.find((d) => d.id === projectDomain)?.name}
                 </h3>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-zinc-500">
                   {generatedProjects.length} projects with detailed explanations
                 </p>
               </div>

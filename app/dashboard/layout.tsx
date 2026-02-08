@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-  Mic,
+  Zap,
   LayoutDashboard,
   BarChart3,
   History,
@@ -61,8 +61,8 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-yellow-400"></div>
       </div>
     );
   }
@@ -72,7 +72,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1115] text-white">
+    <div className="min-h-screen bg-[#0f0f0f] text-white">
       {/* Mobile Sidebar Overlay */}
       <div
         className={`fixed inset-0 bg-black/60 z-40 lg:hidden transition-opacity duration-300 ${
@@ -84,7 +84,7 @@ export default function DashboardLayout({
       {/* Sidebar Navigation */}
       <aside
         className={`
-          fixed left-0 top-0 h-full border-r border-[#2d3139] bg-[#0f1115] flex flex-col z-50
+          fixed left-0 top-0 h-full border-r border-white/[0.08] bg-[#0f0f0f] flex flex-col z-50
           transition-all duration-300 ease-in-out
           w-64
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -93,11 +93,11 @@ export default function DashboardLayout({
       >
         {/* Logo */}
         <div className="p-4 flex items-center gap-3 h-16">
-          <div className="h-10 w-10 min-w-[40px] bg-blue-500 rounded-lg flex items-center justify-center text-white flex-shrink-0">
-            <Mic className="h-5 w-5" />
+          <div className="h-10 w-10 min-w-[40px] bg-yellow-400 rotate-45 flex items-center justify-center flex-shrink-0">
+            <Zap className="h-5 w-5 text-[#0f0f0f] -rotate-45" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
-            FresherReady
+          <h1 className="text-sm font-black tracking-[0.2em] uppercase whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+            SkillForge
           </h1>
         </div>
 
@@ -107,15 +107,15 @@ export default function DashboardLayout({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2.5 font-medium transition-colors ${
                 isActive(item.href)
-                  ? "bg-blue-500/10 text-blue-400"
-                  : "text-slate-400 hover:bg-[#1c1f26] hover:text-white"
+                  ? "bg-yellow-400/10 text-yellow-400"
+                  : "text-zinc-400 hover:bg-[#161616] hover:text-white"
               }`}
               title={item.label}
             >
               <item.icon className="h-5 w-5 min-w-[20px] flex-shrink-0" />
-              <span className="whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+              <span className="whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-xs uppercase tracking-wider">
                 {item.label}
               </span>
             </Link>
@@ -123,26 +123,26 @@ export default function DashboardLayout({
         </nav>
 
         {/* User Profile & Sign out at bottom */}
-        <div className="p-3 border-t border-[#2d3139] space-y-2">
+        <div className="p-3 border-t border-white/[0.08] space-y-2">
           {/* User Profile */}
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#1c1f26]">
-            <div className="h-9 w-9 min-w-[36px] rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
+          <div className="flex items-center gap-3 px-3 py-2.5 bg-[#161616]">
+            <div className="h-9 w-9 min-w-[36px] bg-orange-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
             </div>
             <div className="overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
-              <p className="text-sm font-semibold text-white truncate">{user.name || "User"}</p>
-              <p className="text-xs text-slate-400">Candidate</p>
+              <p className="text-sm font-bold text-white truncate">{user.name || "User"}</p>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Candidate</p>
             </div>
           </div>
 
           {/* Sign out button */}
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-[#1c1f26] hover:text-white transition-colors w-full"
+            className="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:bg-[#161616] hover:text-white transition-colors w-full"
             title="Sign out"
           >
             <LogOut className="h-5 w-5 min-w-[20px] flex-shrink-0" />
-            <span className="whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+            <span className="whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-xs uppercase tracking-wider">
               Sign out
             </span>
           </button>
@@ -152,33 +152,33 @@ export default function DashboardLayout({
       {/* Main Content */}
       <main className="lg:ml-[72px] flex flex-col min-h-screen">
         {/* Mobile Header */}
-        <header className="sticky top-0 z-30 w-full border-b border-[#2d3139] bg-[#0f1115]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between lg:hidden">
+        <header className="sticky top-0 z-30 w-full border-b border-white/[0.08] bg-[#0f0f0f]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between lg:hidden">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 text-slate-400 hover:bg-[#1c1f26] hover:text-white rounded-lg transition-colors"
+            className="p-2 text-zinc-400 hover:bg-[#161616] hover:text-white transition-colors"
             aria-label="Toggle menu"
           >
             {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 bg-blue-500 rounded-lg flex items-center justify-center text-white">
-              <Mic className="h-4 w-4" />
+            <div className="h-8 w-8 bg-yellow-400 rotate-45 flex items-center justify-center">
+              <Zap className="h-4 w-4 text-[#0f0f0f] -rotate-45" />
             </div>
-            <span className="font-bold">FresherReady</span>
+            <span className="text-xs font-black tracking-[0.15em] uppercase">SkillForge</span>
           </div>
-          <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-sm">
+          <div className="h-9 w-9 bg-orange-500 flex items-center justify-center text-white font-bold text-sm">
             {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
           </div>
         </header>
 
         {/* Desktop Top Bar */}
-        <header className="hidden lg:flex sticky top-0 z-30 w-full border-b border-[#2d3139] bg-[#0f1115]/95 backdrop-blur-md px-8 py-2.5 items-center justify-between">
+        <header className="hidden lg:flex sticky top-0 z-30 w-full border-b border-white/[0.08] bg-[#0f0f0f]/95 backdrop-blur-md px-8 py-2.5 items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-slate-400 text-sm">Welcome back,</span>
-            <span className="text-white font-medium">{user.name || "User"}</span>
+            <span className="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Welcome back,</span>
+            <span className="text-white font-bold">{user.name || "User"}</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-slate-500">AI Mock Interview Platform</span>
+            <span className="text-[10px] text-zinc-600 uppercase tracking-[0.3em] font-bold">SkillForge Platform</span>
           </div>
         </header>
 

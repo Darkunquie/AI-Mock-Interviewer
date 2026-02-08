@@ -3,276 +3,319 @@
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Mic, Brain, BarChart3, ArrowRight, BookOpen, Target, Upload, Building2, TrendingUp, Layers, GraduationCap, Zap } from "lucide-react";
-import { MotionDiv, MotionStagger, motion, fadeUpVariants, scaleUpVariants } from "@/components/ui/motion";
+import {
+  Mic,
+  BarChart3,
+  Target,
+  Zap,
+  ArrowRight,
+  Sparkles,
+  Link as LinkIcon,
+  Mail,
+} from "lucide-react";
 
 // Hydration-safe mounting check
 const emptySubscribe = () => () => {};
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
 
+// SkillForge Logo - Anvil with Spark
+function SkillForgeLogo() {
+  return (
+    <div className="size-5 bg-yellow-400 flex items-center justify-center rotate-45">
+      <Zap className="w-3 h-3 text-[#0f0f0f] -rotate-45" />
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { isSignedIn, isLoading } = useAuth();
-
-  // useSyncExternalStore prevents hydration mismatch
   const mounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
-
-  // Use false during SSR and initial render to match server
   const showDashboardLink = mounted && !isLoading && isSignedIn;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-[#0f0f0f] text-neutral-200 antialiased overflow-x-hidden font-sans">
       {/* Header */}
-      <header className="container mx-auto px-4 py-6">
-        <nav className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="h-8 w-8 text-blue-500" />
-            <span className="text-xl font-bold text-white">AI Mock Interview</span>
-          </div>
-          <div className="flex items-center gap-4">
+      <header className="fixed top-0 w-full z-50 bg-[#0f0f0f]/90 backdrop-blur-xl border-b border-white/[0.08]">
+        <div className="max-w-full mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <SkillForgeLogo />
+            <span className="text-sm font-bold tracking-[0.25em] uppercase text-white">
+              SkillForge
+            </span>
+          </Link>
+
+          <div className="flex items-center gap-10">
+            <nav className="hidden md:flex items-center gap-8">
+              <a href="#features" className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-yellow-400 transition-colors">
+                Features
+              </a>
+              <a href="#practice" className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-yellow-400 transition-colors">
+                Practice
+              </a>
+            </nav>
             {showDashboardLink ? (
               <Link href="/dashboard">
-                <Button>Go to Dashboard</Button>
+                <button className="bg-white text-[#0f0f0f] px-5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-yellow-400 transition-all">
+                  Dashboard
+                </button>
               </Link>
             ) : (
-              <>
-                <Link href="/sign-in">
-                  <Button variant="ghost" className="text-white hover:text-blue-400">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/sign-up">
-                  <Button>Get Started Free</Button>
-                </Link>
-              </>
+              <Link href="/sign-in">
+                <button className="bg-white text-[#0f0f0f] px-5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-yellow-400 transition-all">
+                  Sign In
+                </button>
+              </Link>
             )}
           </div>
-        </nav>
+        </div>
       </header>
 
-      {/* Hero Section */}
-      <main className="container mx-auto px-4 py-16 text-center">
-        <div className="mx-auto max-w-4xl">
-          <MotionDiv delay={0}>
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-blue-500/10 px-4 py-2 text-sm text-blue-400">
-              <Mic className="h-4 w-4" />
-              Voice-Powered AI Interviews
+      <main className="pt-16">
+        <div className="grid grid-cols-1 md:grid-cols-12 w-full min-h-screen border-l border-white/[0.08]">
+          {/* Hero Section - Left */}
+          <section className="md:col-span-8 lg:col-span-9 grid-cell border-b border-r border-white/[0.08] flex flex-col justify-center min-h-[70vh] relative group">
+            <div className="absolute top-8 left-8">
+              <p className="text-orange-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2">
+                System Status: Active
+              </p>
             </div>
-          </MotionDiv>
-          <MotionDiv delay={0.1}>
-            <h1 className="mb-6 text-5xl font-bold leading-tight text-white md:text-6xl">
-              Master Your Next
-              <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                {" "}Tech Interview
-              </span>
-            </h1>
-          </MotionDiv>
-          <MotionDiv delay={0.2}>
-            <p className="mb-8 text-xl text-slate-400">
-              Practice with our AI interviewer that speaks and listens. Get real-time feedback,
-              personalized questions, and improve your interview skills—all for free.
-            </p>
-          </MotionDiv>
-          <MotionDiv delay={0.3}>
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link href={showDashboardLink ? "/dashboard" : "/sign-up"}>
-                <Button size="lg" className="gap-2 text-lg">
-                  Start Free Interview <ArrowRight className="h-5 w-5" />
-                </Button>
+
+            <div className="max-w-4xl space-y-12">
+              <div className="space-y-6">
+                <p className="text-yellow-400 text-xs font-bold uppercase tracking-[0.4em]">
+                  Ready for your session?
+                </p>
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-[0.9] text-white">
+                  Hello. I&apos;m your interviewer today.{" "}
+                  <br />
+                  <span className="text-zinc-700">Shall we begin?</span>
+                </h1>
+              </div>
+
+              {/* Audio Visualizer Bars */}
+              <div className="flex items-end gap-1 h-32 py-4">
+                {[20, 45, 80, 30, 95, 50, 15, 75, 40, 100, 60, 25, 85, 35, 55, 10].map((height, i) => (
+                  <div
+                    key={i}
+                    className={`w-2 ${i % 3 === 0 ? 'bg-orange-500' : 'bg-yellow-400'} glitch-bar`}
+                    style={{
+                      height: `${height}%`,
+                      animationDelay: `${i * 0.1}s`,
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* CTA */}
+              <div className="flex flex-wrap items-center gap-8">
+                <Link href={showDashboardLink ? "/dashboard/practice" : "/sign-up"}>
+                  <button className="btn-brutalist px-10 py-5 bg-yellow-400 text-[#0f0f0f] font-black text-sm uppercase tracking-widest hover:bg-white transition-all">
+                    Start Free Interview
+                    <ArrowRight className="inline-block ml-2 w-4 h-4" />
+                  </button>
+                </Link>
+                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] border-l border-zinc-800 pl-6">
+                  100+ Tech Stacks Available
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Features Section - Right */}
+          <section className="md:col-span-4 lg:col-span-3 border-b border-white/[0.08]">
+            <div className="grid grid-cols-1 h-full">
+              {/* Feature 1 */}
+              <div className="grid-cell border-b border-white/[0.08] flex flex-col justify-center gap-6 hover:bg-[#161616] group transition-colors">
+                <Mic className="w-8 h-8 text-orange-500 group-hover:scale-110 transition-transform" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">01. Conversation</p>
+                <h3 className="text-xl font-bold text-white leading-tight">
+                  Natural, low-latency voice interaction.
+                </h3>
+                <p className="text-zinc-400 text-xs leading-relaxed italic">
+                  &quot;Explain how you handle state management in complex applications.&quot;
+                </p>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="grid-cell border-b border-white/[0.08] flex flex-col justify-center gap-6 hover:bg-[#161616] group transition-colors">
+                <BarChart3 className="w-8 h-8 text-yellow-400 group-hover:scale-110 transition-transform" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">02. Feedback</p>
+                <h3 className="text-xl font-bold text-white leading-tight">
+                  Immediate analysis of your response.
+                </h3>
+                <p className="text-zinc-400 text-xs leading-relaxed italic">
+                  &quot;You demonstrated clear logic but could improve your technical depth here.&quot;
+                </p>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="grid-cell flex flex-col justify-center gap-6 hover:bg-[#161616] group transition-colors">
+                <Target className="w-8 h-8 text-orange-500 group-hover:scale-110 transition-transform" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">03. Growth</p>
+                <h3 className="text-xl font-bold text-white leading-tight">
+                  Role-specific mastery paths.
+                </h3>
+                <p className="text-zinc-400 text-xs leading-relaxed italic">
+                  &quot;Based on our talk, I&apos;ve curated five new challenges for your goal.&quot;
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Stats Section */}
+          <section className="md:col-span-12 grid grid-cols-2 md:grid-cols-4 border-b border-white/[0.08]" id="features">
+            <StatCell number="100+" label="Tech Courses" />
+            <StatCell number="1000+" label="Subtopics" />
+            <StatCell number="20+" label="Learning Paths" />
+            <StatCell number="Free" label="Forever" />
+          </section>
+
+          {/* What We Offer Grid */}
+          <section className="md:col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border-b border-white/[0.08]" id="practice">
+            <OfferCell
+              icon={<Mic className="w-6 h-6" />}
+              title="Voice Interviews"
+              description="Real-time AI conversations with speech-to-text"
+              color="yellow"
+            />
+            <OfferCell
+              icon={<BarChart3 className="w-6 h-6" />}
+              title="Smart Analytics"
+              description="Track filler words, pace, and improvement"
+              color="orange"
+            />
+            <OfferCell
+              icon={<Sparkles className="w-6 h-6" />}
+              title="Flash Cards"
+              description="AI-generated cards for quick revision"
+              color="yellow"
+            />
+            <OfferCell
+              icon={<Target className="w-6 h-6" />}
+              title="Company Prep"
+              description="Questions styled for FAANG & top companies"
+              color="orange"
+            />
+          </section>
+
+          {/* CTA Section */}
+          <section className="md:col-span-12 grid-cell border-b border-white/[0.08] bg-[#161616] flex flex-col md:flex-row items-center justify-between py-20 gap-12">
+            <h2 className="text-3xl md:text-5xl font-bold text-white max-w-2xl leading-[0.9] tracking-tighter">
+              Are you ready to <span className="text-yellow-400">forge</span> your skills?
+            </h2>
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+              <Link href={showDashboardLink ? "/dashboard/practice" : "/sign-up"}>
+                <button className="px-10 py-5 bg-orange-500 text-white font-bold text-xs uppercase tracking-[0.2em] hover:bg-white hover:text-[#0f0f0f] transition-all text-center">
+                  Start Practicing
+                </button>
               </Link>
-              <Button size="lg" variant="outline" className="text-lg">
-                Watch Demo
-              </Button>
+              <Link href={showDashboardLink ? "/dashboard/analytics" : "/sign-up"}>
+                <button className="px-10 py-5 border border-white/20 text-white font-bold text-xs uppercase tracking-[0.2em] hover:border-yellow-400 hover:text-yellow-400 transition-all text-center">
+                  View Analytics
+                </button>
+              </Link>
             </div>
-          </MotionDiv>
+          </section>
         </div>
-
-        {/* Features Grid */}
-        <MotionStagger className="mx-auto mt-24 grid max-w-5xl gap-8 md:grid-cols-3">
-          <motion.div variants={fadeUpVariants}>
-            <FeatureCard
-              icon={<Mic className="h-8 w-8 text-blue-500" />}
-              title="Voice Conversations"
-              description="Speak naturally with our AI interviewer. No typing required—just talk like a real interview."
-            />
-          </motion.div>
-          <motion.div variants={fadeUpVariants}>
-            <FeatureCard
-              icon={<Brain className="h-8 w-8 text-purple-500" />}
-              title="Smart AI Evaluation"
-              description="Get instant scoring on technical accuracy, communication skills, and depth of knowledge."
-            />
-          </motion.div>
-          <motion.div variants={fadeUpVariants}>
-            <FeatureCard
-              icon={<BarChart3 className="h-8 w-8 text-green-500" />}
-              title="Detailed Feedback"
-              description="Receive personalized improvement tips, ideal answers, and topics to study after each interview."
-            />
-          </motion.div>
-        </MotionStagger>
-
-        {/* Stats Section */}
-        <MotionDiv variants={scaleUpVariants}>
-          <div className="mx-auto mt-24 grid max-w-4xl gap-8 rounded-2xl bg-slate-800/50 p-8 md:grid-cols-4">
-            <StatCard number="10K+" label="Users Practicing" />
-            <StatCard number="50K+" label="Interviews Completed" />
-            <StatCard number="85%" label="Success Rate" />
-            <StatCard number="Free" label="Forever" />
-          </div>
-        </MotionDiv>
-
-        {/* What We Offer Section */}
-        <div className="mx-auto mt-24 max-w-6xl">
-          <MotionDiv>
-            <h2 className="mb-4 text-3xl font-bold text-white">What We Offer</h2>
-            <p className="mb-12 text-lg text-slate-400">Everything you need to ace your tech interview</p>
-          </MotionDiv>
-          <MotionStagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <motion.div variants={fadeUpVariants}>
-              <OfferCard
-                icon={<Layers className="h-6 w-6 text-blue-400" />}
-                title="64+ Tech Stacks"
-                description="Python, Java, React, AWS, Docker, Kubernetes, and 60+ more technologies with 900+ subtopics"
-              />
-            </motion.div>
-            <motion.div variants={fadeUpVariants}>
-              <OfferCard
-                icon={<GraduationCap className="h-6 w-6 text-purple-400" />}
-                title="20 Learning Paths"
-                description="Structured paths for Full Stack, Data Science, DevOps, ML Engineer, and more roles"
-              />
-            </motion.div>
-            <motion.div variants={fadeUpVariants}>
-              <OfferCard
-                icon={<Zap className="h-6 w-6 text-yellow-400" />}
-                title="Tech Deep Dive"
-                description="Focus on specific technologies with subtopic-level questions for targeted practice"
-              />
-            </motion.div>
-            <motion.div variants={fadeUpVariants}>
-              <OfferCard
-                icon={<Building2 className="h-6 w-6 text-cyan-400" />}
-                title="Company Patterns"
-                description="Questions styled for Google, Amazon, Meta, Microsoft, and other top companies"
-              />
-            </motion.div>
-            <motion.div variants={fadeUpVariants}>
-              <OfferCard
-                icon={<TrendingUp className="h-6 w-6 text-green-400" />}
-                title="Speech Analytics"
-                description="Track filler words (um, uh), speaking pace (WPM), and improve communication"
-              />
-            </motion.div>
-            <motion.div variants={fadeUpVariants}>
-              <OfferCard
-                icon={<Upload className="h-6 w-6 text-orange-400" />}
-                title="PDF Upload"
-                description="Upload your own interview questions from PDFs for personalized practice"
-              />
-            </motion.div>
-            <motion.div variants={fadeUpVariants}>
-              <OfferCard
-                icon={<Target className="h-6 w-6 text-red-400" />}
-                title="Progress Tracking"
-                description="Track your scores, completion rates, and improvement over time"
-              />
-            </motion.div>
-            <motion.div variants={fadeUpVariants}>
-              <OfferCard
-                icon={<BookOpen className="h-6 w-6 text-pink-400" />}
-                title="Detailed Feedback"
-                description="Get ideal answers, improvement tips, and topics to study after each question"
-              />
-            </motion.div>
-          </MotionStagger>
-        </div>
-
-        {/* How It Works */}
-        <div className="mx-auto mt-24 max-w-4xl">
-          <MotionDiv>
-            <h2 className="mb-12 text-3xl font-bold text-white">How It Works</h2>
-          </MotionDiv>
-          <MotionStagger className="grid gap-6 md:grid-cols-4">
-            <motion.div variants={fadeUpVariants}>
-              <StepCard step={1} title="Select Role" description="Choose your target role and experience level" />
-            </motion.div>
-            <motion.div variants={fadeUpVariants}>
-              <StepCard step={2} title="Start Interview" description="AI generates personalized questions for you" />
-            </motion.div>
-            <motion.div variants={fadeUpVariants}>
-              <StepCard step={3} title="Answer & Speak" description="Respond using your voice—just like a real interview" />
-            </motion.div>
-            <motion.div variants={fadeUpVariants}>
-              <StepCard step={4} title="Get Feedback" description="Receive instant scores and improvement tips" />
-            </motion.div>
-          </MotionStagger>
-        </div>
-
-        {/* CTA Section */}
-        <MotionDiv variants={scaleUpVariants}>
-          <div className="mx-auto mt-24 max-w-2xl rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 p-12">
-            <h2 className="mb-4 text-3xl font-bold text-white">Ready to Ace Your Interview?</h2>
-            <p className="mb-8 text-lg text-blue-100">
-              Join thousands of developers who improved their interview skills with AI practice.
-            </p>
-            <Link href={showDashboardLink ? "/dashboard" : "/sign-up"}>
-              <Button size="lg" variant="secondary" className="gap-2 text-lg">
-                Start Practicing Now <ArrowRight className="h-5 w-5" />
-              </Button>
-            </Link>
-          </div>
-        </MotionDiv>
       </main>
 
       {/* Footer */}
-      <footer className="container mx-auto border-t border-slate-800 px-4 py-8 text-center text-slate-500">
-        <p>© 2026 AI Mock Interview by FresherReady. All rights reserved.</p>
+      <footer className="bg-[#0f0f0f] border-t border-white/[0.08] py-16">
+        <div className="max-w-full mx-auto px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 lg:gap-24">
+            {/* Logo */}
+            <div className="space-y-8 md:col-span-1">
+              <div className="flex items-center gap-2">
+                <div className="size-4 bg-orange-500 rotate-45" />
+                <span className="text-xs font-black uppercase tracking-[0.3em] text-white">
+                  SkillForge
+                </span>
+              </div>
+              <p className="text-zinc-500 text-[10px] font-medium uppercase tracking-widest leading-loose max-w-xs">
+                Built for the future of technical assessment. Zero friction. Pure growth.
+              </p>
+            </div>
+
+            {/* Links */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:col-span-3">
+              <div className="space-y-6">
+                <p className="text-[9px] font-black text-white uppercase tracking-[0.3em]">Platform</p>
+                <ul className="space-y-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                  <li><Link href="/dashboard/practice" className="hover:text-yellow-400 transition-colors">Practice</Link></li>
+                  <li><Link href="/dashboard/flash-cards" className="hover:text-yellow-400 transition-colors">Flash Cards</Link></li>
+                  <li><Link href="/dashboard/analytics" className="hover:text-yellow-400 transition-colors">Analytics</Link></li>
+                </ul>
+              </div>
+              <div className="space-y-6">
+                <p className="text-[9px] font-black text-white uppercase tracking-[0.3em]">Company</p>
+                <ul className="space-y-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                  <li><a href="#" className="hover:text-yellow-400 transition-colors">About</a></li>
+                  <li><a href="#" className="hover:text-yellow-400 transition-colors">Privacy</a></li>
+                  <li><a href="#" className="hover:text-yellow-400 transition-colors">Terms</a></li>
+                </ul>
+              </div>
+              <div className="space-y-6 col-span-2 md:col-span-1">
+                <p className="text-[9px] font-black text-white uppercase tracking-[0.3em]">Connect</p>
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 border border-white/[0.08] flex items-center justify-center text-zinc-500 hover:text-yellow-400 hover:border-yellow-400 transition-all cursor-pointer">
+                    <LinkIcon className="w-4 h-4" />
+                  </div>
+                  <div className="w-10 h-10 border border-white/[0.08] flex items-center justify-center text-zinc-500 hover:text-yellow-400 hover:border-yellow-400 transition-all cursor-pointer">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom */}
+          <div className="mt-20 pt-8 border-t border-white/[0.08] flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-zinc-700 text-[9px] font-bold uppercase tracking-[0.4em]">
+              © 2026 SKILLFORGE. SYSTEM ONLINE.
+            </p>
+            <div className="flex gap-8">
+              <span className="text-[9px] text-zinc-700 font-bold uppercase tracking-[0.4em]">
+                100+ COURSES
+              </span>
+              <span className="text-[9px] text-zinc-700 font-bold uppercase tracking-[0.4em]">
+                FREE FOREVER
+              </span>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   );
 }
 
-function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+function StatCell({ number, label }: { number: string; label: string }) {
   return (
-    <div className="rounded-xl bg-slate-800/50 p-6 text-left transition-all hover:bg-slate-800">
-      <div className="mb-4">{icon}</div>
-      <h3 className="mb-2 text-xl font-semibold text-white">{title}</h3>
-      <p className="text-slate-400">{description}</p>
+    <div className="grid-cell border-r border-white/[0.08] flex flex-col justify-center items-center gap-2 hover:bg-[#161616] transition-colors">
+      <p className="text-4xl md:text-5xl font-black text-yellow-400">{number}</p>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{label}</p>
     </div>
   );
 }
 
-function StatCard({ number, label }: { number: string; label: string }) {
+function OfferCell({
+  icon,
+  title,
+  description,
+  color,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  color: "yellow" | "orange";
+}) {
   return (
-    <div className="text-center">
-      <div className="text-3xl font-bold text-white">{number}</div>
-      <div className="text-slate-400">{label}</div>
-    </div>
-  );
-}
-
-function StepCard({ step, title, description }: { step: number; title: string; description: string }) {
-  return (
-    <div className="relative rounded-xl bg-slate-800/50 p-6 text-center">
-      <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold text-white">
-        {step}
-      </div>
-      <h3 className="mb-2 font-semibold text-white">{title}</h3>
-      <p className="text-sm text-slate-400">{description}</p>
-    </div>
-  );
-}
-
-function OfferCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
-  return (
-    <div className="rounded-xl border border-slate-700 bg-slate-800/30 p-5 text-left transition-all hover:border-blue-500/50 hover:bg-slate-800/50">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700/50">
+    <div className="grid-cell border-r border-white/[0.08] flex flex-col gap-4 hover:bg-[#161616] transition-colors group">
+      <div className={`${color === "yellow" ? "text-yellow-400" : "text-orange-500"} group-hover:scale-110 transition-transform`}>
         {icon}
       </div>
-      <h3 className="mb-2 text-lg font-semibold text-white">{title}</h3>
-      <p className="text-sm text-slate-400">{description}</p>
+      <h3 className="text-lg font-bold text-white">{title}</h3>
+      <p className="text-zinc-500 text-xs leading-relaxed">{description}</p>
     </div>
   );
 }

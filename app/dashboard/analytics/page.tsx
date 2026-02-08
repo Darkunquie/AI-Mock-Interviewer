@@ -53,7 +53,7 @@ interface AnalyticsData {
   recentTrend: "improving" | "declining" | "stable";
 }
 
-const COLORS = ["#3b82f6", "#22c55e", "#eab308", "#ef4444", "#8b5cf6", "#06b6d4"];
+const COLORS = ["#facc15", "#f97316", "#22c55e", "#ef4444", "#8b5cf6", "#06b6d4"];
 
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-yellow-400" />
       </div>
     );
   }
@@ -87,9 +87,9 @@ export default function AnalyticsPage() {
   if (!data) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center">
-        <BarChart3 className="h-16 w-16 text-slate-600 mb-4" />
-        <p className="text-slate-400">No analytics data available yet.</p>
-        <p className="text-sm text-slate-500 mt-2">Complete some interviews to see your progress!</p>
+        <BarChart3 className="h-16 w-16 text-zinc-700 mb-4" />
+        <p className="text-zinc-400">No analytics data available yet.</p>
+        <p className="text-sm text-zinc-600 mt-2">Complete some interviews to see your progress!</p>
       </div>
     );
   }
@@ -113,9 +113,9 @@ export default function AnalyticsPage() {
   };
 
   const skillData = [
-    { name: "Technical", value: skillBreakdown.technical, color: "#3b82f6" },
-    { name: "Communication", value: skillBreakdown.communication, color: "#22c55e" },
-    { name: "Depth", value: skillBreakdown.depth, color: "#8b5cf6" },
+    { name: "Technical", value: skillBreakdown.technical, color: "#facc15" },
+    { name: "Communication", value: skillBreakdown.communication, color: "#f97316" },
+    { name: "Depth", value: skillBreakdown.depth, color: "#22c55e" },
   ];
 
   return (
@@ -123,8 +123,9 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500 mb-1">Performance</p>
           <h1 className="text-3xl font-bold text-white">Progress Analytics</h1>
-          <p className="mt-2 text-slate-400">
+          <p className="mt-2 text-zinc-500 text-sm">
             Track your interview performance and identify areas for improvement
           </p>
         </div>
@@ -136,50 +137,50 @@ export default function AnalyticsPage() {
 
       {/* Overview Stats */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-slate-700 bg-slate-800/50">
+        <Card className="border-white/[0.08] bg-[#161616]">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Total Interviews</p>
-                <p className="text-3xl font-bold text-white">{overview.totalInterviews}</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total Interviews</p>
+                <p className="text-3xl font-black text-yellow-400">{overview.totalInterviews}</p>
               </div>
-              <Calendar className="h-10 w-10 text-blue-500 opacity-50" />
+              <Calendar className="h-10 w-10 text-yellow-400 opacity-50" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-700 bg-slate-800/50">
+        <Card className="border-white/[0.08] bg-[#161616]">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Average Score</p>
-                <p className="text-3xl font-bold text-white">{overview.averageScore}%</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Average Score</p>
+                <p className="text-3xl font-black text-orange-500">{overview.averageScore}%</p>
               </div>
-              <Target className="h-10 w-10 text-yellow-500 opacity-50" />
+              <Target className="h-10 w-10 text-orange-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-700 bg-slate-800/50">
+        <Card className="border-white/[0.08] bg-[#161616]">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Best Score</p>
-                <p className="text-3xl font-bold text-green-500">{overview.bestScore}%</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Best Score</p>
+                <p className="text-3xl font-black text-emerald-500">{overview.bestScore}%</p>
               </div>
-              <Award className="h-10 w-10 text-green-500 opacity-50" />
+              <Award className="h-10 w-10 text-emerald-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-700 bg-slate-800/50">
+        <Card className="border-white/[0.08] bg-[#161616]">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Improvement</p>
-                <p className={`text-3xl font-bold ${overview.improvementRate >= 0 ? "text-green-500" : "text-red-500"}`}>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Improvement</p>
+                <p className={`text-3xl font-black ${overview.improvementRate >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                   {overview.improvementRate >= 0 ? "+" : ""}{overview.improvementRate}%
                 </p>
               </div>
               {overview.improvementRate >= 0 ? (
-                <TrendingUp className="h-10 w-10 text-green-500 opacity-50" />
+                <TrendingUp className="h-10 w-10 text-emerald-500 opacity-50" />
               ) : (
                 <TrendingDown className="h-10 w-10 text-red-500 opacity-50" />
               )}
@@ -191,10 +192,10 @@ export default function AnalyticsPage() {
       {/* Charts Row 1 */}
       <div className="mb-8 grid gap-6 lg:grid-cols-2">
         {/* Score History */}
-        <Card className="border-slate-700 bg-slate-800/50">
+        <Card className="border-white/[0.08] bg-[#161616]">
           <CardHeader>
             <CardTitle className="text-white">Score Trend</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-zinc-500">
               Your interview scores over time
             </CardDescription>
           </CardHeader>
@@ -202,29 +203,29 @@ export default function AnalyticsPage() {
             {scoreHistory.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={scoreHistory}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} />
-                  <YAxis stroke="#94a3b8" fontSize={12} domain={[0, 100]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis dataKey="date" stroke="#71717a" fontSize={12} />
+                  <YAxis stroke="#71717a" fontSize={12} domain={[0, 100]} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#1e293b",
-                      border: "1px solid #334155",
-                      borderRadius: "8px",
+                      backgroundColor: "#161616",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "0",
                     }}
                     labelStyle={{ color: "#fff" }}
                   />
                   <Line
                     type="monotone"
                     dataKey="score"
-                    stroke="#3b82f6"
+                    stroke="#facc15"
                     strokeWidth={2}
-                    dot={{ fill: "#3b82f6", strokeWidth: 2 }}
+                    dot={{ fill: "#facc15", strokeWidth: 2 }}
                     activeDot={{ r: 6 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-[300px] items-center justify-center text-slate-400">
+              <div className="flex h-[300px] items-center justify-center text-zinc-500">
                 Complete more interviews to see your trend
               </div>
             )}
@@ -232,10 +233,10 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Skill Breakdown */}
-        <Card className="border-slate-700 bg-slate-800/50">
+        <Card className="border-white/[0.08] bg-[#161616]">
           <CardHeader>
             <CardTitle className="text-white">Skill Breakdown</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-zinc-500">
               Average scores by skill category
             </CardDescription>
           </CardHeader>
@@ -250,8 +251,12 @@ export default function AnalyticsPage() {
                   outerRadius={100}
                   paddingAngle={5}
                   dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}/10`}
-                  labelLine={{ stroke: "#94a3b8" }}
+                  label={({ name, value, x, y }) => (
+                    <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="middle" fontSize={12}>
+                      {`${name}: ${value}/10`}
+                    </text>
+                  )}
+                  labelLine={{ stroke: "#71717a" }}
                 >
                   {skillData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -262,9 +267,9 @@ export default function AnalyticsPage() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#1e293b",
-                    border: "1px solid #334155",
-                    borderRadius: "8px",
+                    backgroundColor: "#161616",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "0",
                   }}
                 />
               </PieChart>
@@ -276,10 +281,10 @@ export default function AnalyticsPage() {
       {/* Charts Row 2 */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Score by Role */}
-        <Card className="border-slate-700 bg-slate-800/50">
+        <Card className="border-white/[0.08] bg-[#161616]">
           <CardHeader>
             <CardTitle className="text-white">Performance by Role</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-zinc-500">
               Average score for each role type
             </CardDescription>
           </CardHeader>
@@ -287,22 +292,22 @@ export default function AnalyticsPage() {
             {scoreByRole.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={scoreByRole} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis type="number" stroke="#94a3b8" fontSize={12} domain={[0, 100]} />
-                  <YAxis dataKey="role" type="category" stroke="#94a3b8" fontSize={12} width={80} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis type="number" stroke="#71717a" fontSize={12} domain={[0, 100]} />
+                  <YAxis dataKey="role" type="category" stroke="#71717a" fontSize={12} width={80} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#1e293b",
-                      border: "1px solid #334155",
-                      borderRadius: "8px",
+                      backgroundColor: "#161616",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "0",
                     }}
                     formatter={(value) => [`${value ?? 0}%`, "Avg Score"]}
                   />
-                  <Bar dataKey="avgScore" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="avgScore" fill="#facc15" radius={[0, 0, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-[300px] items-center justify-center text-slate-400">
+              <div className="flex h-[300px] items-center justify-center text-zinc-500">
                 No role data available
               </div>
             )}
@@ -310,10 +315,10 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Score by Type */}
-        <Card className="border-slate-700 bg-slate-800/50">
+        <Card className="border-white/[0.08] bg-[#161616]">
           <CardHeader>
             <CardTitle className="text-white">Performance by Type</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-zinc-500">
               Average score for each interview type
             </CardDescription>
           </CardHeader>
@@ -321,18 +326,18 @@ export default function AnalyticsPage() {
             {scoreByType.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={scoreByType}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="type" stroke="#94a3b8" fontSize={12} />
-                  <YAxis stroke="#94a3b8" fontSize={12} domain={[0, 100]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis dataKey="type" stroke="#71717a" fontSize={12} />
+                  <YAxis stroke="#71717a" fontSize={12} domain={[0, 100]} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#1e293b",
-                      border: "1px solid #334155",
-                      borderRadius: "8px",
+                      backgroundColor: "#161616",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "0",
                     }}
                     formatter={(value) => [`${value ?? 0}%`, "Avg Score"]}
                   />
-                  <Bar dataKey="avgScore" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="avgScore" radius={[0, 0, 0, 0]}>
                     {scoreByType.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
@@ -340,7 +345,7 @@ export default function AnalyticsPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-[300px] items-center justify-center text-slate-400">
+              <div className="flex h-[300px] items-center justify-center text-zinc-500">
                 No type data available
               </div>
             )}

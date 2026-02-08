@@ -278,12 +278,15 @@ export default function PracticePage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/10">
-            <GraduationCap className="h-5 w-5 text-purple-500" />
+          <div className="flex h-10 w-10 items-center justify-center bg-yellow-400 rotate-45">
+            <GraduationCap className="h-5 w-5 text-[#0f0f0f] -rotate-45" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Learning & Practice</h1>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500">Learning Center</p>
+            <h1 className="text-3xl font-bold text-white">Learning & Practice</h1>
+          </div>
         </div>
-        <p className="text-slate-400">
+        <p className="text-zinc-500 text-sm">
           Choose your role to see a structured learning path with 191+ IT topics, or select specific topics to practice.
         </p>
       </div>
@@ -291,39 +294,39 @@ export default function PracticePage() {
       {/* Role & Settings Selection */}
       <div className="mb-8 grid gap-6 md:grid-cols-3">
         <div className="grid gap-2">
-          <Label className="text-slate-300">Target Role</Label>
+          <Label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Target Role</Label>
           <Select value={role} onValueChange={(v) => setRole(v as ExtendedRole)}>
-            <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
+            <SelectTrigger className="border-white/[0.08] bg-[#161616] text-white hover:border-yellow-400/50 transition-colors">
               <SelectValue placeholder="Select role" />
             </SelectTrigger>
-            <SelectContent className="border-slate-600 bg-slate-700 max-h-96 min-w-[320px]">
-              <div className="px-2 py-1 text-xs text-slate-400 font-semibold">Core Roles</div>
+            <SelectContent className="border-white/[0.08] bg-[#161616] max-h-96 min-w-[320px]">
+              <div className="px-2 py-1 text-[10px] text-yellow-400 font-black uppercase tracking-widest">Core Roles</div>
               {["frontend", "backend", "fullstack"].map((r) => (
-                <SelectItem key={r} value={r} className="text-white hover:bg-slate-600">
+                <SelectItem key={r} value={r} className="text-white hover:bg-[#1a1a1a]">
                   {EXTENDED_ROLE_NAMES[r as ExtendedRole]}
                 </SelectItem>
               ))}
-              <div className="px-2 py-1 text-xs text-slate-400 font-semibold mt-2">Data & AI</div>
+              <div className="px-2 py-1 text-[10px] text-orange-500 font-black uppercase tracking-widest mt-2">Data & AI</div>
               {["data_engineer", "data_analyst", "data_scientist", "ml_engineer", "ai_engineer"].map((r) => (
-                <SelectItem key={r} value={r} className="text-white hover:bg-slate-600">
+                <SelectItem key={r} value={r} className="text-white hover:bg-[#1a1a1a]">
                   {EXTENDED_ROLE_NAMES[r as ExtendedRole]}
                 </SelectItem>
               ))}
-              <div className="px-2 py-1 text-xs text-slate-400 font-semibold mt-2">DevOps & Cloud</div>
+              <div className="px-2 py-1 text-[10px] text-orange-500 font-black uppercase tracking-widest mt-2">DevOps & Cloud</div>
               {["devops", "cloud_engineer", "sre"].map((r) => (
-                <SelectItem key={r} value={r} className="text-white hover:bg-slate-600">
+                <SelectItem key={r} value={r} className="text-white hover:bg-[#1a1a1a]">
                   {EXTENDED_ROLE_NAMES[r as ExtendedRole]}
                 </SelectItem>
               ))}
-              <div className="px-2 py-1 text-xs text-slate-400 font-semibold mt-2">Mobile</div>
+              <div className="px-2 py-1 text-[10px] text-orange-500 font-black uppercase tracking-widest mt-2">Mobile</div>
               {["mobile_android", "mobile_ios", "mobile_cross"].map((r) => (
-                <SelectItem key={r} value={r} className="text-white hover:bg-slate-600">
+                <SelectItem key={r} value={r} className="text-white hover:bg-[#1a1a1a]">
                   {EXTENDED_ROLE_NAMES[r as ExtendedRole]}
                 </SelectItem>
               ))}
-              <div className="px-2 py-1 text-xs text-slate-400 font-semibold mt-2">Specialized</div>
+              <div className="px-2 py-1 text-[10px] text-orange-500 font-black uppercase tracking-widest mt-2">Specialized</div>
               {["security_engineer", "qa_engineer", "sap_consultant", "salesforce_dev", "rpa_developer", "blockchain_dev"].map((r) => (
-                <SelectItem key={r} value={r} className="text-white hover:bg-slate-600">
+                <SelectItem key={r} value={r} className="text-white hover:bg-[#1a1a1a]">
                   {EXTENDED_ROLE_NAMES[r as ExtendedRole]}
                 </SelectItem>
               ))}
@@ -332,20 +335,20 @@ export default function PracticePage() {
         </div>
 
         <div className="grid gap-2">
-          <Label className="text-slate-300">Experience Level</Label>
+          <Label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Experience Level</Label>
           <Select
             value={experience}
             onValueChange={(v) => setExperience(v as ExperienceLevel)}
           >
-            <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
+            <SelectTrigger className="border-white/[0.08] bg-[#161616] text-white hover:border-yellow-400/50 transition-colors">
               <SelectValue placeholder="Select level" />
             </SelectTrigger>
-            <SelectContent className="border-slate-600 bg-slate-700">
+            <SelectContent className="border-white/[0.08] bg-[#161616]">
               {Object.entries(EXPERIENCE_DISPLAY_NAMES).map(([value, label]) => (
                 <SelectItem
                   key={value}
                   value={value}
-                  className="text-white hover:bg-slate-600"
+                  className="text-white hover:bg-[#1a1a1a]"
                 >
                   {label}
                 </SelectItem>
@@ -355,20 +358,20 @@ export default function PracticePage() {
         </div>
 
         <div className="grid gap-2">
-          <Label className="text-slate-300">Duration</Label>
+          <Label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Duration</Label>
           <Select
             value={duration}
             onValueChange={(v) => setDuration(v as InterviewDuration)}
           >
-            <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
+            <SelectTrigger className="border-white/[0.08] bg-[#161616] text-white hover:border-yellow-400/50 transition-colors">
               <SelectValue placeholder="Select duration" />
             </SelectTrigger>
-            <SelectContent className="border-slate-600 bg-slate-700">
+            <SelectContent className="border-white/[0.08] bg-[#161616]">
               {Object.entries(DURATION_CONFIG).map(([value, config]) => (
                 <SelectItem
                   key={value}
                   value={value}
-                  className="text-white hover:bg-slate-600"
+                  className="text-white hover:bg-[#1a1a1a]"
                 >
                   {config.label} ({config.questionCount} questions)
                 </SelectItem>
@@ -380,18 +383,18 @@ export default function PracticePage() {
 
       {/* Tech Stack Display for Selected Role */}
       {role && (
-        <Card className="mb-8 border-slate-700 bg-gradient-to-r from-purple-900/20 to-slate-800/50">
+        <Card className="mb-8 border-white/[0.08] bg-[#161616]">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3 mb-4">
-              <Sparkles className="h-5 w-5 text-purple-400" />
-              <h3 className="text-lg font-semibold text-white">
+              <Sparkles className="h-5 w-5 text-yellow-400" />
+              <h3 className="text-lg font-bold text-white">
                 Tech Stack for {EXTENDED_ROLE_NAMES[role]}
               </h3>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {getRoleTopics().map((category) => (
-                <div key={category.name} className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
-                  <h4 className="text-sm font-medium text-purple-300 mb-2 flex items-center gap-2">
+                <div key={category.name} className="border border-white/[0.08] bg-[#0f0f0f] p-4">
+                  <h4 className="text-[10px] font-black text-yellow-400 mb-2 flex items-center gap-2 uppercase tracking-widest">
                     <Target className="h-4 w-4" />
                     {category.name}
                   </h4>
@@ -400,7 +403,7 @@ export default function PracticePage() {
                       <Badge
                         key={topic}
                         variant="secondary"
-                        className="bg-slate-700/50 text-slate-300 text-xs hover:bg-purple-500/20 hover:text-purple-300 cursor-default"
+                        className="bg-zinc-800 text-zinc-300 text-xs hover:bg-yellow-400/20 hover:text-yellow-400 cursor-default"
                       >
                         {topic}
                       </Badge>
@@ -410,7 +413,7 @@ export default function PracticePage() {
               ))}
             </div>
             {getRoleTopics().length === 0 && (
-              <p className="text-slate-400 text-sm">No specific tech stack defined for this role yet.</p>
+              <p className="text-zinc-500 text-sm">No specific tech stack defined for this role yet.</p>
             )}
           </CardContent>
         </Card>
@@ -418,16 +421,16 @@ export default function PracticePage() {
 
       {/* Learning Path / Topics Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "topics" | "learning-path" | "tech-deep-dive")} className="mb-8">
-          <TabsList className="bg-slate-800 border border-slate-700">
-            <TabsTrigger value="learning-path" className="data-[state=active]:bg-purple-600">
+          <TabsList className="bg-[#161616] border border-white/[0.08]">
+            <TabsTrigger value="learning-path" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-[#0f0f0f] font-bold uppercase text-xs tracking-wider">
               <GraduationCap className="h-4 w-4 mr-2" />
               Learning Path
             </TabsTrigger>
-            <TabsTrigger value="topics" className="data-[state=active]:bg-purple-600">
+            <TabsTrigger value="topics" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-[#0f0f0f] font-bold uppercase text-xs tracking-wider">
               <Layers className="h-4 w-4 mr-2" />
               All Topics
             </TabsTrigger>
-            <TabsTrigger value="tech-deep-dive" className="data-[state=active]:bg-blue-600">
+            <TabsTrigger value="tech-deep-dive" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white font-bold uppercase text-xs tracking-wider">
               <Zap className="h-4 w-4 mr-2" />
               Tech Deep Dive
             </TabsTrigger>
@@ -438,41 +441,41 @@ export default function PracticePage() {
             {learningPath ? (
               <div className="space-y-6">
                 {/* Path Overview Card */}
-                <Card className="border-slate-700 bg-gradient-to-r from-purple-900/30 to-slate-800/50">
+                <Card className="border-white/[0.08] bg-[#161616]">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between flex-wrap gap-4">
                       <div className="flex items-center gap-4">
                         <span className="text-4xl">{learningPath.icon}</span>
                         <div>
                           <h2 className="text-xl font-bold text-white">{learningPath.roleName}</h2>
-                          <p className="text-slate-400">{learningPath.description}</p>
+                          <p className="text-zinc-500 text-sm">{learningPath.description}</p>
                         </div>
                       </div>
                       <div className="flex gap-6 text-center">
                         <div>
-                          <div className="text-2xl font-bold text-purple-400">{learningPath.totalTopics}</div>
-                          <div className="text-xs text-slate-400">Topics</div>
+                          <div className="text-2xl font-black text-yellow-400">{learningPath.totalTopics}</div>
+                          <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Topics</div>
                         </div>
                         <div>
-                          <div className="text-2xl font-bold text-blue-400">{learningPath.phases.length}</div>
-                          <div className="text-xs text-slate-400">Phases</div>
+                          <div className="text-2xl font-black text-orange-500">{learningPath.phases.length}</div>
+                          <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Phases</div>
                         </div>
                         <div>
-                          <div className="text-2xl font-bold text-green-400">{learningPath.estimatedWeeks}</div>
-                          <div className="text-xs text-slate-400">Weeks</div>
+                          <div className="text-2xl font-black text-emerald-500">{learningPath.estimatedWeeks}</div>
+                          <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Weeks</div>
                         </div>
                       </div>
                     </div>
                     {/* Progress Bar */}
                     {progressLoaded && getRoleProgress(role) && (
-                      <div className="mt-4 pt-4 border-t border-slate-700">
+                      <div className="mt-4 pt-4 border-t border-white/[0.08]">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-slate-400">Your Progress</span>
-                          <span className="text-sm font-medium text-purple-400">
+                          <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Your Progress</span>
+                          <span className="text-sm font-bold text-yellow-400">
                             {getRoleProgress(role)?.completedTopics || 0} / {learningPath.totalTopics} topics ({getRoleProgressPercentage(role)}%)
                           </span>
                         </div>
-                        <Progress value={getRoleProgressPercentage(role)} className="h-2 bg-slate-700" />
+                        <Progress value={getRoleProgressPercentage(role)} className="h-2 bg-zinc-800" />
                       </div>
                     )}
                   </CardContent>
@@ -484,13 +487,13 @@ export default function PracticePage() {
                     <button
                       key={phase.phase}
                       onClick={() => setSelectedPhase(phase.phase)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg border whitespace-nowrap transition-all ${
+                      className={`flex items-center gap-2 px-4 py-2 border whitespace-nowrap transition-all text-sm font-bold ${
                         selectedPhase === phase.phase
-                          ? "border-purple-500 bg-purple-500/20 text-purple-300"
-                          : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-purple-500/50"
+                          ? "border-yellow-400 bg-yellow-400/10 text-yellow-400"
+                          : "border-white/[0.08] bg-[#161616] text-zinc-400 hover:border-yellow-400/50"
                       }`}
                     >
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-700 text-xs font-bold">
+                      <span className="flex h-6 w-6 items-center justify-center bg-zinc-800 text-xs font-black">
                         {phase.phase}
                       </span>
                       {phase.name}
@@ -502,14 +505,14 @@ export default function PracticePage() {
                 {learningPath.phases
                   .filter((p) => p.phase === selectedPhase)
                   .map((phase) => (
-                    <Card key={phase.phase} className="border-slate-700 bg-slate-800/50">
+                    <Card key={phase.phase} className="border-white/[0.08] bg-[#161616]">
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <div>
                             <CardTitle className="flex items-center gap-2 text-white">
                               Phase {phase.phase}: {phase.name}
                             </CardTitle>
-                            <CardDescription className="text-slate-400">
+                            <CardDescription className="text-zinc-500">
                               {phase.description}
                             </CardDescription>
                           </div>
@@ -517,7 +520,7 @@ export default function PracticePage() {
                             variant="outline"
                             size="sm"
                             onClick={() => selectPhaseTopics(phase)}
-                            className="border-purple-500 text-purple-400 hover:bg-purple-500/20"
+                            className="border-yellow-400 text-yellow-400 hover:bg-yellow-400/20"
                           >
                             Select All Phase Topics
                           </Button>
@@ -536,37 +539,37 @@ export default function PracticePage() {
                                 key={topic.id}
                                 type="button"
                                 onClick={() => toggleTopic(topic.name)}
-                                className={`rounded-lg border p-4 text-left transition-all relative ${
+                                className={`border p-4 text-left transition-all relative ${
                                   selectedTopics.includes(topic.name)
-                                    ? "border-purple-500 bg-purple-500/10"
+                                    ? "border-yellow-400 bg-yellow-400/10"
                                     : isCompleted
-                                    ? "border-green-500/50 bg-green-500/5"
+                                    ? "border-emerald-500/50 bg-emerald-500/5"
                                     : isInProgress
-                                    ? "border-yellow-500/50 bg-yellow-500/5"
-                                    : "border-slate-700 bg-slate-800/30 hover:border-purple-500/50"
+                                    ? "border-orange-500/50 bg-orange-500/5"
+                                    : "border-white/[0.08] bg-[#0f0f0f] hover:border-yellow-400/50"
                                 }`}
                               >
                                 {/* Status indicator */}
                                 {isCompleted && (
-                                  <div className="absolute -top-2 -right-2 bg-green-500 rounded-full p-1">
+                                  <div className="absolute -top-2 -right-2 bg-emerald-500 p-1">
                                     <CheckCircle2 className="h-3 w-3 text-white" />
                                   </div>
                                 )}
                                 <div className="flex items-start justify-between mb-2">
                                   <span className={`text-sm font-medium ${
-                                    selectedTopics.includes(topic.name) ? "text-purple-300" :
-                                    isCompleted ? "text-green-300" :
-                                    isInProgress ? "text-yellow-300" : "text-white"
+                                    selectedTopics.includes(topic.name) ? "text-yellow-400" :
+                                    isCompleted ? "text-emerald-400" :
+                                    isInProgress ? "text-orange-400" : "text-white"
                                   }`}>
                                     {topic.name}
                                   </span>
                                   {selectedTopics.includes(topic.name) ? (
-                                    <CheckCircle2 className="h-5 w-5 text-purple-400 shrink-0" />
+                                    <CheckCircle2 className="h-5 w-5 text-yellow-400 shrink-0" />
                                   ) : (
-                                    <Circle className="h-5 w-5 text-slate-600 shrink-0" />
+                                    <Circle className="h-5 w-5 text-zinc-700 shrink-0" />
                                   )}
                                 </div>
-                                <p className="text-xs text-slate-500 mb-2 line-clamp-2">
+                                <p className="text-xs text-zinc-600 mb-2 line-clamp-2">
                                   {topic.description}
                                 </p>
                                 <div className="flex items-center justify-between">
@@ -598,18 +601,18 @@ export default function PracticePage() {
                   ))}
               </div>
             ) : (
-              <Card className="border-slate-700 bg-slate-800/50">
+              <Card className="border-white/[0.08] bg-[#161616]">
                 <CardContent className="py-12 text-center">
-                  <GraduationCap className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+                  <GraduationCap className="h-12 w-12 text-zinc-700 mx-auto mb-4" />
                   {!role ? (
                     <>
-                      <h3 className="text-lg font-semibold text-white mb-2">Select a Role to Begin</h3>
-                      <p className="text-slate-400 max-w-md mx-auto">
+                      <h3 className="text-lg font-bold text-white mb-2">Select a Role to Begin</h3>
+                      <p className="text-zinc-500 max-w-md mx-auto text-sm">
                         Choose your target role above to see a structured learning path, or use the Tech Deep Dive tab to explore technologies directly.
                       </p>
                     </>
                   ) : (
-                    <p className="text-slate-400">
+                    <p className="text-zinc-500 text-sm">
                       Learning path not available for this role yet.
                       <br />
                       Use the "All Topics" tab to select topics manually.
@@ -623,23 +626,23 @@ export default function PracticePage() {
           {/* Topics Tab */}
           <TabsContent value="topics" className="mt-6">
             {!role ? (
-              <Card className="border-slate-700 bg-slate-800/50">
+              <Card className="border-white/[0.08] bg-[#161616]">
                 <CardContent className="py-12 text-center">
-                  <Target className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-white mb-2">Select a Role First</h3>
-                  <p className="text-slate-400 max-w-md mx-auto">
+                  <Target className="h-12 w-12 text-zinc-700 mx-auto mb-4" />
+                  <h3 className="text-lg font-bold text-white mb-2">Select a Role First</h3>
+                  <p className="text-zinc-500 max-w-md mx-auto text-sm">
                     Choose your target role above to see tech stack topics, or use the Tech Deep Dive tab to explore technologies directly.
                   </p>
                 </CardContent>
               </Card>
             ) : (
-            <Card className="border-slate-700 bg-slate-800/50">
+            <Card className="border-white/[0.08] bg-[#161616]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
-                  <Sparkles className="h-5 w-5 text-purple-400" />
+                  <Sparkles className="h-5 w-5 text-yellow-400" />
                   Tech Stack for {EXTENDED_ROLE_NAMES[role]}
                 </CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardDescription className="text-zinc-500">
                   Select topics from your role's tech stack. Questions will be tailored to these areas.
                 </CardDescription>
               </CardHeader>
@@ -648,8 +651,8 @@ export default function PracticePage() {
                   <div className="space-y-6">
                     {getRoleTopics().map((category) => (
                       <div key={category.name}>
-                        <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
-                          <Target className="h-4 w-4 text-purple-400" />
+                        <h3 className="text-[10px] font-black text-yellow-400 mb-3 flex items-center gap-2 uppercase tracking-widest">
+                          <Target className="h-4 w-4" />
                           {category.name}
                         </h3>
                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -658,18 +661,18 @@ export default function PracticePage() {
                               key={topic}
                               type="button"
                               onClick={() => toggleTopic(topic)}
-                              className={`rounded-lg border p-3 text-left text-sm transition-all ${
+                              className={`border p-3 text-left text-sm transition-all ${
                                 selectedTopics.includes(topic)
-                                  ? "border-purple-500 bg-purple-500/10 text-purple-300"
-                                  : "border-slate-700 bg-slate-800/30 text-slate-300 hover:border-purple-500/50"
+                                  ? "border-yellow-400 bg-yellow-400/10 text-yellow-400"
+                                  : "border-white/[0.08] bg-[#0f0f0f] text-zinc-300 hover:border-yellow-400/50"
                               }`}
                             >
                               <span className="flex items-center gap-2">
                                 <span
-                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
+                                  className={`flex h-5 w-5 shrink-0 items-center justify-center border text-xs ${
                                     selectedTopics.includes(topic)
-                                      ? "border-purple-500 bg-purple-500 text-white"
-                                      : "border-slate-600"
+                                      ? "border-yellow-400 bg-yellow-400 text-[#0f0f0f]"
+                                      : "border-zinc-700"
                                   }`}
                                 >
                                   {selectedTopics.includes(topic) ? "✓" : ""}
@@ -683,7 +686,7 @@ export default function PracticePage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center text-slate-400 py-8">
+                  <p className="text-center text-zinc-500 py-8 text-sm">
                     No specific tech stack defined for this role. Select from the learning path.
                   </p>
                 )}
@@ -697,18 +700,18 @@ export default function PracticePage() {
             <div className="space-y-6">
               {/* Search Bar */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
                 <input
                   type="text"
                   placeholder="Search courses... (e.g., Python, React, AWS, Blockchain)"
                   value={techSearchQuery}
                   onChange={(e) => setTechSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 rounded-lg border border-slate-600 bg-slate-700 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-10 py-3 border border-white/[0.08] bg-[#161616] text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
                 {techSearchQuery && (
                   <button
                     onClick={() => setTechSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -719,10 +722,10 @@ export default function PracticePage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setTechCategory("all")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 border transition-all text-sm font-bold ${
                     techCategory === "all"
-                      ? "border-blue-500 bg-blue-500/20 text-blue-300"
-                      : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-blue-500/50"
+                      ? "border-orange-500 bg-orange-500/20 text-orange-400"
+                      : "border-white/[0.08] bg-[#161616] text-zinc-400 hover:border-orange-500/50"
                   }`}
                 >
                   <Filter className="h-4 w-4" />
@@ -732,10 +735,10 @@ export default function PracticePage() {
                   <button
                     key={cat.id}
                     onClick={() => setTechCategory(cat.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2 border transition-all text-sm font-bold ${
                       techCategory === cat.id
-                        ? "border-blue-500 bg-blue-500/20 text-blue-300"
-                        : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-blue-500/50"
+                        ? "border-orange-500 bg-orange-500/20 text-orange-400"
+                        : "border-white/[0.08] bg-[#161616] text-zinc-400 hover:border-orange-500/50"
                     }`}
                   >
                     <CategoryIcon categoryId={cat.id} size={16} />
@@ -751,12 +754,12 @@ export default function PracticePage() {
                     <button
                       key={tech.id}
                       onClick={() => handleTechSelect(tech)}
-                      className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 text-left transition-all hover:border-blue-500/50 hover:bg-slate-800"
+                      className="border border-white/[0.08] bg-[#161616] p-6 text-left transition-all hover:border-orange-500/50 hover:bg-[#1a1a1a]"
                     >
                       <TechIcon techId={tech.id} size={48} />
-                      <h3 className="mt-3 font-semibold text-white">{tech.name}</h3>
-                      <p className="mt-1 text-xs text-slate-400 line-clamp-2">{tech.description}</p>
-                      <div className="mt-3 flex items-center gap-3 text-xs text-slate-500">
+                      <h3 className="mt-3 font-bold text-white">{tech.name}</h3>
+                      <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{tech.description}</p>
+                      <div className="mt-3 flex items-center gap-3 text-[10px] text-zinc-600 uppercase tracking-wider font-bold">
                         <span>{tech.totalSubtopics} topics</span>
                         <span>•</span>
                         <span>{tech.estimatedWeeks} weeks</span>
@@ -770,30 +773,30 @@ export default function PracticePage() {
               {selectedTech && (
                 <div className="space-y-6">
                   {/* Tech Overview Card */}
-                  <Card className="border-slate-700 bg-gradient-to-r from-blue-900/30 to-slate-800/50">
+                  <Card className="border-white/[0.08] bg-[#161616]">
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between flex-wrap gap-4">
                         <div className="flex items-center gap-4">
                           <button
                             onClick={() => setSelectedTech(null)}
-                            className="text-slate-400 hover:text-white"
+                            className="text-zinc-500 hover:text-yellow-400 font-bold"
                           >
                             ← Back
                           </button>
                           <TechIcon techId={selectedTech.id} size={48} />
                           <div>
                             <h2 className="text-xl font-bold text-white">{selectedTech.name}</h2>
-                            <p className="text-slate-400">{selectedTech.description}</p>
+                            <p className="text-zinc-500 text-sm">{selectedTech.description}</p>
                           </div>
                         </div>
                         <div className="flex gap-6 text-center">
                           <div>
-                            <div className="text-2xl font-bold text-blue-400">{selectedTech.totalSubtopics}</div>
-                            <div className="text-xs text-slate-400">Topics</div>
+                            <div className="text-2xl font-black text-orange-500">{selectedTech.totalSubtopics}</div>
+                            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Topics</div>
                           </div>
                           <div>
-                            <div className="text-2xl font-bold text-green-400">{selectedTech.estimatedWeeks}</div>
-                            <div className="text-xs text-slate-400">Weeks</div>
+                            <div className="text-2xl font-black text-emerald-500">{selectedTech.estimatedWeeks}</div>
+                            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Weeks</div>
                           </div>
                         </div>
                       </div>
@@ -803,25 +806,25 @@ export default function PracticePage() {
                   {/* Company Target Selector */}
                   <div className="flex flex-wrap items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-blue-400" />
-                      <Label className="text-slate-300">Target Company:</Label>
+                      <Building2 className="h-4 w-4 text-orange-500" />
+                      <Label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Target Company:</Label>
                     </div>
                     <Select value={targetCompany} onValueChange={setTargetCompany}>
-                      <SelectTrigger className="w-48 border-slate-600 bg-slate-700 text-white">
+                      <SelectTrigger className="w-48 border-white/[0.08] bg-[#161616] text-white hover:border-orange-500/50 transition-colors">
                         <SelectValue placeholder="Select company" />
                       </SelectTrigger>
-                      <SelectContent className="border-slate-600 bg-slate-700">
-                        <SelectItem value="general" className="text-white hover:bg-slate-600">General</SelectItem>
+                      <SelectContent className="border-white/[0.08] bg-[#161616]">
+                        <SelectItem value="general" className="text-white hover:bg-[#1a1a1a]">General</SelectItem>
                         {selectedTech.companyPatterns.map((cp) => (
-                          <SelectItem key={cp.company} value={cp.company} className="text-white hover:bg-slate-600">
+                          <SelectItem key={cp.company} value={cp.company} className="text-white hover:bg-[#1a1a1a]">
                             {cp.company}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     {targetCompany && targetCompany !== "general" && (
-                      <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-1">
-                        <p className="text-xs text-blue-400">
+                      <div className="bg-orange-500/10 border border-orange-500/20 px-3 py-1">
+                        <p className="text-xs text-orange-400">
                           ✨ Questions styled for {targetCompany} interviews
                         </p>
                       </div>
@@ -831,23 +834,23 @@ export default function PracticePage() {
                   {/* Experience Level for Tech Deep Dive */}
                   <div className="flex flex-wrap items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <GraduationCap className="h-4 w-4 text-blue-400" />
-                      <Label className="text-slate-300">Experience Level: <span className="text-red-400">*</span></Label>
+                      <GraduationCap className="h-4 w-4 text-orange-500" />
+                      <Label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Experience Level: <span className="text-red-400">*</span></Label>
                     </div>
                     <Select value={experience} onValueChange={(v) => setExperience(v as ExperienceLevel)}>
-                      <SelectTrigger className={`w-48 border-slate-600 bg-slate-700 text-white ${!experience ? "border-red-500/50" : ""}`}>
+                      <SelectTrigger className={`w-48 border-white/[0.08] bg-[#161616] text-white ${!experience ? "border-red-500/50" : ""}`}>
                         <SelectValue placeholder="Select level (required)" />
                       </SelectTrigger>
-                      <SelectContent className="border-slate-600 bg-slate-700">
+                      <SelectContent className="border-white/[0.08] bg-[#161616]">
                         {Object.entries(EXPERIENCE_DISPLAY_NAMES).map(([value, label]) => (
-                          <SelectItem key={value} value={value} className="text-white hover:bg-slate-600">
+                          <SelectItem key={value} value={value} className="text-white hover:bg-[#1a1a1a]">
                             {label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     {!experience && (
-                      <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-1">
+                      <div className="bg-red-500/10 border border-red-500/20 px-3 py-1">
                         <p className="text-xs text-red-400">Required to start</p>
                       </div>
                     )}
@@ -859,7 +862,7 @@ export default function PracticePage() {
                       variant="outline"
                       size="sm"
                       onClick={() => selectAllByDifficulty("beginner")}
-                      className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+                      className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/20"
                     >
                       Select All Beginner
                     </Button>
@@ -867,7 +870,7 @@ export default function PracticePage() {
                       variant="outline"
                       size="sm"
                       onClick={() => selectAllByDifficulty("intermediate")}
-                      className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
+                      className="border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/20"
                     >
                       Select All Intermediate
                     </Button>
@@ -883,7 +886,7 @@ export default function PracticePage() {
                       variant="outline"
                       size="sm"
                       onClick={selectInterviewEssentials}
-                      className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
+                      className="border-orange-500/50 text-orange-400 hover:bg-orange-500/20"
                     >
                       <Sparkles className="h-4 w-4 mr-1" />
                       Interview Essentials
@@ -893,7 +896,7 @@ export default function PracticePage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setSelectedSubtopics([])}
-                        className="text-slate-400 hover:text-white"
+                        className="text-zinc-500 hover:text-white"
                       >
                         Clear All
                       </Button>
@@ -901,15 +904,15 @@ export default function PracticePage() {
                   </div>
 
                   {/* Subtopics Grid */}
-                  <Card className="border-slate-700 bg-slate-800/50">
+                  <Card className="border-white/[0.08] bg-[#161616]">
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between text-white">
                         <span className="flex items-center gap-2">
-                          <Layers className="h-5 w-5 text-blue-400" />
+                          <Layers className="h-5 w-5 text-orange-500" />
                           Subtopics
                         </span>
                         {selectedSubtopics.length > 0 && (
-                          <Badge className="bg-blue-500/20 text-blue-300">
+                          <Badge className="bg-orange-500/20 text-orange-400">
                             {selectedSubtopics.length} selected
                           </Badge>
                         )}
@@ -922,32 +925,32 @@ export default function PracticePage() {
                             key={subtopic.id}
                             type="button"
                             onClick={() => toggleSubtopic(subtopic.name)}
-                            className={`rounded-lg border p-4 text-left transition-all ${
+                            className={`border p-4 text-left transition-all ${
                               selectedSubtopics.includes(subtopic.name)
-                                ? "border-blue-500 bg-blue-500/10"
-                                : "border-slate-700 bg-slate-800/30 hover:border-blue-500/50"
+                                ? "border-orange-500 bg-orange-500/10"
+                                : "border-white/[0.08] bg-[#0f0f0f] hover:border-orange-500/50"
                             }`}
                           >
                             <div className="flex items-start justify-between mb-2">
                               <span className={`text-sm font-medium ${
-                                selectedSubtopics.includes(subtopic.name) ? "text-blue-300" : "text-white"
+                                selectedSubtopics.includes(subtopic.name) ? "text-orange-400" : "text-white"
                               }`}>
                                 {subtopic.name}
                               </span>
                               {selectedSubtopics.includes(subtopic.name) ? (
-                                <CheckCircle2 className="h-5 w-5 text-blue-400 shrink-0" />
+                                <CheckCircle2 className="h-5 w-5 text-orange-500 shrink-0" />
                               ) : (
-                                <Circle className="h-5 w-5 text-slate-600 shrink-0" />
+                                <Circle className="h-5 w-5 text-zinc-700 shrink-0" />
                               )}
                             </div>
-                            <p className="text-xs text-slate-500 mb-2 line-clamp-2">
+                            <p className="text-xs text-zinc-600 mb-2 line-clamp-2">
                               {subtopic.description}
                             </p>
                             <div className="flex items-center justify-between">
                               <Badge className={getDifficultyColor(subtopic.difficulty)}>
                                 {subtopic.difficulty}
                               </Badge>
-                              <span className="flex items-center text-xs text-slate-500">
+                              <span className="flex items-center text-xs text-zinc-600">
                                 <Clock className="h-3 w-3 mr-1" />
                                 {subtopic.estimatedHours}h
                               </span>
@@ -957,7 +960,7 @@ export default function PracticePage() {
                                 {subtopic.companyFocus.map((company) => (
                                   <span
                                     key={company}
-                                    className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-400"
+                                    className="text-[10px] px-1.5 py-0.5 bg-zinc-800 text-zinc-500"
                                   >
                                     {company}
                                   </span>
@@ -977,12 +980,12 @@ export default function PracticePage() {
 
       {/* Selected Topics Summary - Role-based */}
       {selectedTopics.length > 0 && activeTab !== "tech-deep-dive" && (
-        <Card className="mb-8 border-purple-500/30 bg-purple-500/5">
+        <Card className="mb-8 border-yellow-400/30 bg-yellow-400/5">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-purple-400" />
-                <span className="text-purple-300 font-medium">
+                <CheckCircle2 className="h-5 w-5 text-yellow-400" />
+                <span className="text-yellow-400 font-bold">
                   {selectedTopics.length} topic{selectedTopics.length > 1 ? "s" : ""} selected
                 </span>
               </div>
@@ -990,7 +993,7 @@ export default function PracticePage() {
                 <button
                   type="button"
                   onClick={() => setSelectedTopics([])}
-                  className="text-sm text-slate-500 hover:text-slate-300"
+                  className="text-sm text-zinc-500 hover:text-white font-bold"
                 >
                   Clear all
                 </button>
@@ -998,12 +1001,12 @@ export default function PracticePage() {
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {selectedTopics.slice(0, 8).map((topic) => (
-                <Badge key={topic} variant="secondary" className="bg-purple-500/20 text-purple-300">
+                <Badge key={topic} variant="secondary" className="bg-yellow-400/20 text-yellow-400">
                   {topic}
                 </Badge>
               ))}
               {selectedTopics.length > 8 && (
-                <Badge variant="secondary" className="bg-slate-700 text-slate-300">
+                <Badge variant="secondary" className="bg-zinc-800 text-zinc-400">
                   +{selectedTopics.length - 8} more
                 </Badge>
               )}
@@ -1014,21 +1017,21 @@ export default function PracticePage() {
 
       {/* Selected Subtopics Summary - Tech Deep Dive */}
       {selectedSubtopics.length > 0 && activeTab === "tech-deep-dive" && (
-        <Card className="mb-8 border-blue-500/30 bg-blue-500/5">
+        <Card className="mb-8 border-orange-500/30 bg-orange-500/5">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-blue-400" />
-                <span className="text-blue-300 font-medium">
+                <CheckCircle2 className="h-5 w-5 text-orange-500" />
+                <span className="text-orange-400 font-bold">
                   {selectedSubtopics.length} subtopic{selectedSubtopics.length > 1 ? "s" : ""} selected
-                  {selectedTech && <span className="text-slate-400 ml-2">in {selectedTech.name}</span>}
+                  {selectedTech && <span className="text-zinc-500 ml-2">in {selectedTech.name}</span>}
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setSelectedSubtopics([])}
-                  className="text-sm text-slate-500 hover:text-slate-300"
+                  className="text-sm text-zinc-500 hover:text-white font-bold"
                 >
                   Clear all
                 </button>
@@ -1036,12 +1039,12 @@ export default function PracticePage() {
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {selectedSubtopics.slice(0, 8).map((topic) => (
-                <Badge key={topic} variant="secondary" className="bg-blue-500/20 text-blue-300">
+                <Badge key={topic} variant="secondary" className="bg-orange-500/20 text-orange-400">
                   {topic}
                 </Badge>
               ))}
               {selectedSubtopics.length > 8 && (
-                <Badge variant="secondary" className="bg-slate-700 text-slate-300">
+                <Badge variant="secondary" className="bg-zinc-800 text-zinc-400">
                   +{selectedSubtopics.length - 8} more
                 </Badge>
               )}
@@ -1062,16 +1065,16 @@ export default function PracticePage() {
               ? !selectedTech || selectedSubtopics.length === 0
               : !role || selectedTopics.length === 0)
           }
-          className={`gap-2 px-8 ${
+          className={`gap-2 px-10 py-6 font-black uppercase tracking-widest ${
             activeTab === "tech-deep-dive"
-              ? "bg-blue-600 hover:bg-blue-700"
-              : "bg-purple-600 hover:bg-purple-700"
+              ? "bg-orange-500 hover:bg-orange-600 text-white"
+              : "bg-yellow-400 hover:bg-yellow-300 text-[#0f0f0f]"
           }`}
         >
           {loading ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
-              Creating Practice Session...
+              Creating Session...
             </>
           ) : (
             <>
@@ -1080,7 +1083,7 @@ export default function PracticePage() {
               ) : (
                 <BookOpen className="h-5 w-5" />
               )}
-              {activeTab === "tech-deep-dive" ? "Start Tech Deep Dive" : "Start Practice Session"}
+              {activeTab === "tech-deep-dive" ? "Start Tech Deep Dive" : "Start Practice"}
               <ArrowRight className="h-4 w-4 ml-1" />
             </>
           )}
