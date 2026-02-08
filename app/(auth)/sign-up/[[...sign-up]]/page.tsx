@@ -3,11 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Zap } from "lucide-react";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -50,68 +47,72 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      <div className="w-full max-w-md p-8 bg-slate-800 border border-slate-700 rounded-xl shadow-xl">
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-8 w-8 text-blue-500" />
-            <span className="text-2xl font-bold text-white">FresherReady</span>
-          </div>
-          <h1 className="text-xl font-semibold text-white">Create an account</h1>
-          <p className="text-slate-400 text-sm">Start your interview prep journey</p>
+    <div className="flex min-h-screen items-center justify-center bg-[#0f0f0f]">
+      <div className="w-full max-w-md p-10 border border-white/[0.08] bg-[#161616]">
+        <div className="flex flex-col items-center mb-10">
+          <Link href="/" className="flex items-center gap-3 mb-8">
+            <div className="size-5 bg-yellow-400 flex items-center justify-center rotate-45">
+              <Zap className="w-3 h-3 text-[#0f0f0f] -rotate-45" />
+            </div>
+            <span className="text-sm font-bold tracking-[0.25em] uppercase text-white">
+              SkillForge
+            </span>
+          </Link>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Create an account</h1>
+          <p className="text-zinc-500 text-xs uppercase tracking-widest mt-2">Start your journey</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-slate-300">
+            <label htmlFor="name" className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
               Full Name
-            </Label>
-            <Input
+            </label>
+            <input
               id="name"
               type="text"
               placeholder="John Doe"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+              className="w-full px-4 py-3 bg-[#0f0f0f] border border-white/[0.08] text-white placeholder:text-zinc-600 text-sm focus:outline-none focus:border-yellow-400 transition-colors"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-slate-300">
+            <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
               Email
-            </Label>
-            <Input
+            </label>
+            <input
               id="email"
               type="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+              className="w-full px-4 py-3 bg-[#0f0f0f] border border-white/[0.08] text-white placeholder:text-zinc-600 text-sm focus:outline-none focus:border-yellow-400 transition-colors"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone" className="text-slate-300">
+            <label htmlFor="phone" className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
               Phone Number
-            </Label>
-            <Input
+            </label>
+            <input
               id="phone"
               type="tel"
               placeholder="+91 9876543210"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
-              className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+              className="w-full px-4 py-3 bg-[#0f0f0f] border border-white/[0.08] text-white placeholder:text-zinc-600 text-sm focus:outline-none focus:border-yellow-400 transition-colors"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-slate-300">
+            <label htmlFor="password" className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
               Password
-            </Label>
-            <Input
+            </label>
+            <input
               id="password"
               type="password"
               placeholder="At least 6 characters"
@@ -119,29 +120,29 @@ export default function SignUpPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+              className="w-full px-4 py-3 bg-[#0f0f0f] border border-white/[0.08] text-white placeholder:text-zinc-600 text-sm focus:outline-none focus:border-yellow-400 transition-colors"
             />
           </div>
 
-          <Button
+          <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="w-full py-4 bg-yellow-400 text-[#0f0f0f] font-bold text-xs uppercase tracking-[0.2em] hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Creating account...
-              </>
+              </span>
             ) : (
               "Sign Up"
             )}
-          </Button>
+          </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-slate-400">
-          Already have an account?{" "}
-          <Link href="/sign-in" className="text-blue-400 hover:text-blue-300">
+        <div className="mt-8 text-center">
+          <span className="text-zinc-500 text-xs">Already have an account? </span>
+          <Link href="/sign-in" className="text-yellow-400 text-xs font-bold uppercase tracking-wider hover:text-white transition-colors">
             Sign in
           </Link>
         </div>
