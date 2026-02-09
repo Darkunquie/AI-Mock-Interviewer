@@ -7,8 +7,8 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 // Rate limit configurations per route pattern
 const rateLimitConfig: Record<string, { limit: number; windowMs: number }> = {
-  "/api/auth/signin": { limit: 5, windowMs: 60000 },      // 5 requests per minute
-  "/api/auth/signup": { limit: 3, windowMs: 60000 },      // 3 requests per minute
+  "/api/auth/signin": { limit: 10, windowMs: 60000 },     // 10 requests per minute
+  "/api/auth/signup": { limit: 5, windowMs: 60000 },      // 5 requests per minute
   "/api/interview": { limit: 30, windowMs: 60000 },       // 30 requests per minute
   "/api/transcribe": { limit: 60, windowMs: 60000 },      // 60 requests per minute (for real-time transcription)
   "/api/flashcards": { limit: 20, windowMs: 60000 },      // 20 requests per minute
@@ -133,10 +133,7 @@ export function middleware(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: {
-            code: "RATE_001",
-            message: "Too many requests. Please try again later.",
-          },
+          error: "Too many requests. Please try again later.",
         },
         {
           status: 429,

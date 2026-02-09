@@ -32,7 +32,8 @@ export default function SignInPage() {
         toast.error("Your account is pending admin approval");
         router.push("/pending-approval");
       } else {
-        toast.error(data.error || "Failed to sign in");
+        const errorMsg = typeof data.error === "string" ? data.error : data.error?.message || "Failed to sign in";
+        toast.error(errorMsg);
       }
     } catch {
       toast.error("Something went wrong");
