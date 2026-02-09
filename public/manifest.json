@@ -1,11 +1,11 @@
 {
-  "name": "AI Mock Interview - FresherReady",
-  "short_name": "MockInterview",
+  "name": "SkillForge - AI Mock Interview",
+  "short_name": "SkillForge",
   "description": "Practice tech interviews with AI that speaks & listens. Get instant feedback and ace your next interview!",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#3b82f6",
+  "background_color": "#0f0f0f",
+  "theme_color": "#facc15",
   "orientation": "portrait-primary",
   "icons": [
     {
