@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
-import { groq } from "@/lib/groq";
 import { getCurrentUser } from "@/lib/auth";
 
-// Whisper model for transcription
-const WHISPER_MODEL = "whisper-large-v3";
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_WHISPER_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
+const WHISPER_MODEL = "whisper-large-v3-turbo";
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MIN_FILE_SIZE = 1000; // 1KB
 
+/**
+ * POST /api/transcribe
+ * Transcribes audio using Groq Whisper API
+ */
 export async function POST(request: Request) {
   try {
-    // Check authentication
+    // Auth check
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
@@ -16,7 +22,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Parse form data
+    // Config check
+    if (!GROQ_API_KEY) {
+      return NextResponse.json(
+        { success: false, error: "Transcription service not configured" },
+        { status: 500 }
+      );
+    }
+
+    // Parse request
     const formData = await request.formData();
     const audioFile = formData.get("audio");
 
@@ -27,50 +41,52 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate file size (max 25MB for Whisper)
-    const maxSize = 25 * 1024 * 1024; // 25MB
-    if (audioFile.size > maxSize) {
+    // Skip small files (likely silence)
+    if (audioFile.size < MIN_FILE_SIZE) {
+      return NextResponse.json({ success: true, text: "" });
+    }
+
+    // Validate file size
+    if (audioFile.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { success: false, error: "Audio file too large. Maximum 25MB allowed." },
+        { success: false, error: "File too large (max 25MB)" },
         { status: 400 }
       );
     }
 
-    // Get optional language parameter (defaults to English)
-    const language = (formData.get("language") as string) || "en";
+    // Call Groq Whisper API
+    const groqFormData = new FormData();
+    groqFormData.append("file", audioFile, "audio.webm");
+    groqFormData.append("model", WHISPER_MODEL);
+    groqFormData.append("response_format", "json");
 
-    // Call Groq Whisper API for transcription
-    const transcription = await groq.audio.transcriptions.create({
-      file: audioFile,
-      model: WHISPER_MODEL,
-      language: language,
+    const response = await fetch(GROQ_WHISPER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+      },
+      body: groqFormData,
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[Transcribe] Groq error:", errorText);
+      return NextResponse.json(
+        { success: false, error: "Transcription failed" },
+        { status: response.status }
+      );
+    }
+
+    const result = await response.json();
 
     return NextResponse.json({
       success: true,
-      text: transcription.text,
+      text: result.text || "",
     });
   } catch (error) {
     console.error("[Transcribe] Error:", error);
-
-    // Handle specific Groq errors
-    if (error instanceof Error) {
-      if (error.message.includes("rate limit")) {
-        return NextResponse.json(
-          { success: false, error: "Rate limit exceeded. Please try again later." },
-          { status: 429 }
-        );
-      }
-      if (error.message.includes("invalid_api_key")) {
-        return NextResponse.json(
-          { success: false, error: "Transcription service unavailable." },
-          { status: 503 }
-        );
-      }
-    }
-
     return NextResponse.json(
-      { success: false, error: "Failed to transcribe audio" },
+      { success: false, error: "Transcription failed" },
       { status: 500 }
     );
   }

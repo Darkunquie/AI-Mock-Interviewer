@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
-import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { useDeepgramTTS } from "@/hooks/useDeepgramTTS";
 import { useTimer } from "@/hooks/useTimer";
 import { useSpeechAnalysis } from "@/hooks/useSpeechAnalysis";
 import { Question, AnswerEvaluation } from "@/types";
@@ -57,8 +57,9 @@ export default function InterviewStartPage() {
   const [userAnswer, setUserAnswer] = useState("");
   const [feedback, setFeedback] = useState<AnswerEvaluation | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [useVoice, setUseVoice] = useState(true);
+  const [useVoice, setUseVoice] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   const handleTimeUp = useCallback(() => {
     toast.warning("Time's up! Moving to the next question.");
@@ -102,8 +103,10 @@ export default function InterviewStartPage() {
     speak,
     cancel: cancelSpeech,
     isSpeaking,
-    isSupported: ttsSupported,
-  } = useTextToSpeech({ rate: 0.95 });
+    isLoading: ttsLoading,
+  } = useDeepgramTTS({ voice: "aura-asteria-en" });
+
+  const ttsSupported = true; // Deepgram TTS is always supported
 
   const {
     metrics: speechMetrics,
@@ -149,13 +152,13 @@ export default function InterviewStartPage() {
   }, [transcript, analyzeTranscript]);
 
   useEffect(() => {
-    if (data && useVoice && ttsSupported && !showFeedback) {
+    if (data && useVoice && ttsSupported && !showFeedback && hasInteracted) {
       const question = data.interview.questions[currentQuestionIndex];
       if (question) {
-        speak(question.text);
+        void speak(question.text);
       }
     }
-  }, [currentQuestionIndex, data, useVoice, ttsSupported, showFeedback, speak]);
+  }, [currentQuestionIndex, data, useVoice, ttsSupported, showFeedback, speak, hasInteracted]);
 
   useEffect(() => {
     if (!showFeedback && !loading) {
@@ -171,6 +174,7 @@ export default function InterviewStartPage() {
   }, [showFeedback, pauseTimer]);
 
   const handleToggleRecording = async () => {
+    setHasInteracted(true); // Enable TTS after user interaction
     if (isListening) {
       stopListening();
       stopTracking();
@@ -224,7 +228,7 @@ export default function InterviewStartPage() {
 
       if (useVoice && ttsSupported) {
         const feedbackText = `You scored ${result.evaluation.overallScore} out of 100. ${result.evaluation.encouragement}`;
-        speak(feedbackText);
+        void speak(feedbackText);
       }
     } catch {
       toast.error("Failed to evaluate your answer. Please try again.");
@@ -341,7 +345,7 @@ export default function InterviewStartPage() {
             </div>
           )}
           <button
-            onClick={() => setUseVoice(!useVoice)}
+            onClick={() => { setHasInteracted(true); setUseVoice(!useVoice); }}
             className="size-7 flex items-center justify-center rounded bg-zinc-800 border border-zinc-700 hover:bg-zinc-700"
           >
             {useVoice ? <Volume2 className="w-4 h-4 text-yellow-400" /> : <VolumeX className="w-4 h-4 text-zinc-500" />}

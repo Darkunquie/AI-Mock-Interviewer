@@ -2,8 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
+// Configuration
+const DEFAULT_CHUNK_INTERVAL = 2000; // 2 seconds for low latency
+const MIN_AUDIO_SIZE = 1000; // Minimum bytes to process
+
 interface UseAudioRecorderOptions {
-  chunkInterval?: number; // How often to send chunks for transcription (ms)
+  chunkInterval?: number;
   language?: string;
 }
 
@@ -13,54 +17,62 @@ interface UseAudioRecorderReturn {
   interimTranscript: string;
   isTranscribing: boolean;
   error: string | null;
-  permissionStatus: "granted" | "denied" | "prompt" | "unknown";
+  permissionStatus: PermissionState;
   startRecording: () => Promise<void>;
   stopRecording: () => void;
   resetTranscript: () => void;
   requestPermission: () => Promise<boolean>;
 }
 
+type PermissionState = "granted" | "denied" | "prompt" | "unknown";
+
+/**
+ * Hook for recording audio and transcribing it in real-time
+ * Uses chunked recording with parallel transcription for low latency
+ */
 export function useAudioRecorder(
   options: UseAudioRecorderOptions = {}
 ): UseAudioRecorderReturn {
-  const { chunkInterval = 4000, language = "en" } = options;
+  const {
+    chunkInterval = DEFAULT_CHUNK_INTERVAL,
+    language = "en"
+  } = options;
 
+  // State
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<
-    "granted" | "denied" | "prompt" | "unknown"
-  >("unknown");
+  const [permissionStatus, setPermissionStatus] = useState<PermissionState>("unknown");
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  // Refs for mutable state that shouldn't trigger re-renders
   const streamRef = useRef<MediaStream | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isRecordingRef = useRef(false);
+  const transcriptRef = useRef("");
 
   // Check microphone permission on mount
   useEffect(() => {
-    const checkPermission = async () => {
-      try {
-        if (navigator.permissions) {
-          const result = await navigator.permissions.query({
-            name: "microphone" as PermissionName,
-          });
-          setPermissionStatus(result.state as "granted" | "denied" | "prompt");
-          result.onchange = () => {
-            setPermissionStatus(result.state as "granted" | "denied" | "prompt");
-          };
-        }
-      } catch {
-        setPermissionStatus("unknown");
-      }
-    };
-    checkPermission();
+    checkMicrophonePermission();
   }, []);
 
-  // Request microphone permission
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopRecordingInternal();
+    };
+  }, []);
+
+  const checkMicrophonePermission = async () => {
+    try {
+      if (!navigator.permissions) return;
+      const result = await navigator.permissions.query({ name: "microphone" as PermissionName });
+      setPermissionStatus(result.state as PermissionState);
+    } catch {
+      setPermissionStatus("unknown");
+    }
+  };
+
   const requestPermission = useCallback(async (): Promise<boolean> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -68,84 +80,96 @@ export function useAudioRecorder(
       setPermissionStatus("granted");
       setError(null);
       return true;
-    } catch (err) {
-      console.error("[AudioRecorder] Permission denied:", err);
+    } catch {
       setPermissionStatus("denied");
-      setError(
-        "Microphone access denied. Please allow microphone access in browser settings."
-      );
+      setError("Microphone access denied");
       return false;
     }
   }, []);
 
-  // Transcribe audio blob
-  const transcribeAudio = useCallback(
-    async (audioBlob: Blob): Promise<string | null> => {
-      try {
-        const formData = new FormData();
-        formData.append("audio", audioBlob, "recording.webm");
-        formData.append("language", language);
+  const transcribeAudio = useCallback(async (audioBlob: Blob) => {
+    if (audioBlob.size < MIN_AUDIO_SIZE) return;
 
-        const response = await fetch("/api/transcribe", {
-          method: "POST",
-          body: formData,
-        });
+    try {
+      setIsTranscribing(true);
 
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Transcription failed");
-        }
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+      formData.append("language", language);
 
-        const data = await response.json();
-        return data.text || null;
-      } catch (err) {
-        console.error("[AudioRecorder] Transcription error:", err);
-        return null;
-      }
-    },
-    [language]
-  );
-
-  // Process and transcribe accumulated chunks
-  const processChunks = useCallback(async () => {
-    if (audioChunksRef.current.length === 0) return;
-
-    // Get current chunks and clear the buffer
-    const chunks = [...audioChunksRef.current];
-    audioChunksRef.current = [];
-
-    // Create blob from chunks
-    const audioBlob = new Blob(chunks, { type: "audio/webm" });
-
-    // Skip if too small (likely no audio)
-    if (audioBlob.size < 1000) return;
-
-    setIsTranscribing(true);
-    setInterimTranscript("Processing...");
-
-    const text = await transcribeAudio(audioBlob);
-
-    if (text && text.trim()) {
-      setTranscript((prev) => {
-        const newText = prev ? `${prev} ${text.trim()}` : text.trim();
-        return newText;
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        body: formData,
       });
-      console.log("[AudioRecorder] Transcribed:", text.trim());
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.text?.trim();
+
+        if (text && isRecordingRef.current) {
+          transcriptRef.current = transcriptRef.current
+            ? `${transcriptRef.current} ${text}`
+            : text;
+          setTranscript(transcriptRef.current);
+        }
+      }
+    } catch {
+      // Silent fail - don't interrupt recording
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, [language]);
+
+  const recordChunk = useCallback(async (): Promise<Blob | null> => {
+    const stream = streamRef.current;
+    if (!stream || !isRecordingRef.current) return null;
+
+    const chunks: Blob[] = [];
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : "audio/webm";
+
+    const mediaRecorder = new MediaRecorder(stream, { mimeType });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    mediaRecorder.start();
+    setInterimTranscript("Listening...");
+
+    // Wait for chunk duration
+    await new Promise((resolve) => setTimeout(resolve, chunkInterval));
+
+    // Stop and wait for final data
+    if (mediaRecorder.state !== "inactive") {
+      await new Promise<void>((resolve) => {
+        mediaRecorder.onstop = () => resolve();
+        mediaRecorder.stop();
+      });
     }
 
-    setInterimTranscript("");
-    setIsTranscribing(false);
-  }, [transcribeAudio]);
+    if (chunks.length === 0) return null;
+    return new Blob(chunks, { type: mimeType });
+  }, [chunkInterval]);
 
-  // Start recording
+  const startRecordingLoop = useCallback(async () => {
+    while (isRecordingRef.current && streamRef.current) {
+      const audioBlob = await recordChunk();
+
+      if (audioBlob && isRecordingRef.current) {
+        // Fire and forget - transcribe while recording next chunk
+        transcribeAudio(audioBlob);
+      }
+    }
+  }, [recordChunk, transcribeAudio]);
+
   const startRecording = useCallback(async () => {
     if (isRecordingRef.current) return;
 
-    // Check/request permission
+    // Check permissions
     if (permissionStatus === "denied") {
-      setError(
-        "Microphone access denied. Please allow microphone access in browser settings."
-      );
+      setError("Microphone access denied");
       return;
     }
 
@@ -157,119 +181,44 @@ export function useAudioRecorder(
     try {
       setError(null);
 
-      // Get audio stream
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 16000,
         },
       });
 
       streamRef.current = stream;
-
-      // Create MediaRecorder
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-          ? "audio/webm;codecs=opus"
-          : "audio/webm",
-      });
-
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      // Collect audio data
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onerror = (event) => {
-        console.error("[AudioRecorder] MediaRecorder error:", event);
-        setError("Recording error occurred");
-        stopRecording();
-      };
-
-      // Start recording
-      mediaRecorder.start(1000); // Collect data every second
       isRecordingRef.current = true;
       setIsRecording(true);
-      setInterimTranscript("Listening...");
 
-      console.log("[AudioRecorder] Started recording");
-
-      // Set up interval to process chunks
-      intervalRef.current = setInterval(() => {
-        if (isRecordingRef.current && audioChunksRef.current.length > 0) {
-          processChunks();
-        }
-      }, chunkInterval);
-    } catch (err) {
-      console.error("[AudioRecorder] Failed to start:", err);
-      if (err instanceof Error) {
-        if (err.name === "NotAllowedError") {
-          setError("Microphone access denied");
-          setPermissionStatus("denied");
-        } else if (err.name === "NotFoundError") {
-          setError("No microphone found");
-        } else {
-          setError("Failed to access microphone");
-        }
-      }
+      // Start recording loop (non-blocking)
+      startRecordingLoop();
+    } catch {
+      setError("Failed to access microphone");
     }
-  }, [permissionStatus, requestPermission, processChunks, chunkInterval]);
+  }, [permissionStatus, requestPermission, startRecordingLoop]);
 
-  // Stop recording
-  const stopRecording = useCallback(() => {
-    console.log("[AudioRecorder] Stopping recording...");
-
+  const stopRecordingInternal = () => {
     isRecordingRef.current = false;
 
-    // Clear interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    // Stop MediaRecorder
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-    }
-
-    // Stop audio stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+  };
 
-    // Process any remaining chunks
-    if (audioChunksRef.current.length > 0) {
-      processChunks();
-    }
-
+  const stopRecording = useCallback(() => {
+    stopRecordingInternal();
     setIsRecording(false);
     setInterimTranscript("");
-  }, [processChunks]);
+  }, []);
 
-  // Reset transcript
   const resetTranscript = useCallback(() => {
     setTranscript("");
     setInterimTranscript("");
-    audioChunksRef.current = [];
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
+    transcriptRef.current = "";
   }, []);
 
   return {
