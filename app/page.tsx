@@ -80,14 +80,14 @@ export default function HomePage() {
           {/* Hero Section - Left */}
           <section className="md:col-span-8 lg:col-span-9 grid-cell border-b border-r border-white/[0.08] flex flex-col justify-center min-h-[70vh] relative group">
             <div className="absolute top-8 left-8">
-              <p className="text-orange-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2">
+              <p className="text-orange-500 text-sm font-black uppercase tracking-[0.4em] mb-2">
                 System Status: Active
               </p>
             </div>
 
             <div className="max-w-4xl space-y-12">
               <div className="space-y-6">
-                <p className="text-yellow-400 text-xs font-bold uppercase tracking-[0.4em]">
+                <p className="text-yellow-400 text-base font-bold uppercase tracking-[0.4em]">
                   Ready for your session?
                 </p>
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-[0.9] text-white">
@@ -132,11 +132,11 @@ export default function HomePage() {
               {/* Feature 1 */}
               <div className="grid-cell border-b border-white/[0.08] flex flex-col justify-center gap-6 hover:bg-[#161616] group transition-colors">
                 <Mic className="w-8 h-8 text-orange-500 group-hover:scale-110 transition-transform" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">01. Conversation</p>
+                <p className="text-xs font-black uppercase tracking-widest text-zinc-500">01. Conversation</p>
                 <h3 className="text-xl font-bold text-white leading-tight">
                   Natural, low-latency voice interaction.
                 </h3>
-                <p className="text-zinc-400 text-xs leading-relaxed italic">
+                <p className="text-zinc-400 text-sm leading-relaxed italic">
                   &quot;Explain how you handle state management in complex applications.&quot;
                 </p>
               </div>
@@ -144,11 +144,11 @@ export default function HomePage() {
               {/* Feature 2 */}
               <div className="grid-cell border-b border-white/[0.08] flex flex-col justify-center gap-6 hover:bg-[#161616] group transition-colors">
                 <BarChart3 className="w-8 h-8 text-yellow-400 group-hover:scale-110 transition-transform" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">02. Feedback</p>
+                <p className="text-xs font-black uppercase tracking-widest text-zinc-500">02. Feedback</p>
                 <h3 className="text-xl font-bold text-white leading-tight">
                   Immediate analysis of your response.
                 </h3>
-                <p className="text-zinc-400 text-xs leading-relaxed italic">
+                <p className="text-zinc-400 text-sm leading-relaxed italic">
                   &quot;You demonstrated clear logic but could improve your technical depth here.&quot;
                 </p>
               </div>
@@ -156,11 +156,11 @@ export default function HomePage() {
               {/* Feature 3 */}
               <div className="grid-cell flex flex-col justify-center gap-6 hover:bg-[#161616] group transition-colors">
                 <Target className="w-8 h-8 text-orange-500 group-hover:scale-110 transition-transform" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">03. Growth</p>
+                <p className="text-xs font-black uppercase tracking-widest text-zinc-500">03. Growth</p>
                 <h3 className="text-xl font-bold text-white leading-tight">
                   Role-specific mastery paths.
                 </h3>
-                <p className="text-zinc-400 text-xs leading-relaxed italic">
+                <p className="text-zinc-400 text-sm leading-relaxed italic">
                   &quot;Based on our talk, I&apos;ve curated five new challenges for your goal.&quot;
                 </p>
               </div>
