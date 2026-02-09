@@ -33,7 +33,10 @@ export default function SignUpPage() {
 
       const data = await res.json();
 
-      if (data.success) {
+      if (data.success && data.pending) {
+        toast.success("Account created! Awaiting admin approval.");
+        router.push("/pending-approval");
+      } else if (data.success) {
         toast.success("Account created successfully!");
         router.push("/dashboard");
       } else {

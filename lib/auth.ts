@@ -22,6 +22,8 @@ export interface AuthUser {
   id: number;
   email: string;
   name: string | null;
+  role: string;
+  status: string;
 }
 
 // Hash password
@@ -37,7 +39,7 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 // Generate JWT token
 export function generateToken(user: AuthUser): string {
   return jwt.sign(
-    { id: user.id, email: user.email, name: user.name },
+    { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status },
     getJwtSecret(),
     { expiresIn: "7d" }
   );
@@ -95,7 +97,7 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 // Sign up a new user
-export async function signUp(email: string, password: string, name: string, phone?: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> {
+export async function signUp(email: string, password: string, name: string, phone?: string): Promise<{ success: boolean; error?: string; user?: AuthUser; pending?: boolean }> {
   try {
     // Check if user already exists
     const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -104,6 +106,10 @@ export async function signUp(email: string, password: string, name: string, phon
       return { success: false, error: "Email already registered" };
     }
 
+    // Check if this is the admin email (auto-approve)
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
+    const isAdmin = adminEmail && email.toLowerCase() === adminEmail;
+
     // Hash password and create user
     const hashedPassword = await hashPassword(password);
     const [newUser] = await db.insert(users).values({
@@ -111,19 +117,26 @@ export async function signUp(email: string, password: string, name: string, phon
       password: hashedPassword,
       name,
       phone: phone || null,
+      role: isAdmin ? "admin" : "user",
+      status: isAdmin ? "approved" : "pending",
     }).returning();
 
     const authUser: AuthUser = {
       id: newUser.id,
       email: newUser.email,
       name: newUser.name,
+      role: newUser.role,
+      status: newUser.status,
     };
 
-    // Generate token and set cookie
-    const token = generateToken(authUser);
-    await setAuthCookie(token);
+    // Admin gets auto-login, regular users stay pending
+    if (isAdmin) {
+      const token = generateToken(authUser);
+      await setAuthCookie(token);
+      return { success: true, user: authUser };
+    }
 
-    return { success: true, user: authUser };
+    return { success: true, pending: true };
   } catch (error) {
     console.error("Sign up error:", error);
     return { success: false, error: "Failed to create account" };
@@ -131,7 +144,7 @@ export async function signUp(email: string, password: string, name: string, phon
 }
 
 // Sign in a user
-export async function signIn(email: string, password: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> {
+export async function signIn(email: string, password: string): Promise<{ success: boolean; error?: string; user?: AuthUser; pending?: boolean }> {
   try {
     // Find user by email
     const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -147,10 +160,21 @@ export async function signIn(email: string, password: string): Promise<{ success
       return { success: false, error: "Invalid email or password" };
     }
 
+    // Check account status
+    if (user.status === "pending") {
+      return { success: false, error: "Your account is pending admin approval", pending: true };
+    }
+
+    if (user.status === "rejected") {
+      return { success: false, error: "Your account has been rejected" };
+    }
+
     const authUser: AuthUser = {
       id: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
+      status: user.status,
     };
 
     // Generate token and set cookie
@@ -167,4 +191,13 @@ export async function signIn(email: string, password: string): Promise<{ success
 // Sign out
 export async function signOut(): Promise<void> {
   await removeAuthCookie();
+}
+
+// Require admin role - returns user if admin, null otherwise
+export async function requireAdmin(): Promise<AuthUser | null> {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    return null;
+  }
+  return user;
 }

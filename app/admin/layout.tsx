@@ -6,19 +6,15 @@ import Link from "next/link";
 import {
   Zap,
   LayoutDashboard,
-  BarChart3,
-  History,
-  GraduationCap,
+  Users,
   LogOut,
   Menu,
   X,
-  FolderKanban,
-  Layers,
-  Shield,
+  ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function DashboardLayout({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -31,12 +27,11 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!isLoading && !user) {
       router.push("/sign-in");
-    } else if (!isLoading && user && user.status !== "approved") {
-      router.push("/pending-approval");
+    } else if (!isLoading && user && !isAdmin) {
+      router.push("/dashboard");
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, isAdmin, router]);
 
-  // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
@@ -47,17 +42,13 @@ export default function DashboardLayout({
   };
 
   const navItems = [
-    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { href: "/dashboard/practice", icon: GraduationCap, label: "Practice" },
-    { href: "/dashboard/flash-cards", icon: Layers, label: "Flash Cards" },
-    { href: "/dashboard/projects", icon: FolderKanban, label: "Projects" },
-    { href: "/dashboard/history", icon: History, label: "History" },
-    { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
+    { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/admin/users", icon: Users, label: "Users" },
   ];
 
   const isActive = (href: string) => {
-    if (href === "/dashboard") {
-      return pathname === "/dashboard";
+    if (href === "/admin") {
+      return pathname === "/admin";
     }
     return pathname.startsWith(href);
   };
@@ -70,7 +61,7 @@ export default function DashboardLayout({
     );
   }
 
-  if (!user || user.status !== "approved") {
+  if (!user || !isAdmin) {
     return null;
   }
 
@@ -99,9 +90,14 @@ export default function DashboardLayout({
           <div className="h-10 w-10 min-w-[40px] bg-yellow-400 rotate-45 flex items-center justify-center flex-shrink-0">
             <Zap className="h-5 w-5 text-[#0f0f0f] -rotate-45" />
           </div>
-          <h1 className="text-sm font-black tracking-[0.2em] uppercase whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
-            SkillForge
-          </h1>
+          <div className="overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+            <h1 className="text-sm font-black tracking-[0.2em] uppercase whitespace-nowrap">
+              SkillForge
+            </h1>
+            <p className="text-[9px] text-yellow-400 uppercase tracking-[0.3em] font-bold">
+              Admin
+            </p>
+          </div>
         </div>
 
         {/* Navigation Links */}
@@ -124,38 +120,34 @@ export default function DashboardLayout({
             </Link>
           ))}
 
-          {/* Admin Portal Link */}
-          {isAdmin && (
-            <>
-              <div className="border-t border-white/[0.08] my-3" />
-              <Link
-                href="/admin"
-                className="flex items-center gap-3 px-3 py-2.5 text-yellow-400 hover:bg-yellow-400/10 transition-colors"
-                title="Admin Portal"
-              >
-                <Shield className="h-5 w-5 min-w-[20px] flex-shrink-0" />
-                <span className="whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-xs uppercase tracking-wider">
-                  Admin Portal
-                </span>
-              </Link>
-            </>
-          )}
+          {/* Divider */}
+          <div className="border-t border-white/[0.08] my-3" />
+
+          {/* Back to Dashboard */}
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:bg-[#161616] hover:text-white transition-colors"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft className="h-5 w-5 min-w-[20px] flex-shrink-0" />
+            <span className="whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-xs uppercase tracking-wider">
+              Back to App
+            </span>
+          </Link>
         </nav>
 
-        {/* User Profile & Sign out at bottom */}
+        {/* User Profile & Sign out */}
         <div className="p-3 border-t border-white/[0.08] space-y-2">
-          {/* User Profile */}
           <div className="flex items-center gap-3 px-3 py-2.5 bg-[#161616]">
-            <div className="h-9 w-9 min-w-[36px] bg-orange-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+            <div className="h-9 w-9 min-w-[36px] bg-yellow-400 flex items-center justify-center text-[#0f0f0f] font-bold text-sm flex-shrink-0">
               {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
             </div>
             <div className="overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
-              <p className="text-sm font-bold text-white truncate">{user.name || "User"}</p>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Candidate</p>
+              <p className="text-sm font-bold text-white truncate">{user.name || "Admin"}</p>
+              <p className="text-[10px] text-yellow-400 uppercase tracking-widest">Admin</p>
             </div>
           </div>
 
-          {/* Sign out button */}
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:bg-[#161616] hover:text-white transition-colors w-full"
@@ -184,9 +176,9 @@ export default function DashboardLayout({
             <div className="h-8 w-8 bg-yellow-400 rotate-45 flex items-center justify-center">
               <Zap className="h-4 w-4 text-[#0f0f0f] -rotate-45" />
             </div>
-            <span className="text-xs font-black tracking-[0.15em] uppercase">SkillForge</span>
+            <span className="text-xs font-black tracking-[0.15em] uppercase">Admin</span>
           </div>
-          <div className="h-9 w-9 bg-orange-500 flex items-center justify-center text-white font-bold text-sm">
+          <div className="h-9 w-9 bg-yellow-400 flex items-center justify-center text-[#0f0f0f] font-bold text-sm">
             {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
           </div>
         </header>
@@ -194,8 +186,9 @@ export default function DashboardLayout({
         {/* Desktop Top Bar */}
         <header className="hidden lg:flex sticky top-0 z-30 w-full border-b border-white/[0.08] bg-[#0f0f0f]/95 backdrop-blur-md px-8 py-2.5 items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Welcome back,</span>
-            <span className="text-white font-bold">{user.name || "User"}</span>
+            <span className="text-yellow-400 text-[10px] uppercase tracking-widest font-bold">Admin Panel</span>
+            <span className="text-zinc-600">|</span>
+            <span className="text-white font-bold">{user.name || "Admin"}</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-[10px] text-zinc-600 uppercase tracking-[0.3em] font-bold">SkillForge Platform</span>

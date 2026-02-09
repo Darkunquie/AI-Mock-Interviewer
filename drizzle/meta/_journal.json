@@ -8,6 +8,13 @@
       "when": 1770304621815,
       "tag": "0000_conscious_patch",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770639195230,
+      "tag": "0001_equal_william_stryker",
+      "breakpoints": true
     }
   ]
 }

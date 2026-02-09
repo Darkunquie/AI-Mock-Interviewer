@@ -28,6 +28,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (result.pending) {
+      return NextResponse.json({
+        success: true,
+        pending: true,
+        message: "Account created. Awaiting admin approval.",
+      });
+    }
+
     return NextResponse.json({
       success: true,
       user: result.user,

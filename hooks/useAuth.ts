@@ -6,6 +6,8 @@ export interface AuthUser {
   id: number;
   email: string;
   name: string | null;
+  role: string;
+  status: string;
 }
 
 export function useAuth() {
@@ -67,6 +69,7 @@ export function useAuth() {
     user,
     isLoading,
     isSignedIn: !!user,
+    isAdmin: user?.role === "admin",
     signIn,
     signUp,
     signOut,

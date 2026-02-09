@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       return NextResponse.json(
-        { success: false, error: result.error },
+        { success: false, error: result.error, pending: result.pending || false },
         { status: 401 }
       );
     }

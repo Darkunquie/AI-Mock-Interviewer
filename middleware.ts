@@ -13,6 +13,7 @@ const rateLimitConfig: Record<string, { limit: number; windowMs: number }> = {
   "/api/transcribe": { limit: 60, windowMs: 60000 },      // 60 requests per minute (for real-time transcription)
   "/api/flashcards": { limit: 20, windowMs: 60000 },      // 20 requests per minute
   "/api/projects": { limit: 10, windowMs: 60000 },        // 10 requests per minute
+  "/api/admin": { limit: 30, windowMs: 60000 },           // 30 requests per minute
   default: { limit: 100, windowMs: 60000 },               // Default: 100 requests per minute
 };
 
