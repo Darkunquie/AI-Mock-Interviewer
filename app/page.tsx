@@ -80,12 +80,12 @@ export default function HomePage() {
           {/* Hero Section - Left */}
           <section className="md:col-span-8 lg:col-span-9 grid-cell border-b border-r border-white/[0.08] flex flex-col justify-center min-h-[70vh] relative group">
             <div className="absolute top-8 left-8">
-              <p className="text-orange-500 text-sm font-black uppercase tracking-[0.4em] mb-2">
+              <p className="text-orange-500 text-sm font-black uppercase tracking-[0.4em] mb-0">
                 System Status: Active
               </p>
             </div>
 
-            <div className="max-w-4xl space-y-12">
+            <div className="max-w-4xl space-y-5 mt-[-190px]">
               <div className="space-y-6">
                 <p className="text-yellow-400 text-base font-bold uppercase tracking-[0.4em]">
                   Ready for your session?
