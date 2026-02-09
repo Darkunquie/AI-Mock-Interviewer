@@ -14,27 +14,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Mock Interview | Free Voice-Based Interview Practice | FresherReady",
+  title: "SkillForge | AI Mock Interview Practice",
   description: "Practice tech interviews with AI that speaks & listens. Get instant feedback on technical skills, communication & depth. Free forever. Join 10K+ developers preparing for their dream jobs.",
-  keywords: ["AI mock interview", "interview practice", "tech interview", "voice interview", "coding interview prep", "fresher interview", "frontend interview", "backend interview", "fullstack interview", "job preparation", "interview simulator"],
-  authors: [{ name: "FresherReady" }],
-  creator: "FresherReady",
+  keywords: ["SkillForge", "AI mock interview", "interview practice", "tech interview", "voice interview", "coding interview prep", "fresher interview", "frontend interview", "backend interview", "fullstack interview", "job preparation", "interview simulator"],
+  authors: [{ name: "SkillForge" }],
+  creator: "SkillForge",
   publisher: "Sunadh EduTech",
   metadataBase: new URL("https://sunadhedutech.com"),
   alternates: {
     canonical: "https://sunadhedutech.com",
   },
   openGraph: {
-    title: "AI Mock Interview - Master Your Tech Interview",
+    title: "SkillForge - Master Your Tech Interview",
     description: "Voice-powered AI interview practice with real-time feedback. Practice frontend, backend, fullstack & more. 100% Free!",
     url: "https://sunadhedutech.com",
-    siteName: "FresherReady",
+    siteName: "SkillForge",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "AI Mock Interview - Practice Tech Interviews with AI",
+        alt: "SkillForge - Practice Tech Interviews with AI",
       },
     ],
     locale: "en_US",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Mock Interview | FresherReady",
+    title: "SkillForge | AI Mock Interview",
     description: "Practice tech interviews with AI voice conversations. Get instant feedback & ace your next interview!",
     images: ["/og-image.png"],
   },
@@ -66,8 +66,8 @@ export const metadata: Metadata = {
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "AI Mock Interview",
-  "alternateName": "FresherReady",
+  "name": "SkillForge",
+  "alternateName": "SkillForge AI Mock Interview",
   "url": "https://sunadhedutech.com",
   "description": "Practice tech interviews with AI that speaks & listens. Get instant feedback on technical skills, communication & depth.",
   "applicationCategory": "EducationalApplication",
@@ -98,9 +98,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
-        <meta name="theme-color" content="#3b82f6" />
+        <meta name="theme-color" content="#facc15" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

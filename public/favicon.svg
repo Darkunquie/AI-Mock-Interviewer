@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Yellow diamond background (rotated square) -->
+  <rect x="4" y="4" width="24" height="24" rx="2" fill="#facc15" transform="rotate(45 16 16)"/>
+  <!-- Lightning bolt icon -->
+  <path d="M18 6L10 18h5l-3 8 8-12h-5l3-8z" fill="#0f0f0f" stroke="#0f0f0f" stroke-width="0.5" stroke-linejoin="round"/>
+</svg>
