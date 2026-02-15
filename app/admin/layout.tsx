@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   ArrowLeft,
+  Trophy,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -44,6 +45,7 @@ export default function AdminLayout({
   const navItems = [
     { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/admin/users", icon: Users, label: "Users" },
+    { href: "/dashboard/leaderboard", icon: Trophy, label: "Leaderboard" },
   ];
 
   const isActive = (href: string) => {
