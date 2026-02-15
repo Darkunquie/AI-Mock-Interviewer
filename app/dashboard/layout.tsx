@@ -15,6 +15,7 @@ import {
   FolderKanban,
   Layers,
   Shield,
+  Trophy,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -53,6 +54,7 @@ export default function DashboardLayout({
     { href: "/dashboard/projects", icon: FolderKanban, label: "Projects" },
     { href: "/dashboard/history", icon: History, label: "History" },
     { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
+    { href: "/dashboard/leaderboard", icon: Trophy, label: "Leaderboard" },
   ];
 
   const isActive = (href: string) => {
