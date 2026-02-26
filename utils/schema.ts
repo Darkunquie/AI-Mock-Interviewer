@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text, integer, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
 
 // Users table (basic auth)
 export const users = pgTable("users", {
@@ -30,12 +30,17 @@ export const interviews = pgTable("interviews", {
   questionsJson: text("questions_json"), // JSON string of generated questions
   createdAt: timestamp("created_at").defaultNow(),
   completedAt: timestamp("completed_at"),
-});
+}, (t) => [
+  index("idx_interviews_user_id").on(t.userId),
+  index("idx_interviews_status").on(t.status),
+  index("idx_interviews_created_at").on(t.createdAt),
+  index("idx_interviews_user_status").on(t.userId, t.status),
+]);
 
 // Answers table
 export const answers = pgTable("answers", {
   id: serial("id").primaryKey(),
-  interviewId: integer("interview_id").references(() => interviews.id),
+  interviewId: integer("interview_id").references(() => interviews.id, { onDelete: "cascade" }).notNull(),
   questionIndex: integer("question_index").notNull(),
   questionText: text("question_text").notNull(),
   userAnswer: text("user_answer"),
@@ -45,12 +50,15 @@ export const answers = pgTable("answers", {
   depthScore: integer("depth_score"),
   idealAnswer: text("ideal_answer"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  index("idx_answers_interview_id").on(t.interviewId),
+  uniqueIndex("idx_answers_interview_question").on(t.interviewId, t.questionIndex),
+]);
 
 // Interview Summaries table
 export const interviewSummaries = pgTable("interview_summaries", {
   id: serial("id").primaryKey(),
-  interviewId: integer("interview_id").references(() => interviews.id),
+  interviewId: integer("interview_id").references(() => interviews.id, { onDelete: "cascade" }).notNull(),
   overallScore: integer("overall_score"),
   rating: varchar("rating", { length: 50 }), // Excellent, Good, Average, Needs Improvement
   strengthsJson: text("strengths_json"), // JSON array
@@ -59,7 +67,9 @@ export const interviewSummaries = pgTable("interview_summaries", {
   actionPlan: text("action_plan"),
   summaryText: text("summary_text"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  uniqueIndex("idx_summaries_interview_id").on(t.interviewId),
+]);
 
 // Generated Projects table - stores AI-generated project specifications
 // One-time generation per technology + domain combination (no regeneration)
@@ -69,7 +79,9 @@ export const generatedProjects = pgTable("generated_projects", {
   domain: varchar("domain", { length: 255 }).notNull(),
   projectsJson: text("projects_json").notNull(), // Full ProjectSpecification[] JSON
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  uniqueIndex("idx_projects_tech_domain").on(t.technology, t.domain),
+]);
 
 // Types for TypeScript
 export type User = typeof users.$inferSelect;

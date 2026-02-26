@@ -5,17 +5,18 @@ import { db } from "./db";
 import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
 
-// JWT Secret - MUST be set in production
+// JWT Secret - MUST be set in all environments
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("JWT_SECRET environment variable is required in production");
-  }
-  console.warn("[Auth] WARNING: JWT_SECRET not set. Using insecure default for development only.");
+  throw new Error(
+    "JWT_SECRET environment variable is required. " +
+    "Set it in .env.local for development or in your deployment environment for production. " +
+    "Generate one with: node -e \"console.log(require('crypto').randomBytes(64).toString('hex'))\""
+  );
 }
 
-const getJwtSecret = () => JWT_SECRET || "dev-only-secret-do-not-use-in-production";
+const getJwtSecret = (): string => JWT_SECRET;
 const COOKIE_NAME = "auth_token";
 
 export interface AuthUser {

@@ -1,27 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signUp } from "@/lib/auth";
+import { signUpSchema, validateRequest } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, phone } = await request.json();
+    const body = await request.json();
 
-    if (!email || !password || !name || !phone) {
+    const validation = validateRequest(signUpSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: "Email, password, name, and phone are required" },
+        {
+          success: false,
+          error: validation.error.errors[0]?.message || "Invalid input",
+          details: validation.error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
-      return NextResponse.json(
-        { success: false, error: "Password must be at least 6 characters" },
-        { status: 400 }
-      );
-    }
+    const { email, password, name, phone } = validation.data;
 
     const result = await signUp(email, password, name, phone);
 
     if (!result.success) {
+      logger.warn("Signup failed", { email, reason: result.error });
       return NextResponse.json(
         { success: false, error: result.error },
         { status: 400 }
@@ -29,6 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.pending) {
+      logger.info("New user signup (pending)", { email });
       return NextResponse.json({
         success: true,
         pending: true,
@@ -36,12 +43,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    logger.info("New user signup (auto-approved)", { email });
     return NextResponse.json({
       success: true,
       user: result.user,
     });
   } catch (error) {
-    console.error("Signup error:", error);
+    logger.error("Signup error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

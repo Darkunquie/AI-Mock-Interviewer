@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, answers } from "@/utils/schema";
 import { generateCompletion } from "@/lib/groq";
 import { getAnswerEvaluatorPrompt } from "@/utils/prompts";
-import { EvaluateAnswerRequest, AnswerEvaluation, Question } from "@/types";
+import { AnswerEvaluation, Question } from "@/types";
 import { getCurrentUser } from "@/lib/auth";
 import { validateKeywords } from "@/lib/utils";
+import { evaluateAnswerSchema, validateRequest } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,23 +18,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body: EvaluateAnswerRequest & {
-      speechMetrics?: {
-        fillerWordCount: number;
-        fillerWords: Record<string, number>;
-        wordsPerMinute: number;
-        speakingTime: number;
-      };
-    } = await request.json();
-    const { interviewId, questionIndex, questionText, userAnswer, speechMetrics } = body;
+    const body = await request.json();
 
-    // Validate input
-    if (!interviewId || questionIndex === undefined || !questionText || !userAnswer) {
+    // Validate input with Zod
+    const validation = validateRequest(evaluateAnswerSchema, {
+      mockId: body.interviewId,
+      questionIndex: body.questionIndex,
+      questionText: body.questionText,
+      userAnswer: body.userAnswer,
+    });
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: validation.error.errors[0]?.message || "Invalid input" },
         { status: 400 }
       );
     }
+
+    const interviewId = validation.data.mockId;
+    const { questionIndex, questionText, userAnswer } = validation.data;
+    const speechMetrics = body.speechMetrics as {
+      fillerWordCount: number;
+      fillerWords: Record<string, number>;
+      wordsPerMinute: number;
+      speakingTime: number;
+    } | undefined;
 
     // Get interview details
     const interview = await db
@@ -59,7 +68,6 @@ export async function POST(request: NextRequest) {
       const currentQuestion = questionsData.questions[questionIndex];
       questionKeywords = currentQuestion?.keywords;
     } catch {
-      // No keywords available (might be AI-generated interview)
       questionKeywords = undefined;
     }
 
@@ -79,11 +87,10 @@ export async function POST(request: NextRequest) {
       experience: interviewData.experienceLevel,
     });
 
-    let evaluationJson: string;
     let evaluation: AnswerEvaluation;
 
     try {
-      evaluationJson = await generateCompletion([
+      const evaluationJson = await generateCompletion([
         { role: "system", content: "You are an expert interviewer evaluating candidates. Always respond with valid JSON only." },
         { role: "user", content: prompt },
       ]);
@@ -105,7 +112,6 @@ export async function POST(request: NextRequest) {
       evaluation.depthScore = Math.max(0, Math.min(10, evaluation.depthScore));
 
       // ALWAYS calculate overall score from component scores (don't trust AI calculation)
-      // Component scores are 0-10, overall score is 0-100 (percentage)
       evaluation.overallScore = Math.round(
         (evaluation.technicalScore * 0.4 +
           evaluation.communicationScore * 0.3 +
@@ -113,10 +119,14 @@ export async function POST(request: NextRequest) {
           10
       );
 
-      console.log("[Evaluation] Scores - Tech:", evaluation.technicalScore,
-                  "Comm:", evaluation.communicationScore,
-                  "Depth:", evaluation.depthScore,
-                  "Overall:", evaluation.overallScore + "%");
+      logger.info("Evaluation complete", {
+        interviewId,
+        questionIndex,
+        tech: evaluation.technicalScore,
+        comm: evaluation.communicationScore,
+        depth: evaluation.depthScore,
+        overall: evaluation.overallScore,
+      });
 
       // Add speech metrics to evaluation
       if (speechMetrics) {
@@ -125,7 +135,6 @@ export async function POST(request: NextRequest) {
         evaluation.wordsPerMinute = speechMetrics.wordsPerMinute;
         evaluation.speakingTime = speechMetrics.speakingTime;
 
-        // Add feedback about speech metrics
         if (speechMetrics.fillerWordCount > 5) {
           evaluation.weaknesses.push(
             `Used ${speechMetrics.fillerWordCount} filler words - try to reduce these for clearer communication`
@@ -148,11 +157,13 @@ export async function POST(request: NextRequest) {
           evaluation.strengths.push("Perfect speaking pace!");
         }
 
-        console.log("[Speech Metrics] Filler words:", speechMetrics.fillerWordCount,
-                    "WPM:", speechMetrics.wordsPerMinute);
+        logger.info("Speech metrics", {
+          fillerWords: speechMetrics.fillerWordCount,
+          wpm: speechMetrics.wordsPerMinute,
+        });
       }
     } catch (aiError) {
-      console.error("AI evaluation error:", aiError);
+      logger.error("AI evaluation error", aiError instanceof Error ? aiError : new Error(String(aiError)), { interviewId, questionIndex });
       // Fallback evaluation
       evaluation = {
         technicalScore: 5,
@@ -176,14 +187,12 @@ export async function POST(request: NextRequest) {
       evaluation.keywordsMissed = keywordValidation.missed;
       evaluation.keywordValidationPassed = keywordValidation.passed;
 
-      // Add keyword feedback to weaknesses if validation failed
       if (!keywordValidation.passed && keywordValidation.missed.length > 0) {
         evaluation.weaknesses.push(
           `Missing key concepts: ${keywordValidation.missed.slice(0, 3).join(", ")}`
         );
       }
 
-      // Add to strengths if good coverage
       if (keywordValidation.passed && keywordValidation.covered.length > 0) {
         evaluation.strengths.push(
           `Covered important concepts: ${keywordValidation.covered.slice(0, 3).join(", ")}`
@@ -191,25 +200,53 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save answer to database
-    await db.insert(answers).values({
-      interviewId: interviewData.id,
-      questionIndex,
-      questionText,
-      userAnswer,
-      feedbackJson: JSON.stringify(evaluation),
-      technicalScore: evaluation.technicalScore,
-      communicationScore: evaluation.communicationScore,
-      depthScore: evaluation.depthScore,
-      idealAnswer: evaluation.idealAnswer,
-    });
+    // Upsert answer — prevents duplicates if user submits same question twice
+    const existingAnswer = await db
+      .select({ id: answers.id })
+      .from(answers)
+      .where(
+        and(
+          eq(answers.interviewId, interviewData.id),
+          eq(answers.questionIndex, questionIndex)
+        )
+      )
+      .limit(1);
+
+    if (existingAnswer.length > 0) {
+      // Update existing answer
+      await db
+        .update(answers)
+        .set({
+          questionText,
+          userAnswer,
+          feedbackJson: JSON.stringify(evaluation),
+          technicalScore: evaluation.technicalScore,
+          communicationScore: evaluation.communicationScore,
+          depthScore: evaluation.depthScore,
+          idealAnswer: evaluation.idealAnswer,
+        })
+        .where(eq(answers.id, existingAnswer[0].id));
+    } else {
+      // Insert new answer
+      await db.insert(answers).values({
+        interviewId: interviewData.id,
+        questionIndex,
+        questionText,
+        userAnswer,
+        feedbackJson: JSON.stringify(evaluation),
+        technicalScore: evaluation.technicalScore,
+        communicationScore: evaluation.communicationScore,
+        depthScore: evaluation.depthScore,
+        idealAnswer: evaluation.idealAnswer,
+      });
+    }
 
     return NextResponse.json({
       success: true,
       evaluation,
     });
   } catch (error) {
-    console.error("Evaluate answer error:", error);
+    logger.error("Evaluate answer error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: "Failed to evaluate answer" },
       { status: 500 }
