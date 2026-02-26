@@ -33,7 +33,7 @@ export async function GET(
 
     // Verify user owns this interview
     if (interviewData.userId !== user.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
     // Get answers for this interview

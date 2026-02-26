@@ -134,16 +134,16 @@ export const logger = {
 export function withRequestId(requestId: string) {
   return {
     debug(message: string, metadata?: Record<string, unknown>) {
-      logger.debug(message, { requestId, ...metadata });
+      logger.debug(message, { ...metadata, requestId });
     },
     info(message: string, metadata?: Record<string, unknown>) {
-      logger.info(message, { requestId, ...metadata });
+      logger.info(message, { ...metadata, requestId });
     },
     warn(message: string, metadata?: Record<string, unknown>) {
-      logger.warn(message, { requestId, ...metadata });
+      logger.warn(message, { ...metadata, requestId });
     },
     error(message: string, error?: Error, metadata?: Record<string, unknown>) {
-      logger.error(message, error, { requestId, ...metadata });
+      logger.error(message, error, { ...metadata, requestId });
     },
   };
 }

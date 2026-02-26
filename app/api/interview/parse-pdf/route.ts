@@ -154,8 +154,8 @@ export async function POST(request: NextRequest) {
       ) {
         throw new Error("Invalid response format");
       }
-    } catch {
-      logger.error("JSON parse error");
+    } catch (parseError) {
+      logger.error("JSON parse error", parseError instanceof Error ? parseError : new Error(String(parseError)));
       return NextResponse.json(
         {
           error: "Failed to parse questions. The PDF format may not be supported.",
