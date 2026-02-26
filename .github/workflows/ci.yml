@@ -29,6 +29,9 @@ jobs:
 
       - name: Run tests
         run: npm test
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://fake:fake@localhost:5432/fake' }}
+          JWT_SECRET: ci-test-secret-key-not-for-production
 
       - name: Build
         run: npm run build

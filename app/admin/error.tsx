@@ -16,7 +16,7 @@ export default function AdminError({
   }, [error]);
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4">
+    <div className="flex min-h-[60vh] items-center justify-center px-4" role="alert">
       <div className="max-w-md w-full text-center space-y-6">
         <div className="flex justify-center">
           <div className="size-12 bg-red-500/10 rounded-full flex items-center justify-center">
@@ -47,11 +47,11 @@ export default function AdminError({
             Try Again
           </button>
           <Link
-            href="/dashboard"
+            href="/"
             className="flex items-center gap-2 px-6 py-3 border border-white/[0.08] text-zinc-400 font-bold text-xs uppercase tracking-[0.2em] hover:text-white hover:border-white/20 transition-all"
           >
             <Home className="w-4 h-4" />
-            Dashboard
+            Home
           </Link>
         </div>
       </div>
