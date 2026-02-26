@@ -80,7 +80,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-[#0f0f0f] text-white">
       {/* Mobile Sidebar Overlay */}
       <div
-        className={`fixed inset-0 bg-black/60 z-40 lg:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/60 z-40 md:hidden transition-opacity duration-300 ${
           sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={() => setSidebarOpen(false)}
@@ -93,7 +93,7 @@ export default function DashboardLayout({
           transition-all duration-300 ease-in-out
           w-64
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0 lg:w-[72px] lg:hover:w-64 group/sidebar
+          md:translate-x-0 md:w-[72px] md:hover:w-64 group/sidebar
         `}
       >
         {/* Logo */}
@@ -101,7 +101,7 @@ export default function DashboardLayout({
           <div className="h-10 w-10 min-w-[40px] bg-yellow-400 rotate-45 flex items-center justify-center flex-shrink-0">
             <Zap className="h-5 w-5 text-[#0f0f0f] -rotate-45" />
           </div>
-          <h1 className="text-sm font-black tracking-[0.2em] uppercase whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+          <h1 className="text-sm font-black tracking-[0.2em] uppercase whitespace-nowrap overflow-hidden md:opacity-0 md:group-hover/sidebar:opacity-100 transition-opacity duration-300">
             SkillForge
           </h1>
         </div>
@@ -120,7 +120,7 @@ export default function DashboardLayout({
               title={item.label}
             >
               <item.icon className="h-5 w-5 min-w-[20px] flex-shrink-0" />
-              <span className="whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-xs uppercase tracking-wider">
+              <span className="whitespace-nowrap overflow-hidden md:opacity-0 md:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-xs uppercase tracking-wider">
                 {item.label}
               </span>
             </Link>
@@ -136,7 +136,7 @@ export default function DashboardLayout({
                 title="Admin Portal"
               >
                 <Shield className="h-5 w-5 min-w-[20px] flex-shrink-0" />
-                <span className="whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-xs uppercase tracking-wider">
+                <span className="whitespace-nowrap overflow-hidden md:opacity-0 md:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-xs uppercase tracking-wider">
                   Admin Portal
                 </span>
               </Link>
@@ -151,7 +151,7 @@ export default function DashboardLayout({
             <div className="h-9 w-9 min-w-[36px] bg-orange-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
             </div>
-            <div className="overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+            <div className="overflow-hidden md:opacity-0 md:group-hover/sidebar:opacity-100 transition-opacity duration-300">
               <p className="text-sm font-bold text-white truncate">{user.name || "User"}</p>
               <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Candidate</p>
             </div>
@@ -164,7 +164,7 @@ export default function DashboardLayout({
             title="Sign out"
           >
             <LogOut className="h-5 w-5 min-w-[20px] flex-shrink-0" />
-            <span className="whitespace-nowrap overflow-hidden lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-xs uppercase tracking-wider">
+            <span className="whitespace-nowrap overflow-hidden md:opacity-0 md:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-xs uppercase tracking-wider">
               Sign out
             </span>
           </button>
@@ -172,9 +172,9 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-[72px] flex flex-col min-h-screen">
+      <main className="md:ml-[72px] flex flex-col min-h-screen">
         {/* Mobile Header */}
-        <header className="sticky top-0 z-30 w-full border-b border-white/[0.08] bg-[#0f0f0f]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between lg:hidden">
+        <header className="sticky top-0 z-30 w-full border-b border-white/[0.08] bg-[#0f0f0f]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between md:hidden">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 text-zinc-400 hover:bg-[#161616] hover:text-white transition-colors"
@@ -194,7 +194,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Desktop Top Bar */}
-        <header className="hidden lg:flex sticky top-0 z-30 w-full border-b border-white/[0.08] bg-[#0f0f0f]/95 backdrop-blur-md px-8 py-2.5 items-center justify-between">
+        <header className="hidden md:flex sticky top-0 z-30 w-full border-b border-white/[0.08] bg-[#0f0f0f]/95 backdrop-blur-md px-8 py-2.5 items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Welcome back,</span>
             <span className="text-white font-bold">{user.name || "User"}</span>
@@ -205,7 +205,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Page Content */}
-        <div className="p-4 lg:p-8 flex-1">
+        <div className="p-4 md:p-6 lg:p-8 flex-1">
           {children}
         </div>
       </main>
