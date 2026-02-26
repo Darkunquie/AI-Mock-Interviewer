@@ -97,7 +97,7 @@ const interviewRoles = [
   "business_analyst",
 ] as const;
 
-const experienceLevels = ["0-1", "1-3", "3-5", "5+"] as const;
+export const experienceLevels = ["0-1", "1-3", "3-5", "5+"] as const;
 const interviewTypes = ["technical", "hr", "behavioral"] as const;
 const interviewModes = ["interview", "practice"] as const;
 const durations = ["15", "30"] as const;
@@ -146,6 +146,25 @@ export const generateProjectsSchema = z.object({
   count: z.number().int().min(1).max(5).optional().default(3),
 });
 
+// ==================== RETAKE SCHEMA ====================
+
+export const retakeInterviewSchema = z.object({
+  interviewId: z.string().uuid("Invalid interview ID"),
+});
+
+// ==================== ADMIN SCHEMAS ====================
+
+export const adminUserActionSchema = z.object({
+  id: z.string().regex(/^\d+$/, "Invalid user ID"),
+});
+
+// ==================== PAGINATION SCHEMA ====================
+
+export const paginationSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 // ==================== TYPE EXPORTS ====================
 
 export type SignUpInput = z.infer<typeof signUpSchema>;
@@ -154,6 +173,9 @@ export type CreateInterviewInput = z.infer<typeof createInterviewSchema>;
 export type EvaluateAnswerInput = z.infer<typeof evaluateAnswerSchema>;
 export type GenerateFlashCardsInput = z.infer<typeof generateFlashCardsSchema>;
 export type GenerateProjectsInput = z.infer<typeof generateProjectsSchema>;
+export type RetakeInterviewInput = z.infer<typeof retakeInterviewSchema>;
+export type AdminUserActionInput = z.infer<typeof adminUserActionSchema>;
+export type PaginationInput = z.infer<typeof paginationSchema>;
 
 // ==================== VALIDATION HELPER ====================
 

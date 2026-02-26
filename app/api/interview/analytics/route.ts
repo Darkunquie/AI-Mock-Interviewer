@@ -3,6 +3,7 @@ import { eq, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, answers } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import {
   ROLE_DISPLAY_NAMES,
@@ -15,7 +16,7 @@ export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     // Fetch all completed interviews with scores
@@ -156,9 +157,9 @@ export async function GET() {
       recentTrend,
     });
   } catch (error) {
-    console.error("Analytics fetch error:", error);
+    logger.error("Analytics fetch error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
-      { error: "Failed to fetch analytics" },
+      { success: false, error: "Failed to fetch analytics" },
       { status: 500 }
     );
   }

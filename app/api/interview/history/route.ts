@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, desc, and, like } from "drizzle-orm";
+import { eq, desc, and, like, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -16,6 +17,11 @@ export async function GET(req: NextRequest) {
     const role = searchParams.get("role");
     const type = searchParams.get("type");
     const search = searchParams.get("search");
+
+    // Pagination
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
+    const offset = (page - 1) * limit;
 
     // Build conditions
     const conditions = [eq(interviews.userId, user.id)];
@@ -36,7 +42,14 @@ export async function GET(req: NextRequest) {
       conditions.push(like(interviews.role, `%${search.toLowerCase()}%`));
     }
 
-    // Fetch interviews with filters
+    // Get total count for pagination
+    const [countResult] = await db
+      .select({ count: sql<number>`COUNT(*)::int` })
+      .from(interviews)
+      .where(and(...conditions));
+    const total = countResult?.count || 0;
+
+    // Fetch interviews with filters + pagination
     const userInterviews = await db
       .select({
         mockId: interviews.mockId,
@@ -49,9 +62,11 @@ export async function GET(req: NextRequest) {
       })
       .from(interviews)
       .where(and(...conditions))
-      .orderBy(desc(interviews.createdAt));
+      .orderBy(desc(interviews.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    // Calculate stats
+    // Calculate stats (across all user interviews, not just current page)
     const allUserInterviews = await db
       .select({
         status: interviews.status,
@@ -83,6 +98,7 @@ export async function GET(req: NextRequest) {
         : 0;
 
     return NextResponse.json({
+      success: true,
       interviews: userInterviews,
       stats: {
         totalInterviews,
@@ -90,11 +106,17 @@ export async function GET(req: NextRequest) {
         averageScore,
         bestScore,
       },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
-    console.error("History fetch error:", error);
+    logger.error("History fetch error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
-      { error: "Failed to fetch history" },
+      { success: false, error: "Failed to fetch history" },
       { status: 500 }
     );
   }

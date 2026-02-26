@@ -4,6 +4,7 @@ import { extractTextFromPdf } from "@/lib/pdf-parser";
 import { generateCompletion } from "@/lib/groq";
 import { getQuestionClassifierPrompt } from "@/utils/prompts";
 import { Question } from "@/types";
+import { logger } from "@/lib/logger";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
 const ALLOWED_MIME_TYPES = ["application/pdf"];
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
         { role: "user", content: prompt },
       ]);
     } catch (aiError) {
-      console.error("AI classification error:", aiError);
+      logger.error("AI classification error", aiError instanceof Error ? aiError : new Error(String(aiError)));
       return NextResponse.json(
         { error: "Failed to classify questions. Please try again." },
         { status: 500 }
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
         throw new Error("Invalid response format");
       }
     } catch {
-      console.error("JSON parse error");
+      logger.error("JSON parse error");
       return NextResponse.json(
         {
           error: "Failed to parse questions. The PDF format may not be supported.",
@@ -200,7 +201,7 @@ export async function POST(request: NextRequest) {
       suggestedRole: suggestedRole,
     });
   } catch (error) {
-    console.error("PDF parse error:", error);
+    logger.error("PDF parse error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: "Failed to process PDF" },
       { status: 500 }

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { ProjectGenerator, LOG_PREFIX } from "@/lib/projects";
-import { GenerateProjectsRequest, GenerateProjectsResponse } from "@/types/project";
+import { GenerateProjectsResponse } from "@/types/project";
+import { generateProjectsSchema, validateRequest } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 /**
  * GET - Check if technology+domain combination exists
@@ -10,7 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
     const exists = await ProjectGenerator.checkExists(technology, domain);
     return NextResponse.json({ exists });
   } catch (error) {
-    console.error(`${LOG_PREFIX} Check combination error:`, error);
+    logger.error(`${LOG_PREFIX} Check combination error`, error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json({ exists: false });
   }
 }
@@ -36,27 +38,30 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     // Check API key
     if (!process.env.GROQ_API_KEY) {
-      console.error(`${LOG_PREFIX} GROQ_API_KEY not configured`);
+      logger.error(`${LOG_PREFIX} GROQ_API_KEY not configured`);
       return NextResponse.json(
-        { error: "AI service not configured. Please contact administrator." },
+        { success: false, error: "AI service not configured. Please contact administrator." },
         { status: 500 }
       );
     }
 
-    const body: GenerateProjectsRequest = await request.json();
-    const { technology, domain } = body;
+    const body = await request.json();
 
-    if (!technology || !domain) {
+    // Validate input with Zod
+    const validation = validateRequest(generateProjectsSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields: technology, domain" },
+        { success: false, error: validation.error.issues[0]?.message || "Invalid input" },
         { status: 400 }
       );
     }
+
+    const { technology, domain } = validation.data;
 
     // Use ProjectGenerator service
     const result = await ProjectGenerator.getOrGenerate(technology, domain);
@@ -70,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error(`${LOG_PREFIX} Unexpected error:`, error);
+    logger.error(`${LOG_PREFIX} Unexpected error`, error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { error: `Failed to generate projects: ${message}` },

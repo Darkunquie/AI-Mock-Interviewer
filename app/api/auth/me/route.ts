@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -17,7 +18,7 @@ export async function GET() {
       user,
     });
   } catch (error) {
-    console.error("Get user error:", error);
+    logger.error("Get user error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

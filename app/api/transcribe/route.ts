@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_WHISPER_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Transcribe] Groq error:", errorText);
+      logger.error("[Transcribe] Groq error", new Error(errorText));
       return NextResponse.json(
         { success: false, error: "Transcription failed" },
         { status: response.status }
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
       text: result.text || "",
     });
   } catch (error) {
-    console.error("[Transcribe] Error:", error);
+    logger.error("[Transcribe] Error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: "Transcription failed" },
       { status: 500 }

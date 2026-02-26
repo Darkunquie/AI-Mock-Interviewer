@@ -7,23 +7,29 @@ import { generateCompletion } from "@/lib/groq";
 import { getQuestionGeneratorPrompt } from "@/utils/prompts";
 import { DURATION_CONFIG, InterviewDuration } from "@/types";
 import { getCurrentUser } from "@/lib/auth";
+import { retakeInterviewSchema, validateRequest } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { interviewId } = await request.json();
+    const body = await request.json();
 
-    if (!interviewId) {
+    // Validate input with Zod
+    const validation = validateRequest(retakeInterviewSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing interviewId" },
+        { success: false, error: validation.error.issues[0]?.message || "Invalid input" },
         { status: 400 }
       );
     }
+
+    const { interviewId } = validation.data;
 
     // Fetch the original interview
     const original = await db
@@ -33,14 +39,14 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (!original.length) {
-      return NextResponse.json({ error: "Interview not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Interview not found" }, { status: 404 });
     }
 
     const originalInterview = original[0];
 
     // Verify user owns this interview
     if (originalInterview.userId !== user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 
     // Use the same parameters from the original interview
@@ -76,7 +82,7 @@ export async function POST(request: NextRequest) {
         { role: "user", content: prompt },
       ]);
     } catch (aiError) {
-      console.error("AI generation error on retake:", aiError);
+      logger.error("AI generation error on retake", aiError instanceof Error ? aiError : new Error(String(aiError)));
       const fallbackBase = [
         { text: `Tell me about yourself and your experience with ${role} development.`, difficulty: "easy", topic: "introduction", expectedTime: 60 },
         { text: `What are the key skills required for a ${role} role?`, difficulty: "medium", topic: "technical", expectedTime: 90 },
@@ -101,9 +107,9 @@ export async function POST(request: NextRequest) {
         throw new Error("Invalid questions format");
       }
     } catch (parseError) {
-      console.error("JSON parse error:", parseError);
+      logger.error("JSON parse error", parseError instanceof Error ? parseError : new Error(String(parseError)));
       return NextResponse.json(
-        { error: "Failed to generate valid questions" },
+        { success: false, error: "Failed to generate valid questions" },
         { status: 500 }
       );
     }
@@ -131,9 +137,9 @@ export async function POST(request: NextRequest) {
       questions: parsedQuestions.questions,
     });
   } catch (error) {
-    console.error("Retake interview error:", error);
+    logger.error("Retake interview error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
-      { error: "Failed to create retake interview" },
+      { success: false, error: "Failed to create retake interview" },
       { status: 500 }
     );
   }

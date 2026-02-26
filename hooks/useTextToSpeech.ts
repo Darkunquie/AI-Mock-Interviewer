@@ -19,8 +19,36 @@ interface UseTextToSpeechReturn {
   setSelectedVoice: (voice: SpeechSynthesisVoice) => void;
 }
 
+// Clean text for better speech synthesis — strip emojis, markdown, special chars
+function cleanTextForSpeech(text: string): string {
+  return text
+    // Remove emoji (Unicode emoji ranges)
+    .replace(/[\u{1F600}-\u{1F64F}]/gu, "")
+    .replace(/[\u{1F300}-\u{1F5FF}]/gu, "")
+    .replace(/[\u{1F680}-\u{1F6FF}]/gu, "")
+    .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, "")
+    .replace(/[\u{2600}-\u{26FF}]/gu, "")
+    .replace(/[\u{2700}-\u{27BF}]/gu, "")
+    .replace(/[\u{FE00}-\u{FE0F}]/gu, "")
+    .replace(/[\u{1F900}-\u{1F9FF}]/gu, "")
+    .replace(/[\u{200D}]/gu, "")
+    // Remove markdown formatting
+    .replace(/#{1,6}\s/g, "")
+    .replace(/\*{1,3}(.*?)\*{1,3}/g, "$1")
+    .replace(/`{1,3}[^`]*`{1,3}/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^[-*+]\s/gm, "")
+    .replace(/^\d+\.\s/gm, "")
+    // Remove special characters that cause speech pauses
+    .replace(/[<>{}|\\^~]/g, "")
+    // Collapse multiple spaces/newlines
+    .replace(/\n+/g, ". ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextToSpeechReturn {
-  const { lang = "en-US", rate = 1, pitch = 1, volume = 1 } = options;
+  const { lang = "en-IN", rate = 1, pitch = 1, volume = 1 } = options;
 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSupported] = useState(() =>
@@ -31,52 +59,106 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
 
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const voiceSelectedRef = useRef(false);
+  const warmupDoneRef = useRef(false);
 
-  // Load voices once on mount
+  // Load voices with progressive retry for iPadOS
   useEffect(() => {
     if (!isSupported) return;
 
-    const loadVoices = () => {
+    const selectBestVoice = (availableVoices: SpeechSynthesisVoice[]) => {
+      return (
+        // Priority 1: Google en-IN voice
+        availableVoices.find(
+          (v) => v.lang === "en-IN" && v.name.includes("Google")
+        ) ||
+        // Priority 2: Microsoft en-IN voice
+        availableVoices.find(
+          (v) => v.lang === "en-IN" && v.name.includes("Microsoft")
+        ) ||
+        // Priority 3: Any en-IN voice
+        availableVoices.find((v) => v.lang === "en-IN") ||
+        // Priority 4: Any English voice
+        availableVoices.find((v) => v.lang.startsWith("en")) ||
+        // Priority 5: First available voice
+        availableVoices[0]
+      );
+    };
+
+    const loadVoices = (): boolean => {
       const availableVoices = window.speechSynthesis.getVoices();
-      if (availableVoices.length === 0) return;
+      if (availableVoices.length === 0) return false;
 
       setVoices(availableVoices);
 
-      // Only set voice once to prevent re-render loops
       if (!voiceSelectedRef.current) {
         voiceSelectedRef.current = true;
-        const preferredVoice =
-          availableVoices.find(
-            (v) =>
-              v.lang.startsWith("en") &&
-              (v.name.includes("Natural") ||
-                v.name.includes("Google") ||
-                v.name.includes("Microsoft") ||
-                v.name.includes("Samantha") ||
-                v.name.includes("Daniel"))
-          ) ||
-          availableVoices.find((v) => v.lang.startsWith("en")) ||
-          availableVoices[0];
-
-        setSelectedVoice(preferredVoice);
+        setSelectedVoice(selectBestVoice(availableVoices));
       }
+      return true;
     };
 
     // Try loading immediately
-    loadVoices();
+    if (loadVoices()) return;
 
-    // Chrome loads voices async - listen for the event
+    // Chrome loads voices async
     const handleVoicesChanged = () => loadVoices();
     window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged);
 
+    // iPadOS progressive retry: 100ms → 200ms → 400ms → 800ms → 1600ms → 2000ms
+    const retryDelays = [100, 200, 400, 800, 1600, 2000];
+    const retryTimeouts: ReturnType<typeof setTimeout>[] = [];
+
+    retryDelays.forEach((delay) => {
+      retryTimeouts.push(
+        setTimeout(() => {
+          if (!voiceSelectedRef.current) {
+            loadVoices();
+          }
+        }, delay)
+      );
+    });
+
     return () => {
       window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
+      retryTimeouts.forEach(clearTimeout);
+    };
+  }, [isSupported]);
+
+  // iPad/Safari warmup: fire silent utterance on first user gesture to unlock audio
+  useEffect(() => {
+    if (!isSupported || warmupDoneRef.current) return;
+
+    const handleUserGesture = () => {
+      if (warmupDoneRef.current) return;
+      warmupDoneRef.current = true;
+
+      const silentUtterance = new SpeechSynthesisUtterance("");
+      silentUtterance.volume = 0;
+      silentUtterance.rate = 1;
+      window.speechSynthesis.speak(silentUtterance);
+
+      document.removeEventListener("click", handleUserGesture);
+      document.removeEventListener("touchstart", handleUserGesture);
+      document.removeEventListener("keydown", handleUserGesture);
+    };
+
+    document.addEventListener("click", handleUserGesture, { once: true });
+    document.addEventListener("touchstart", handleUserGesture, { once: true });
+    document.addEventListener("keydown", handleUserGesture, { once: true });
+
+    return () => {
+      document.removeEventListener("click", handleUserGesture);
+      document.removeEventListener("touchstart", handleUserGesture);
+      document.removeEventListener("keydown", handleUserGesture);
     };
   }, [isSupported]);
 
   const speak = useCallback(
     (text: string) => {
       if (!isSupported || !text) return;
+
+      const cleanedText = cleanTextForSpeech(text);
+      if (!cleanedText) return;
 
       try {
         // Cancel any ongoing speech
@@ -87,7 +169,7 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
           window.speechSynthesis.resume();
         }
 
-        const utterance = new SpeechSynthesisUtterance(text);
+        const utterance = new SpeechSynthesisUtterance(cleanedText);
         utterance.lang = lang;
         utterance.rate = rate;
         utterance.pitch = pitch;
@@ -97,31 +179,24 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
           utterance.voice = selectedVoice;
         }
 
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = (event) => {
-          if (event.error && event.error !== "interrupted" && event.error !== "canceled") {
-            console.warn("Speech synthesis error:", event.error);
-          }
-          setIsSpeaking(false);
-        };
+        let resumeInterval: ReturnType<typeof setInterval> | null = null;
 
-        // Chrome bug: speech stops after ~15 seconds
-        // Workaround: pause/resume every 10 seconds
-        let resumeInterval: NodeJS.Timeout | null = null;
         utterance.onstart = () => {
           setIsSpeaking(true);
+          // Chrome bug fix: pause/resume every 500ms to prevent speech stopping
           resumeInterval = setInterval(() => {
             if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
               window.speechSynthesis.pause();
               window.speechSynthesis.resume();
             }
-          }, 10000);
+          }, 500);
         };
+
         utterance.onend = () => {
           setIsSpeaking(false);
           if (resumeInterval) clearInterval(resumeInterval);
         };
+
         utterance.onerror = (event) => {
           if (event.error && event.error !== "interrupted" && event.error !== "canceled") {
             console.warn("Speech synthesis error:", event.error);

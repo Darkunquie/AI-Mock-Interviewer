@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, answers, interviewSummaries } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   _request: NextRequest,
@@ -12,7 +13,7 @@ export async function GET(
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { id: interviewId } = await params;
@@ -25,14 +26,14 @@ export async function GET(
       .limit(1);
 
     if (!interview.length) {
-      return NextResponse.json({ error: "Interview not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Interview not found" }, { status: 404 });
     }
 
     const interviewData = interview[0];
 
     // Verify user owns this interview
     if (interviewData.userId !== user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 
     // Get answers for this interview
@@ -55,7 +56,7 @@ export async function GET(
       const parsed = JSON.parse(interviewData.questionsJson || "{}");
       questions = parsed.questions || [];
     } catch (e) {
-      console.error("Error parsing questions:", e);
+      logger.error("Error parsing questions", e instanceof Error ? e : new Error(String(e)));
     }
 
     return NextResponse.json({
@@ -83,9 +84,9 @@ export async function GET(
         : null,
     });
   } catch (error) {
-    console.error("Get interview error:", error);
+    logger.error("Get interview error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
-      { error: "Failed to get interview" },
+      { success: false, error: "Failed to get interview" },
       { status: 500 }
     );
   }

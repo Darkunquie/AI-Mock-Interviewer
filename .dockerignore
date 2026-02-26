@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env*
+!.env.example
+.vscode
+__tests__
+vitest.config.ts

@@ -5,20 +5,31 @@ import { interviews, answers, interviewSummaries } from "@/utils/schema";
 import { generateCompletion } from "@/lib/groq";
 import { getSummaryGeneratorPrompt } from "@/utils/prompts";
 import { getCurrentUser } from "@/lib/auth";
+import { interviewSummarySchema, validateRequest } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { interviewId } = await request.json();
+    const body = await request.json();
 
-    if (!interviewId) {
-      return NextResponse.json({ error: "Interview ID required" }, { status: 400 });
+    // Validate input with Zod
+    const validation = validateRequest(interviewSummarySchema, {
+      mockId: body.interviewId,
+    });
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: validation.error.issues[0]?.message || "Invalid input" },
+        { status: 400 }
+      );
     }
+
+    const interviewId = validation.data.mockId;
 
     // Get interview
     const interview = await db
@@ -28,13 +39,13 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (!interview.length) {
-      return NextResponse.json({ error: "Interview not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Interview not found" }, { status: 404 });
     }
 
     const interviewData = interview[0];
 
     if (interviewData.userId !== user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 
     // Get all answers
@@ -45,7 +56,7 @@ export async function POST(request: NextRequest) {
       .orderBy(answers.questionIndex);
 
     if (interviewAnswers.length === 0) {
-      return NextResponse.json({ error: "No answers found" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "No answers found" }, { status: 400 });
     }
 
     // Get total number of questions
@@ -88,7 +99,7 @@ export async function POST(request: NextRequest) {
       // Override AI score with accurate calculation
       summaryData.overallScore = accurateOverallScore;
     } catch (aiError) {
-      console.error("AI summary error:", aiError);
+      logger.error("AI summary error", aiError instanceof Error ? aiError : new Error(String(aiError)));
 
       // Fallback summary with accurate score
       const answeredCount = interviewAnswers.length;
@@ -135,8 +146,8 @@ export async function POST(request: NextRequest) {
     // Override rating with accurate calculation
     summaryData.rating = accurateRating;
 
-    // Save summary to database
-    await db.insert(interviewSummaries).values({
+    // Save summary to database (upsert to handle race conditions)
+    const summaryValues = {
       interviewId: interviewData.id,
       overallScore: totalScore,
       rating: accurateRating,
@@ -145,7 +156,20 @@ export async function POST(request: NextRequest) {
       recommendedTopicsJson: JSON.stringify(summaryData.recommendedTopics || []),
       actionPlan: summaryData.actionPlan,
       summaryText: summaryData.performanceSummary,
-    });
+    };
+    await db.insert(interviewSummaries).values(summaryValues)
+      .onConflictDoUpdate({
+        target: interviewSummaries.interviewId,
+        set: {
+          overallScore: summaryValues.overallScore,
+          rating: summaryValues.rating,
+          strengthsJson: summaryValues.strengthsJson,
+          weaknessesJson: summaryValues.weaknessesJson,
+          recommendedTopicsJson: summaryValues.recommendedTopicsJson,
+          actionPlan: summaryValues.actionPlan,
+          summaryText: summaryValues.summaryText,
+        },
+      });
 
     // Update interview as completed
     await db
@@ -162,9 +186,9 @@ export async function POST(request: NextRequest) {
       summary: summaryData,
     });
   } catch (error) {
-    console.error("Generate summary error:", error);
+    logger.error("Generate summary error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
-      { error: "Failed to generate summary" },
+      { success: false, error: "Failed to generate summary" },
       { status: 500 }
     );
   }

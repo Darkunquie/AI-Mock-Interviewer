@@ -130,6 +130,24 @@ export const logger = {
   },
 };
 
+// Create a scoped logger that automatically includes requestId
+export function withRequestId(requestId: string) {
+  return {
+    debug(message: string, metadata?: Record<string, unknown>) {
+      logger.debug(message, { requestId, ...metadata });
+    },
+    info(message: string, metadata?: Record<string, unknown>) {
+      logger.info(message, { requestId, ...metadata });
+    },
+    warn(message: string, metadata?: Record<string, unknown>) {
+      logger.warn(message, { requestId, ...metadata });
+    },
+    error(message: string, error?: Error, metadata?: Record<string, unknown>) {
+      logger.error(message, error, { requestId, ...metadata });
+    },
+  };
+}
+
 // Generate unique request ID
 export function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;

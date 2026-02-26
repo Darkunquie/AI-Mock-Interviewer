@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import {
@@ -12,6 +12,8 @@ import {
   TrendingUp,
   ArrowRight,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -69,13 +71,20 @@ export default function HistoryPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  const fetchHistory = useCallback(async () => {
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
+  const fetchHistory = useCallback(async (page = currentPage) => {
     try {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.append("status", statusFilter);
       if (roleFilter !== "all") params.append("role", roleFilter);
       if (typeFilter !== "all") params.append("type", typeFilter);
       if (searchQuery) params.append("search", searchQuery);
+      params.append("page", page.toString());
+      params.append("limit", "18");
 
       const response = await fetch(`/api/interview/history?${params}`);
       if (!response.ok) throw new Error("Failed to fetch history");
@@ -83,12 +92,17 @@ export default function HistoryPage() {
       const data = await response.json();
       setInterviews(data.interviews);
       setStats(data.stats);
+      if (data.pagination) {
+        setCurrentPage(data.pagination.page);
+        setTotalPages(data.pagination.totalPages);
+        setTotalItems(data.pagination.total);
+      }
     } catch {
       toast.error("Failed to load interview history");
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, roleFilter, typeFilter, searchQuery]);
+  }, [statusFilter, roleFilter, typeFilter, searchQuery, currentPage]);
 
   useEffect(() => {
     fetchHistory();
@@ -99,9 +113,13 @@ export default function HistoryPage() {
     setRoleFilter("all");
     setTypeFilter("all");
     setSearchQuery("");
+    setCurrentPage(1);
   };
 
-  const hasActiveFilters = statusFilter !== "all" || roleFilter !== "all" || typeFilter !== "all" || searchQuery;
+  const hasActiveFilters = useMemo(
+    () => statusFilter !== "all" || roleFilter !== "all" || typeFilter !== "all" || !!searchQuery,
+    [statusFilter, roleFilter, typeFilter, searchQuery]
+  );
 
   const getScoreColor = (score: number | null) => {
     if (score === null) return "text-zinc-500";
@@ -278,6 +296,7 @@ export default function HistoryPage() {
           </CardContent>
         </Card>
       ) : (
+        <>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {interviews.map((interview) => (
             <Card
@@ -320,6 +339,39 @@ export default function HistoryPage() {
             </Card>
           ))}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-between">
+            <p className="text-sm text-zinc-500">
+              Showing {(currentPage - 1) * 18 + 1}–{Math.min(currentPage * 18, totalItems)} of {totalItems}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => { setCurrentPage(currentPage - 1); fetchHistory(currentPage - 1); }}
+                className="gap-1 border-white/[0.08] hover:border-yellow-400/50"
+              >
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </Button>
+              <span className="text-sm text-zinc-400 px-2">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => { setCurrentPage(currentPage + 1); fetchHistory(currentPage + 1); }}
+                className="gap-1 border-white/[0.08] hover:border-yellow-400/50"
+              >
+                Next <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

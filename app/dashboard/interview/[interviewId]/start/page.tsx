@@ -22,16 +22,16 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
-import { useDeepgramTTS } from "@/hooks/useDeepgramTTS";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { useTimer } from "@/hooks/useTimer";
 import { useSpeechAnalysis } from "@/hooks/useSpeechAnalysis";
-import { Question, AnswerEvaluation } from "@/types";
+import { Question, AnswerEvaluation, ExperienceLevel } from "@/types";
 
 interface InterviewData {
   interview: {
     mockId: string;
     role: string;
-    experienceLevel: string;
+    experienceLevel: ExperienceLevel;
     interviewType: string;
     status: string;
     questions: Question[];
@@ -44,6 +44,16 @@ interface InterviewData {
 }
 
 const TIMER_DURATION = 180;
+
+function getSpeedForExperience(level: ExperienceLevel): number {
+  switch (level) {
+    case "0-1": return 0.9;   // Beginner: slower
+    case "1-3": return 1.0;   // Intermediate: normal
+    case "3-5": return 1.05;  // Advanced: slightly faster
+    case "5+":  return 1.05;  // Senior: slightly faster
+    default:    return 1.0;
+  }
+}
 
 export default function InterviewStartPage() {
   const params = useParams();
@@ -99,14 +109,14 @@ export default function InterviewStartPage() {
 
   const sttSupported = typeof window !== "undefined" && !!navigator.mediaDevices;
 
+  const speechRate = data ? getSpeedForExperience(data.interview.experienceLevel) : 1.0;
+
   const {
     speak,
     cancel: cancelSpeech,
     isSpeaking,
-    isLoading: ttsLoading,
-  } = useDeepgramTTS({ voice: "aura-asteria-en" });
-
-  const ttsSupported = true; // Deepgram TTS is always supported
+    isSupported: ttsSupported,
+  } = useTextToSpeech({ rate: speechRate });
 
   const {
     metrics: speechMetrics,
@@ -155,7 +165,7 @@ export default function InterviewStartPage() {
     if (data && useVoice && ttsSupported && !showFeedback && hasInteracted) {
       const question = data.interview.questions[currentQuestionIndex];
       if (question) {
-        void speak(question.text);
+        speak(question.text);
       }
     }
   }, [currentQuestionIndex, data, useVoice, ttsSupported, showFeedback, speak, hasInteracted]);
@@ -228,7 +238,7 @@ export default function InterviewStartPage() {
 
       if (useVoice && ttsSupported) {
         const feedbackText = `You scored ${result.evaluation.overallScore} out of 100. ${result.evaluation.encouragement}`;
-        void speak(feedbackText);
+        speak(feedbackText);
       }
     } catch {
       toast.error("Failed to evaluate your answer. Please try again.");

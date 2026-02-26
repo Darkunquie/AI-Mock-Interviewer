@@ -6,6 +6,8 @@ import { generateCompletion } from "@/lib/groq";
 import { getQuestionGeneratorPrompt } from "@/utils/prompts";
 import { CreateInterviewRequest, DURATION_CONFIG, Question } from "@/types";
 import { getCurrentUser } from "@/lib/auth";
+import { createInterviewSchema, validateRequest } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 interface TechDeepDiveConfig {
   technology: string;
@@ -14,6 +16,7 @@ interface TechDeepDiveConfig {
 }
 
 interface ExtendedCreateInterviewRequest extends CreateInterviewRequest {
+  resumeText?: string;
   customQuestions?: Question[];
   techDeepDive?: TechDeepDiveConfig;
 }
@@ -23,19 +26,31 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const body: ExtendedCreateInterviewRequest = await request.json();
-    const { role, experienceLevel, interviewType, duration, techStack, mode, topics, customQuestions, techDeepDive } = body;
 
-    // Validate input
-    if (!role || !experienceLevel || !interviewType) {
+    // Validate input with Zod
+    const validation = validateRequest(createInterviewSchema, {
+      role: body.role,
+      experienceLevel: body.experienceLevel,
+      interviewType: body.interviewType,
+      mode: body.mode,
+      duration: body.duration,
+      techStack: body.techStack,
+      topics: body.topics,
+      resumeText: body.resumeText,
+    });
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields: role, experienceLevel, interviewType" },
+        { success: false, error: validation.error.issues[0]?.message || "Invalid input" },
         { status: 400 }
       );
     }
+
+    const { role, experienceLevel, interviewType, mode, duration, techStack, topics } = validation.data;
+    const { customQuestions, techDeepDive } = body;
 
     const interviewDuration = duration && DURATION_CONFIG[duration] ? duration : "15";
     const questionCount = DURATION_CONFIG[interviewDuration].questionCount;
@@ -67,7 +82,7 @@ export async function POST(request: NextRequest) {
           { role: "user", content: prompt },
         ]);
       } catch (aiError) {
-        console.error("AI generation error:", aiError);
+        logger.error("AI generation error", aiError instanceof Error ? aiError : new Error(String(aiError)));
         // Fallback to default questions if AI fails
         const fallbackBase = [
           { text: `Tell me about yourself and your experience with ${role} development.`, difficulty: "easy", topic: "introduction", expectedTime: 60 },
@@ -102,9 +117,9 @@ export async function POST(request: NextRequest) {
           throw new Error("Invalid questions format");
         }
       } catch (parseError) {
-        console.error("JSON parse error:", parseError);
+        logger.error("JSON parse error", parseError instanceof Error ? parseError : new Error(String(parseError)));
         return NextResponse.json(
-          { error: "Failed to generate valid questions" },
+          { success: false, error: "Failed to generate valid questions" },
           { status: 500 }
         );
       }
@@ -133,9 +148,9 @@ export async function POST(request: NextRequest) {
       questions: parsedQuestions.questions,
     });
   } catch (error) {
-    console.error("Create interview error:", error);
+    logger.error("Create interview error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
-      { error: "Failed to create interview" },
+      { success: false, error: "Failed to create interview" },
       { status: 500 }
     );
   }

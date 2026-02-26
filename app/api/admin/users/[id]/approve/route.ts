@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 
 export async function POST(
   request: NextRequest,
@@ -50,7 +51,7 @@ export async function POST(
       message: `User ${user.email} approved`,
     });
   } catch (error) {
-    console.error("Admin approve error:", error);
+    logger.error("Admin approve error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

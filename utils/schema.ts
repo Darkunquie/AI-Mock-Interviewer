@@ -50,6 +50,7 @@ export const answers = pgTable("answers", {
   depthScore: integer("depth_score"),
   idealAnswer: text("ideal_answer"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => [
   index("idx_answers_interview_id").on(t.interviewId),
   uniqueIndex("idx_answers_interview_question").on(t.interviewId, t.questionIndex),

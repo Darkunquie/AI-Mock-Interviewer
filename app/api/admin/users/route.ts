@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,8 +17,24 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get("status");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
+    const offset = (page - 1) * limit;
 
-    let query = db
+    // Build where condition
+    const whereCondition = statusFilter && ["pending", "approved", "rejected"].includes(statusFilter)
+      ? eq(users.status, statusFilter)
+      : undefined;
+
+    // Get total count
+    const [countResult] = await db
+      .select({ count: sql<number>`COUNT(*)::int` })
+      .from(users)
+      .where(whereCondition);
+    const total = countResult?.count || 0;
+
+    // Fetch paginated users
+    const allUsers = await db
       .select({
         id: users.id,
         email: users.email,
@@ -28,17 +45,23 @@ export async function GET(request: NextRequest) {
         createdAt: users.createdAt,
       })
       .from(users)
-      .orderBy(desc(users.createdAt));
+      .where(whereCondition)
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    if (statusFilter && ["pending", "approved", "rejected"].includes(statusFilter)) {
-      query = query.where(eq(users.status, statusFilter)) as typeof query;
-    }
-
-    const allUsers = await query;
-
-    return NextResponse.json({ success: true, users: allUsers });
+    return NextResponse.json({
+      success: true,
+      users: allUsers,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
-    console.error("Admin users list error:", error);
+    logger.error("Admin users list error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

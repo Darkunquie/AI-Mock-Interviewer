@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Loader2, TrendingUp, TrendingDown, Target, Award, Calendar, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -72,6 +72,16 @@ export default function AnalyticsPage() {
     }
   }, []);
 
+  const skillData = useMemo(() => {
+    if (!data) return [];
+    const { skillBreakdown } = data;
+    return [
+      { name: "Technical", value: skillBreakdown.technical, color: "#facc15" },
+      { name: "Communication", value: skillBreakdown.communication, color: "#f97316" },
+      { name: "Depth", value: skillBreakdown.depth, color: "#22c55e" },
+    ];
+  }, [data]);
+
   useEffect(() => {
     fetchAnalytics();
   }, [fetchAnalytics]);
@@ -94,7 +104,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  const { overview, scoreHistory, scoreByRole, scoreByType, skillBreakdown, recentTrend } = data;
+  const { overview, scoreHistory, scoreByRole, scoreByType, recentTrend } = data;
 
   const getTrendIcon = () => {
     if (recentTrend === "improving") return <TrendingUp className="h-5 w-5 text-green-500" />;
@@ -111,12 +121,6 @@ export default function AnalyticsPage() {
     }
     return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Stable</Badge>;
   };
-
-  const skillData = [
-    { name: "Technical", value: skillBreakdown.technical, color: "#facc15" },
-    { name: "Communication", value: skillBreakdown.communication, color: "#f97316" },
-    { name: "Depth", value: skillBreakdown.depth, color: "#22c55e" },
-  ];
 
   return (
     <div className="mx-auto max-w-6xl">

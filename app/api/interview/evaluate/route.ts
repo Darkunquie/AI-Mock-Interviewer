@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, answers } from "@/utils/schema";
 import { generateCompletion } from "@/lib/groq";
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     });
     if (!validation.success) {
       return NextResponse.json(
-        { error: validation.error.errors[0]?.message || "Invalid input" },
+        { success: false, error: validation.error.issues[0]?.message || "Invalid input" },
         { status: 400 }
       );
     }
@@ -51,14 +51,14 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (!interview.length) {
-      return NextResponse.json({ error: "Interview not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Interview not found" }, { status: 404 });
     }
 
     const interviewData = interview[0];
 
     // Verify user owns this interview
     if (interviewData.userId !== user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 
     // Get keywords from the question (if available from PDF upload)
@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error("Evaluate answer error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
-      { error: "Failed to evaluate answer" },
+      { success: false, error: "Failed to evaluate answer" },
       { status: 500 }
     );
   }
