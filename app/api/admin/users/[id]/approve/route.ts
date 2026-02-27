@@ -41,6 +41,13 @@ export async function POST(
       );
     }
 
+    if (user.status === "approved") {
+      return NextResponse.json(
+        { success: false, error: "User is already approved" },
+        { status: 400 }
+      );
+    }
+
     const now = new Date();
     const trialEnd = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000); // 3-day trial
 

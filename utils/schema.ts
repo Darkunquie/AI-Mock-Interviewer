@@ -13,7 +13,7 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   approvedAt: timestamp("approved_at"),
   trialEndsAt: timestamp("trial_ends_at"),
-  subscriptionStatus: varchar("subscription_status", { length: 20 }).default("none"), // "none" | "trial" | "active" | "expired"
+  subscriptionStatus: varchar("subscription_status", { length: 20 }).default("none").notNull(), // "none" | "trial" | "active" | "expired"
 });
 
 // Interviews table

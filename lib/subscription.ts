@@ -51,11 +51,15 @@ export async function requireActiveSubscription(): Promise<SubscriptionResult> {
       return { user, allowed: true };
     }
 
-    // Trial expired — auto-update status in DB
-    await db
-      .update(users)
-      .set({ subscriptionStatus: "expired" })
-      .where(eq(users.id, user.id));
+    // Trial expired — auto-update status in DB (best-effort)
+    try {
+      await db
+        .update(users)
+        .set({ subscriptionStatus: "expired" })
+        .where(eq(users.id, user.id));
+    } catch {
+      // Still return expired — the trial is expired regardless of DB update success
+    }
 
     return { user, allowed: false, reason: "trial_expired" };
   }
@@ -104,11 +108,15 @@ export async function getSubscriptionDetails(userId: number) {
     if (trialDaysLeft <= 0) {
       isExpired = true;
       currentStatus = "expired";
-      // Auto-update in DB
-      await db
-        .update(users)
-        .set({ subscriptionStatus: "expired" })
-        .where(eq(users.id, userId));
+      // Auto-update in DB (best-effort)
+      try {
+        await db
+          .update(users)
+          .set({ subscriptionStatus: "expired" })
+          .where(eq(users.id, userId));
+      } catch {
+        // Still mark as expired — the trial is expired regardless of DB update success
+      }
     }
   } else if (currentStatus === "expired" || currentStatus === "none") {
     isExpired = true;

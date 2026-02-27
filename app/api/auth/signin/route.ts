@@ -30,10 +30,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if trial is expired for redirect hint
+    let isTrialExpired = false;
+    if (result.user && result.user.role !== "admin") {
+      const { getSubscriptionDetails } = await import("@/lib/subscription");
+      const details = await getSubscriptionDetails(result.user.id);
+      if (details?.isExpired) {
+        isTrialExpired = true;
+      }
+    }
+
     logger.info("User signed in", { email });
     return NextResponse.json({
       success: true,
       user: result.user,
+      isTrialExpired,
     });
   } catch (error) {
     logger.error("Signin error", error instanceof Error ? error : new Error(String(error)));

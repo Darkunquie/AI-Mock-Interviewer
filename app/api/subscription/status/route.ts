@@ -18,11 +18,10 @@ export async function GET() {
 
     if (!details) {
       return NextResponse.json(
-        { success: false, error: "User not found" },
+        { success: false, error: "Subscription not found" },
         { status: 404 }
       );
     }
-
     return NextResponse.json({
       success: true,
       ...details,

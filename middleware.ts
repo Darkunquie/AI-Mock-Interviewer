@@ -113,7 +113,11 @@ async function checkSubscription(
   requestId: string
 ): Promise<NextResponse | null> {
   try {
-    const sql = neon(process.env.DATABASE_URL!);
+    if (!process.env.DATABASE_URL) {
+      console.error("[checkSubscription] DATABASE_URL not configured");
+      return null; // Fail open — let route handler deal with auth
+    }
+    const sql = neon(process.env.DATABASE_URL);
     const result = await sql`
       SELECT subscription_status, trial_ends_at
       FROM users WHERE id = ${userId} LIMIT 1

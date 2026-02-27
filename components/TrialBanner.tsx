@@ -11,7 +11,7 @@ export default function TrialBanner() {
   // Don't show banner for admins, paid users, or while loading
   if (isLoading || isAdmin || isSubscriptionActive) return null;
 
-  if (isTrialActive && trialDaysLeft !== null) {
+  if (isTrialActive && trialDaysLeft !== null && trialDaysLeft > 0) {
     return (
       <div className="bg-yellow-400/10 border border-yellow-400/20 px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">

@@ -43,7 +43,7 @@ export function useSubscription() {
     isAdmin: data?.isAdmin ?? false,
     isTrialActive:
       data?.subscriptionStatus === "trial" && !data?.isExpired,
-    isSubscriptionActive: data?.subscriptionStatus === "active",
+    isSubscriptionActive: data?.subscriptionStatus === "active" && !data?.isExpired,
     refresh: fetchStatus,
   };
 }

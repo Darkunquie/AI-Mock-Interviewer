@@ -26,15 +26,15 @@ const lockedFeatures = [
 
 export default function SubscriptionPage() {
   const router = useRouter();
-  const { isLoading, isExpired, isAdmin, isSubscriptionActive, isTrialActive } =
+  const { isLoading, isExpired, isAdmin, isSubscriptionActive } =
     useSubscription();
 
-  // Redirect if user has active access
+  // Redirect if user already has paid access or is admin
   useEffect(() => {
-    if (!isLoading && (isAdmin || isSubscriptionActive || isTrialActive)) {
+    if (!isLoading && (isAdmin || isSubscriptionActive)) {
       router.push("/dashboard");
     }
-  }, [isLoading, isAdmin, isSubscriptionActive, isTrialActive, router]);
+  }, [isLoading, isAdmin, isSubscriptionActive, router]);
 
   if (isLoading) {
     return (
@@ -44,30 +44,32 @@ export default function SubscriptionPage() {
     );
   }
 
-  if (!isExpired) return null;
+  // Admin or paid users shouldn't see this page
+  if (isAdmin || isSubscriptionActive) return null;
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
       {/* Header */}
       <div className="text-center mb-10">
         <div className="flex justify-center mb-4">
-          <div className="size-16 bg-red-500/10 rounded-full flex items-center justify-center">
-            <Lock className="w-8 h-8 text-red-400" />
+          <div className={`size-16 ${isExpired ? "bg-red-500/10" : "bg-yellow-400/10"} rounded-full flex items-center justify-center`}>
+            <Lock className={`w-8 h-8 ${isExpired ? "text-red-400" : "text-yellow-400"}`} />
           </div>
         </div>
         <h1 className="text-2xl font-black uppercase tracking-wider text-white mb-3">
-          Your Free Trial Has Ended
+          {isExpired ? "Your Free Trial Has Ended" : "Upgrade to Full Access"}
         </h1>
         <p className="text-zinc-400 max-w-md mx-auto">
-          Your 3-day free trial has expired. Upgrade to a paid plan to continue
-          using all SkillForge features.
+          {isExpired
+            ? "Your 3-day free trial has expired. Upgrade to a paid plan to continue using all SkillForge features."
+            : "Unlock unlimited access to all SkillForge features with a one-time payment."}
         </p>
       </div>
 
       {/* Locked Features Grid */}
       <div className="mb-10">
         <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 mb-4">
-          Features you&apos;re missing
+          {isExpired ? "Features you're missing" : "What you'll get"}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {lockedFeatures.map((feature) => (
@@ -90,11 +92,15 @@ export default function SubscriptionPage() {
         <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-400 mb-2">
           Full Access
         </h3>
-        <div className="flex items-baseline justify-center gap-1 mb-4">
-          <span className="text-4xl font-black text-white">Coming Soon</span>
+        <div className="flex items-baseline justify-center gap-1 mb-1">
+          <span className="text-lg text-zinc-500">₹</span>
+          <span className="text-5xl font-black text-white">999</span>
         </div>
+        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-6">
+          One-time payment
+        </p>
         <p className="text-zinc-400 text-sm mb-6">
-          Payment integration is being set up. Contact us for early access.
+          Unlimited access to all SkillForge features. Pay once, use forever.
         </p>
         <button
           disabled
@@ -106,7 +112,11 @@ export default function SubscriptionPage() {
 
       {/* Contact */}
       <p className="text-center text-xs text-zinc-600 mt-6">
-        Need help? Contact support for assistance with your account.
+        Need help?{" "}
+        <a href="mailto:yashadepu6@gmail.com" className="text-zinc-400 hover:text-white underline">
+          Contact support
+        </a>{" "}
+        for assistance with your account.
       </p>
     </div>
   );
