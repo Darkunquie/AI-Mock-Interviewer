@@ -115,7 +115,11 @@ async function checkSubscription(
   try {
     if (!process.env.DATABASE_URL) {
       console.error("[checkSubscription] DATABASE_URL not configured");
-      return null; // Fail open — let route handler deal with auth
+      // Fail closed — block access when subscription check is impossible
+      return NextResponse.json(
+        { success: false, error: "Service temporarily unavailable" },
+        { status: 503, headers: { ...securityHeaders } }
+      );
     }
     const sql = neon(process.env.DATABASE_URL);
     const result = await sql`

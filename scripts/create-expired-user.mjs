@@ -3,6 +3,10 @@ import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
+if (!process.env.DATABASE_URL) {
+  console.error("Error: DATABASE_URL environment variable is not set");
+  process.exit(1);
+}
 const sql = neon(process.env.DATABASE_URL);
 
 const password = "Test@1234";
