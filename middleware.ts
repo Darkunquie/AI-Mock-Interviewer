@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { neon } from "@neondatabase/serverless";
 
 // In-memory rate limiter (simple implementation for single-server deployment)
 // For multi-server deployment, use Redis-based rate limiting
@@ -80,6 +81,76 @@ const allowedOrigins = [
   "http://localhost:3001",
 ].filter(Boolean);
 
+// Subscription guard — protected API paths that require active trial/subscription
+function isProtectedApiPath(pathname: string): boolean {
+  // Leaderboard is free (view-only)
+  if (pathname === "/api/interview/leaderboard") return false;
+  // All other interview routes are protected (including /api/interview/[id])
+  if (pathname.startsWith("/api/interview")) return true;
+  if (pathname.startsWith("/api/flashcards")) return true;
+  if (pathname.startsWith("/api/projects")) return true;
+  if (pathname === "/api/transcribe") return true;
+  return false;
+}
+
+// Decode JWT payload without verification (lightweight, Edge-compatible)
+// Full verification happens in the route handler — this is just for the subscription guard
+function decodeJwtPayload(token: string): { id?: number; role?: string } | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replaceAll("-", "+").replaceAll("_", "/");
+    const payload = JSON.parse(atob(base64));
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+async function checkSubscription(
+  userId: number,
+  origin: string | null,
+  requestId: string
+): Promise<NextResponse | null> {
+  try {
+    const sql = neon(process.env.DATABASE_URL!);
+    const result = await sql`
+      SELECT subscription_status, trial_ends_at
+      FROM users WHERE id = ${userId} LIMIT 1
+    `;
+    const user = result[0];
+    if (!user) return null; // Let route handler deal with missing user
+
+    const status = user.subscription_status;
+    const trialEnds = user.trial_ends_at ? new Date(user.trial_ends_at as string) : null;
+    const isActive =
+      status === "active" ||
+      (status === "trial" && trialEnds && trialEnds > new Date());
+
+    if (!isActive) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Subscription required",
+          reason: status === "trial" ? "trial_expired" : "no_subscription",
+        },
+        {
+          status: 403,
+          headers: {
+            ...getCorsHeaders(origin),
+            ...securityHeaders,
+            "X-Request-ID": requestId,
+          },
+        }
+      );
+    }
+  } catch {
+    // If subscription check fails, let the request through
+    // Route handler will catch any real auth issues
+  }
+  return null;
+}
+
 function getCorsHeaders(origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -99,7 +170,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   return headers;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const origin = request.headers.get("origin");
 
@@ -148,6 +219,18 @@ export function middleware(request: NextRequest) {
           },
         }
       );
+    }
+
+    // Subscription guard for protected API paths
+    if (isProtectedApiPath(pathname)) {
+      const authToken = request.cookies.get("auth_token")?.value;
+      if (authToken) {
+        const payload = decodeJwtPayload(authToken);
+        if (payload?.id && payload.role !== "admin") {
+          const blocked = await checkSubscription(payload.id, origin, requestId);
+          if (blocked) return blocked;
+        }
+      }
     }
 
     // Continue with the request, adding headers

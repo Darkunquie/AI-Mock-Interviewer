@@ -41,9 +41,17 @@ export async function POST(
       );
     }
 
+    const now = new Date();
+    const trialEnd = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000); // 3-day trial
+
     await db
       .update(users)
-      .set({ status: "approved" })
+      .set({
+        status: "approved",
+        approvedAt: now,
+        trialEndsAt: trialEnd,
+        subscriptionStatus: "trial",
+      })
       .where(eq(users.id, userId));
 
     return NextResponse.json({

@@ -11,6 +11,9 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 20 }).default("user").notNull(), // "user" | "admin"
   status: varchar("status", { length: 20 }).default("pending").notNull(), // "pending" | "approved" | "rejected"
   createdAt: timestamp("created_at").defaultNow(),
+  approvedAt: timestamp("approved_at"),
+  trialEndsAt: timestamp("trial_ends_at"),
+  subscriptionStatus: varchar("subscription_status", { length: 20 }).default("none"), // "none" | "trial" | "active" | "expired"
 });
 
 // Interviews table

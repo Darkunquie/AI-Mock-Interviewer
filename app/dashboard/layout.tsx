@@ -18,6 +18,8 @@ import {
   Trophy,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import TrialBanner from "@/components/TrialBanner";
 
 export default function DashboardLayout({
   children,
@@ -27,6 +29,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { user, isLoading, isAdmin, signOut } = useAuth();
+  const { isExpired: isSubscriptionExpired, isLoading: isSubLoading } = useSubscription();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -36,6 +39,19 @@ export default function DashboardLayout({
       router.push("/pending-approval");
     }
   }, [user, isLoading, router]);
+
+  // Redirect expired users to subscription page (except if already there)
+  useEffect(() => {
+    if (
+      !isLoading &&
+      !isSubLoading &&
+      isSubscriptionExpired &&
+      !isAdmin &&
+      pathname !== "/dashboard/subscription"
+    ) {
+      router.push("/dashboard/subscription");
+    }
+  }, [isLoading, isSubLoading, isSubscriptionExpired, isAdmin, pathname, router]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -203,6 +219,9 @@ export default function DashboardLayout({
             <span className="text-[10px] text-zinc-600 uppercase tracking-[0.3em] font-bold">SkillForge Platform</span>
           </div>
         </header>
+
+        {/* Trial Banner */}
+        <TrialBanner />
 
         {/* Page Content */}
         <div className="p-4 md:p-6 lg:p-8 flex-1">
