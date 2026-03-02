@@ -118,7 +118,7 @@ export async function getSubscriptionDetails(userId: number) {
         // Still mark as expired — the trial is expired regardless of DB update success
       }
     }
-  } else if (currentStatus === "expired" || currentStatus === "none") {
+  } else if (currentStatus === "expired") {
     isExpired = true;
   }
 

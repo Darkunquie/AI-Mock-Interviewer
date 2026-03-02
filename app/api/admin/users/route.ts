@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
         role: users.role,
         status: users.status,
         createdAt: users.createdAt,
+        trialEndsAt: users.trialEndsAt,
+        subscriptionStatus: users.subscriptionStatus,
       })
       .from(users)
       .where(whereCondition)

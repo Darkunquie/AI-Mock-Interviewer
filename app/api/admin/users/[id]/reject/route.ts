@@ -43,7 +43,11 @@ export async function POST(
 
     await db
       .update(users)
-      .set({ status: "rejected" })
+      .set({
+        status: "rejected",
+        subscriptionStatus: "none",
+        trialEndsAt: null,
+      })
       .where(eq(users.id, userId));
 
     return NextResponse.json({

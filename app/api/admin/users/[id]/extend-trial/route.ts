@@ -6,12 +6,12 @@ import { eq } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
-const VALID_TRIAL_DAYS = [0, 3, 6, 14] as const;
+const VALID_TRIAL_DAYS = [3, 6, 14] as const;
 
-const approveSchema = z.object({
+const extendTrialSchema = z.object({
   trialDays: z.number().refine((v) => VALID_TRIAL_DAYS.includes(v as typeof VALID_TRIAL_DAYS[number]), {
-    message: "Trial duration must be 0, 3, 6, or 14 days",
-  }).optional().default(3),
+    message: "Trial duration must be 3, 6, or 14 days",
+  }),
 });
 
 export async function POST(
@@ -28,27 +28,20 @@ export async function POST(
     }
 
     const { id } = await params;
-    const userId = parseInt(id, 10);
+    const userId = Number.parseInt(id, 10);
 
-    if (isNaN(userId)) {
+    if (Number.isNaN(userId)) {
       return NextResponse.json(
         { success: false, error: "Invalid user ID" },
         { status: 400 }
       );
     }
 
-    // Parse body (may be empty for backward compatibility)
-    let body: Record<string, unknown> = {};
-    try {
-      body = await request.json();
-    } catch {
-      // No body sent — use defaults
-    }
-
-    const parsed = approveSchema.safeParse(body);
+    const body = await request.json();
+    const parsed = extendTrialSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Invalid trial duration. Must be 0, 3, 6, or 14 days." },
+        { success: false, error: "Invalid trial duration. Must be 3, 6, or 14 days." },
         { status: 400 }
       );
     }
@@ -68,46 +61,31 @@ export async function POST(
       );
     }
 
-    if (user.status === "approved") {
+    if (user.status !== "approved") {
       return NextResponse.json(
-        { success: false, error: "User is already approved" },
+        { success: false, error: "User must be approved before extending trial" },
         { status: 400 }
       );
     }
 
     const now = new Date();
+    const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
 
-    if (trialDays > 0) {
-      const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
-      await db
-        .update(users)
-        .set({
-          status: "approved",
-          approvedAt: now,
-          trialEndsAt: trialEnd,
-          subscriptionStatus: "trial",
-        })
-        .where(eq(users.id, userId));
-    } else {
-      await db
-        .update(users)
-        .set({
-          status: "approved",
-          approvedAt: now,
-          trialEndsAt: null,
-          subscriptionStatus: "none",
-        })
-        .where(eq(users.id, userId));
-    }
+    await db
+      .update(users)
+      .set({
+        trialEndsAt: trialEnd,
+        subscriptionStatus: "trial",
+      })
+      .where(eq(users.id, userId));
 
     return NextResponse.json({
       success: true,
-      message: trialDays > 0
-        ? `User ${user.email} approved with ${trialDays}-day trial`
-        : `User ${user.email} approved without trial`,
+      message: `Trial extended by ${trialDays} days for ${user.email}`,
+      trialEndsAt: trialEnd.toISOString(),
     });
   } catch (error) {
-    logger.error("Admin approve error", error instanceof Error ? error : new Error(String(error)));
+    logger.error("Admin extend trial error", error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
