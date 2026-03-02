@@ -50,8 +50,10 @@ export default function AdminUsersPage() {
         ? "/api/admin/users"
         : `/api/admin/users?status=${filter}`;
       const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) setUsers(data.users);
+      else throw new Error(data.error || "Unknown error");
     } catch {
       toast.error("Failed to load users");
     } finally {
@@ -73,6 +75,7 @@ export default function AdminUsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trialDays }),
       });
+      if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
@@ -92,6 +95,7 @@ export default function AdminUsersPage() {
     setActionLoading(userId);
     try {
       const res = await fetch(`/api/admin/users/${userId}/reject`, { method: "POST" });
+      if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
@@ -114,6 +118,7 @@ export default function AdminUsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trialDays: extendDays }),
       });
+      if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
@@ -476,7 +481,7 @@ export default function AdminUsersPage() {
               ))}
             </div>
             <p className="text-[10px] text-zinc-600 mt-2">
-              Trial starts from now, regardless of any previous trial.
+              Days are added on top of any remaining trial time.
             </p>
           </div>
 

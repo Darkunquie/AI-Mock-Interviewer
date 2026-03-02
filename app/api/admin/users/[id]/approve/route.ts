@@ -68,6 +68,13 @@ export async function POST(
       );
     }
 
+    if (user.id === admin.id) {
+      return NextResponse.json(
+        { success: false, error: "Cannot modify your own account" },
+        { status: 400 }
+      );
+    }
+
     if (user.status === "approved") {
       return NextResponse.json(
         { success: false, error: "User is already approved" },

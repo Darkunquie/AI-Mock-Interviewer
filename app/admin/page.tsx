@@ -59,14 +59,21 @@ export default function AdminDashboard() {
         fetch("/api/admin/users?status=pending"),
       ]);
 
+      if (!statsRes.ok || !usersRes.ok) {
+        throw new Error(`HTTP ${statsRes.status}/${usersRes.status}`);
+      }
+
       const statsData = await statsRes.json();
       const usersData = await usersRes.json();
 
       if (statsData.success) {
         setStats(statsData.stats);
         setTrialStats(statsData.trialStats);
+      } else {
+        throw new Error(statsData.error || "Failed to load stats");
       }
       if (usersData.success) setPendingUsers(usersData.users);
+      else throw new Error(usersData.error || "Failed to load users");
     } catch {
       toast.error("Failed to load admin data");
     } finally {
@@ -87,6 +94,7 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trialDays }),
       });
+      if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
@@ -106,6 +114,7 @@ export default function AdminDashboard() {
     setActionLoading(userId);
     try {
       const res = await fetch(`/api/admin/users/${userId}/reject`, { method: "POST" });
+      if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
@@ -156,9 +165,8 @@ export default function AdminDashboard() {
       if (failed === 0) {
         toast.success(`All ${succeeded} users approved`);
       } else {
-        toast.success(`${succeeded} approved, ${failed} failed`);
-      }
-      setApproveDialogOpen(false);
+        toast.warning(`${succeeded} approved, ${failed} failed`);
+      }      setApproveDialogOpen(false);
       fetchData();
     } catch {
       toast.error("Failed to approve users");
@@ -180,7 +188,12 @@ export default function AdminDashboard() {
       const succeeded = results.filter(
         (r) => r.status === "fulfilled" && r.value.success
       ).length;
-      toast.success(`${succeeded} users rejected`);
+      const failed = results.length - succeeded;
+      if (failed === 0) {
+        toast.success(`All ${succeeded} users rejected`);
+      } else {
+        toast.warning(`${succeeded} rejected, ${failed} failed`);
+      }
       fetchData();
     } catch {
       toast.error("Failed to reject users");

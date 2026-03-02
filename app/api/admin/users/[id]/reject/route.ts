@@ -41,6 +41,13 @@ export async function POST(
       );
     }
 
+    if (user.id === admin.id) {
+      return NextResponse.json(
+        { success: false, error: "Cannot reject your own account" },
+        { status: 400 }
+      );
+    }
+
     await db
       .update(users)
       .set({

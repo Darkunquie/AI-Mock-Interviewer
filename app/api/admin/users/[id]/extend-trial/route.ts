@@ -69,7 +69,8 @@ export async function POST(
     }
 
     const now = new Date();
-    const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+    const baseDate = user.trialEndsAt && new Date(user.trialEndsAt) > now ? new Date(user.trialEndsAt) : now;
+    const trialEnd = new Date(baseDate.getTime() + trialDays * 24 * 60 * 60 * 1000);
 
     await db
       .update(users)
