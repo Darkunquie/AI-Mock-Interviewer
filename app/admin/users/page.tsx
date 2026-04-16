@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, XCircle, Search } from "lucide-react";
+import { CheckCircle, XCircle, Search, Clock } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface UserRecord {
   id: number;
@@ -12,6 +20,8 @@ interface UserRecord {
   role: string;
   status: string;
   createdAt: string;
+  trialEndsAt: string | null;
+  subscriptionStatus: string;
 }
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
@@ -23,14 +33,27 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
+  // Approval dialog state
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approveUserId, setApproveUserId] = useState<number | null>(null);
+  const [applyTrial, setApplyTrial] = useState(true);
+  const [selectedTrialDays, setSelectedTrialDays] = useState<number>(3);
+
+  // Extend trial dialog state
+  const [extendDialogOpen, setExtendDialogOpen] = useState(false);
+  const [extendUserId, setExtendUserId] = useState<number | null>(null);
+  const [extendDays, setExtendDays] = useState<number>(3);
+
   const fetchUsers = async () => {
     try {
       const url = filter === "all"
         ? "/api/admin/users"
         : `/api/admin/users?status=${filter}`;
       const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) setUsers(data.users);
+      else throw new Error(data.error || "Unknown error");
     } catch {
       toast.error("Failed to load users");
     } finally {
@@ -46,10 +69,17 @@ export default function AdminUsersPage() {
   const handleApprove = async (userId: number) => {
     setActionLoading(userId);
     try {
-      const res = await fetch(`/api/admin/users/${userId}/approve`, { method: "POST" });
+      const trialDays = applyTrial ? selectedTrialDays : 0;
+      const res = await fetch(`/api/admin/users/${userId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trialDays }),
+      });
+      if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
+        setApproveDialogOpen(false);
         fetchUsers();
       } else {
         toast.error(data.error);
@@ -65,6 +95,7 @@ export default function AdminUsersPage() {
     setActionLoading(userId);
     try {
       const res = await fetch(`/api/admin/users/${userId}/reject`, { method: "POST" });
+      if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
@@ -77,6 +108,43 @@ export default function AdminUsersPage() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const handleExtendTrial = async (userId: number) => {
+    setActionLoading(userId);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/extend-trial`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trialDays: extendDays }),
+      });
+      if (!res.ok) throw new Error("Request failed");
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+        setExtendDialogOpen(false);
+        fetchUsers();
+      } else {
+        toast.error(data.error);
+      }
+    } catch {
+      toast.error("Failed to extend trial");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const openApproveDialog = (userId: number) => {
+    setApproveUserId(userId);
+    setApplyTrial(true);
+    setSelectedTrialDays(3);
+    setApproveDialogOpen(true);
+  };
+
+  const openExtendDialog = (userId: number) => {
+    setExtendUserId(userId);
+    setExtendDays(3);
+    setExtendDialogOpen(true);
   };
 
   const filteredUsers = users.filter((user) => {
@@ -110,6 +178,42 @@ export default function AdminUsersPage() {
         }`}
       >
         {status}
+      </span>
+    );
+  };
+
+  const subscriptionBadge = (subscriptionStatus: string, trialEndsAt: string | null) => {
+    if (subscriptionStatus === "trial" && trialEndsAt) {
+      const daysLeft = Math.max(0, Math.ceil(
+        (new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      ));
+      if (daysLeft > 0) {
+        return (
+          <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border bg-blue-400/10 text-blue-400 border-blue-400/20">
+            Trial ({daysLeft}d left)
+          </span>
+        );
+      }
+      // Trial has ended - show as expired
+      return (
+        <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border bg-red-400/10 text-red-400 border-red-400/20">
+          Expired
+        </span>
+      );
+    }
+    const styles: Record<string, string> = {
+      active: "bg-green-400/10 text-green-400 border-green-400/20",
+      trial: "bg-orange-400/10 text-orange-400 border-orange-400/20",
+      expired: "bg-red-400/10 text-red-400 border-red-400/20",
+      none: "bg-zinc-800 text-zinc-400 border-zinc-700",
+    };
+    return (
+      <span
+        className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border ${
+          styles[subscriptionStatus] || styles.none
+        }`}
+      >
+        {subscriptionStatus === "none" ? "No trial" : subscriptionStatus}
       </span>
     );
   };
@@ -173,11 +277,12 @@ export default function AdminUsersPage() {
       ) : (
         <div className="border border-white/[0.08] overflow-hidden">
           {/* Table Header */}
-          <div className="hidden md:grid grid-cols-[1fr_1fr_120px_100px_100px_160px] gap-4 px-5 py-3 bg-[#161616] border-b border-white/[0.08]">
+          <div className="hidden md:grid grid-cols-[1fr_1fr_120px_100px_120px_100px_200px] gap-4 px-5 py-3 bg-[#161616] border-b border-white/[0.08]">
             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Name</span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Email</span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Phone</span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Status</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Subscription</span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Joined</span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Actions</span>
           </div>
@@ -186,7 +291,7 @@ export default function AdminUsersPage() {
           {filteredUsers.map((user) => (
             <div
               key={user.id}
-              className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px_100px_100px_160px] gap-2 md:gap-4 px-5 py-4 border-b border-white/[0.08] last:border-b-0 hover:bg-[#161616]/50 transition-colors items-center"
+              className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px_100px_120px_100px_200px] gap-2 md:gap-4 px-5 py-4 border-b border-white/[0.08] last:border-b-0 hover:bg-[#161616]/50 transition-colors items-center"
             >
               {/* Name */}
               <div className="flex items-center gap-3">
@@ -209,20 +314,28 @@ export default function AdminUsersPage() {
               {/* Status */}
               <div className="hidden md:block">{statusBadge(user.status)}</div>
 
+              {/* Subscription */}
+              <div className="hidden md:block">
+                {subscriptionBadge(user.subscriptionStatus, user.trialEndsAt)}
+              </div>
+
               {/* Date */}
               <span className="text-xs text-zinc-500 hidden md:block">
                 {user.createdAt ? formatDate(user.createdAt) : "—"}
               </span>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 md:justify-end">
-                {/* Mobile status badge */}
-                <div className="md:hidden mr-auto">{statusBadge(user.status)}</div>
+              <div className="flex items-center gap-2 md:justify-end flex-wrap">
+                {/* Mobile status badges */}
+                <div className="md:hidden mr-auto flex items-center gap-1">
+                  {statusBadge(user.status)}
+                  {subscriptionBadge(user.subscriptionStatus, user.trialEndsAt)}
+                </div>
 
                 {user.status === "pending" && (
                   <>
                     <button
-                      onClick={() => handleApprove(user.id)}
+                      onClick={() => openApproveDialog(user.id)}
                       disabled={actionLoading === user.id}
                       className="flex items-center gap-1 px-2.5 py-1.5 bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-wider hover:bg-green-500/20 transition-colors disabled:opacity-50"
                     >
@@ -240,18 +353,28 @@ export default function AdminUsersPage() {
                   </>
                 )}
                 {user.status === "approved" && (
-                  <button
-                    onClick={() => handleReject(user.id)}
-                    disabled={actionLoading === user.id}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                  >
-                    <XCircle className="h-3 w-3" />
-                    Revoke
-                  </button>
+                  <>
+                    <button
+                      onClick={() => openExtendDialog(user.id)}
+                      disabled={actionLoading === user.id}
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-wider hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                    >
+                      <Clock className="h-3 w-3" />
+                      Extend Trial
+                    </button>
+                    <button
+                      onClick={() => handleReject(user.id)}
+                      disabled={actionLoading === user.id}
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                    >
+                      <XCircle className="h-3 w-3" />
+                      Revoke
+                    </button>
+                  </>
                 )}
                 {user.status === "rejected" && (
                   <button
-                    onClick={() => handleApprove(user.id)}
+                    onClick={() => openApproveDialog(user.id)}
                     disabled={actionLoading === user.id}
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-wider hover:bg-green-500/20 transition-colors disabled:opacity-50"
                   >
@@ -264,6 +387,127 @@ export default function AdminUsersPage() {
           ))}
         </div>
       )}
+
+      {/* Approve Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent className="bg-[#161616] border border-white/[0.08] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">Approve User</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Choose trial options for this user.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Toggle: Apply trial or not */}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={applyTrial}
+                onChange={(e) => setApplyTrial(e.target.checked)}
+                className="h-4 w-4 accent-yellow-400"
+              />
+              <span className="text-sm text-zinc-300">Apply free trial</span>
+            </label>
+
+            {/* Trial duration selector */}
+            {applyTrial && (
+              <div className="space-y-2">
+                <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">
+                  Trial Duration
+                </p>
+                <div className="flex gap-2">
+                  {[3, 6, 14].map((days) => (
+                    <button
+                      key={days}
+                      onClick={() => setSelectedTrialDays(days)}
+                      className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+                        selectedTrialDays === days
+                          ? "bg-yellow-400 text-[#0f0f0f]"
+                          : "bg-[#0f0f0f] text-zinc-400 border border-white/[0.08] hover:text-white"
+                      }`}
+                    >
+                      {days} days
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <button
+              onClick={() => setApproveDialogOpen(false)}
+              className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => approveUserId && handleApprove(approveUserId)}
+              disabled={actionLoading !== null}
+              className="px-4 py-2 bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold uppercase tracking-wider hover:bg-green-500/20 transition-colors disabled:opacity-50"
+            >
+              {actionLoading
+                ? "Approving..."
+                : applyTrial
+                  ? `Approve with ${selectedTrialDays}-day trial`
+                  : "Approve without trial"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extend Trial Dialog */}
+      <Dialog open={extendDialogOpen} onOpenChange={setExtendDialogOpen}>
+        <DialogContent className="bg-[#161616] border border-white/[0.08] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">Extend Trial</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Grant or extend a trial period for this user.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-4">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">
+              Trial Duration
+            </p>
+            <div className="flex gap-2">
+              {[3, 6, 14].map((days) => (
+                <button
+                  key={days}
+                  onClick={() => setExtendDays(days)}
+                  className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+                    extendDays === days
+                      ? "bg-yellow-400 text-[#0f0f0f]"
+                      : "bg-[#0f0f0f] text-zinc-400 border border-white/[0.08] hover:text-white"
+                  }`}
+                >
+                  {days} days
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-zinc-600 mt-2">
+              Days are added on top of any remaining trial time.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <button
+              onClick={() => setExtendDialogOpen(false)}
+              className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => extendUserId && handleExtendTrial(extendUserId)}
+              disabled={actionLoading !== null}
+              className="px-4 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+            >
+              {actionLoading ? "Extending..." : `Grant ${extendDays}-day trial`}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

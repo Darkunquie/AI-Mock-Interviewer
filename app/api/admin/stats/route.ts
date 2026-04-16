@@ -2,18 +2,13 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
-import { eq, count } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { eq, and, gt, lt, count } from "drizzle-orm";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 
 export async function GET() {
   try {
     const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
+    if (!admin) return Errors.forbidden();
 
     const [total] = await db.select({ count: count() }).from(users);
     const [pending] = await db
@@ -29,6 +24,53 @@ export async function GET() {
       .from(users)
       .where(eq(users.status, "rejected"));
 
+    // Trial analytics
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+    const [activeTrial] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(
+        and(
+          eq(users.status, "approved"),
+          eq(users.subscriptionStatus, "trial"),
+          gt(users.trialEndsAt, now)
+        )
+      );
+
+    const [expiredTrial] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(
+        and(
+          eq(users.status, "approved"),
+          eq(users.subscriptionStatus, "expired")
+        )
+      );
+
+    const [noTrial] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(
+        and(
+          eq(users.status, "approved"),
+          eq(users.subscriptionStatus, "none")
+        )
+      );
+
+    const [expiringSoon] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(
+        and(
+          eq(users.status, "approved"),
+          eq(users.subscriptionStatus, "trial"),
+          gt(users.trialEndsAt, now),
+          lt(users.trialEndsAt, tomorrow)
+        )
+      );
+
     return NextResponse.json({
       success: true,
       stats: {
@@ -37,12 +79,14 @@ export async function GET() {
         approved: approved.count,
         rejected: rejected.count,
       },
+      trialStats: {
+        activeTrial: activeTrial.count,
+        expiredTrial: expiredTrial.count,
+        noTrial: noTrial.count,
+        expiringWithin24h: expiringSoon.count,
+      },
     });
   } catch (error) {
-    logger.error("Admin stats error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "admin/stats");
   }
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useUser } from "@/app/providers";
 
 export default function Header() {
-  const { user } = useAuth();
+  const user = useUser();
 
   const firstName = user?.name?.split(" ")[0] || "there";
 

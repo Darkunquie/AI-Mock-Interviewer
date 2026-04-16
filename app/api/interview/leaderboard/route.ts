@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, and, desc, sql, gte } from "drizzle-orm";
+import { eq, and, desc, sql, gte, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, users } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { logger } from "@/lib/logger";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 import {
   ROLE_DISPLAY_NAMES,
   InterviewRole,
@@ -12,9 +12,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
     const { searchParams } = new URL(request.url);
     const role = searchParams.get("role");
@@ -72,7 +70,7 @@ export async function GET(request: NextRequest) {
         .where(
           and(
             eq(interviews.status, "completed"),
-            sql`${interviews.userId} = ANY(ARRAY[${sql.raw(userIds.join(","))}])`
+            inArray(interviews.userId, userIds)
           )
         )
         .groupBy(interviews.userId, interviews.role);
@@ -105,7 +103,10 @@ export async function GET(request: NextRequest) {
     const currentUserEntry = leaderboard.find((l) => l.userId === user.id);
     let currentUserRank = currentUserEntry?.rank || null;
 
-    // If user not in top 50, check their actual rank
+    // If user not in top 50, compute their actual rank against the full
+    // eligible pool (not just the fetched top 50). Previous implementation
+    // only filtered the leaderboard array, so any user ranked 51+ was
+    // reported as rank 51 regardless of true position.
     if (!currentUserRank) {
       const userRankResult = await db
         .select({
@@ -121,10 +122,27 @@ export async function GET(request: NextRequest) {
           )
         );
 
-      if (userRankResult.length > 0 && userRankResult[0].avgScore) {
+      // Explicit null check — avgScore of 0 is a legitimate value and
+      // must not short-circuit rank computation via a truthy test.
+      if (userRankResult.length > 0 && userRankResult[0].avgScore != null) {
         const userAvg = Number(userRankResult[0].avgScore);
-        // Count users with higher average
-        const higherCount = leaderboard.filter((l) => l.averageScore > userAvg).length;
+
+        // Count ALL users whose average is strictly greater than this user's.
+        // HAVING applies to aggregates, so wrap in a grouped subquery.
+        const higherAvgUsers = db
+          .select({ uid: interviews.userId })
+          .from(interviews)
+          .innerJoin(users, eq(interviews.userId, users.id))
+          .where(and(...conditions))
+          .groupBy(interviews.userId)
+          .having(sql`ROUND(AVG(${interviews.totalScore})) > ${userAvg}`)
+          .as("higher_avg_users");
+
+        const [higherCountResult] = await db
+          .select({ count: sql<number>`COUNT(*)::int` })
+          .from(higherAvgUsers);
+
+        const higherCount = higherCountResult?.count ?? 0;
         currentUserRank = higherCount + 1;
       }
     }
@@ -136,10 +154,6 @@ export async function GET(request: NextRequest) {
       totalUsers: leaderboard.length,
     });
   } catch (error) {
-    logger.error("Leaderboard fetch error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch leaderboard" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/leaderboard");
   }
 }

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, answers } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { logger } from "@/lib/logger";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 import { format } from "date-fns";
 import {
   ROLE_DISPLAY_NAMES,
@@ -15,11 +15,11 @@ import {
 export async function GET() {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
-    // Fetch all completed interviews with scores
+    // Fetch all completed interviews with scores.
+    // `mockId` alias stays here (internal use only — never returned in this
+    // route's response payload).
     const userInterviews = await db
       .select({
         id: interviews.id,
@@ -101,30 +101,27 @@ export async function GET() {
       count: data.count,
     }));
 
-    // Skill breakdown - fetch answers for all completed interviews
-    const interviewIds = completedInterviews.map((i) => i.id);
+    // Skill breakdown — single query across the 5 most recent completed interviews
+    // (was N+1: one query per interview id).
+    const recentIds = completedInterviews.slice(0, 5).map((i) => i.id);
     let skillBreakdown = { technical: 0, communication: 0, depth: 0 };
 
-    if (interviewIds.length > 0) {
-      // Get average from recent interviews
+    if (recentIds.length > 0) {
+      const intAnswers = await db
+        .select({
+          technicalScore: answers.technicalScore,
+          communicationScore: answers.communicationScore,
+          depthScore: answers.depthScore,
+        })
+        .from(answers)
+        .where(inArray(answers.interviewId, recentIds));
+
       let techTotal = 0, commTotal = 0, depthTotal = 0, answerCount = 0;
-
-      for (const intId of interviewIds.slice(0, 5)) {
-        const intAnswers = await db
-          .select({
-            technicalScore: answers.technicalScore,
-            communicationScore: answers.communicationScore,
-            depthScore: answers.depthScore,
-          })
-          .from(answers)
-          .where(eq(answers.interviewId, intId));
-
-        intAnswers.forEach((a) => {
-          if (a.technicalScore) techTotal += a.technicalScore;
-          if (a.communicationScore) commTotal += a.communicationScore;
-          if (a.depthScore) depthTotal += a.depthScore;
-          answerCount++;
-        });
+      for (const a of intAnswers) {
+        if (a.technicalScore) techTotal += a.technicalScore;
+        if (a.communicationScore) commTotal += a.communicationScore;
+        if (a.depthScore) depthTotal += a.depthScore;
+        answerCount++;
       }
 
       if (answerCount > 0) {
@@ -157,10 +154,6 @@ export async function GET() {
       recentTrend,
     });
   } catch (error) {
-    logger.error("Analytics fetch error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch analytics" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/analytics");
   }
 }

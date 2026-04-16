@@ -3,14 +3,12 @@ import { eq, desc, and, like, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { logger } from "@/lib/logger";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
@@ -51,8 +49,11 @@ export async function GET(req: NextRequest) {
       .where(and(...conditions));
     const total = countResult?.count || 0;
 
-    // Fetch interviews with filters + pagination
-    const userInterviews = await db
+    // Fetch interviews with filters + pagination.
+    // Dual-emits both `mockId` (v0 deprecated) and `interviewId` (v1 canonical)
+    // so the transition is backwards-compatible. mockId will be dropped after
+    // the 60-day deprecation window.
+    const rawInterviews = await db
       .select({
         mockId: interviews.mockId,
         role: interviews.role,
@@ -68,36 +69,33 @@ export async function GET(req: NextRequest) {
       .limit(limit)
       .offset(offset);
 
-    // Calculate stats (across all user interviews, not just current page)
-    const allUserInterviews = await db
+    const userInterviews = rawInterviews.map((i) => ({
+      interviewId: i.mockId,
+      mockId: i.mockId, // deprecated alias
+      role: i.role,
+      experienceLevel: i.experienceLevel,
+      interviewType: i.interviewType,
+      status: i.status,
+      totalScore: i.totalScore,
+      createdAt: i.createdAt,
+    }));
+
+    // Stats aggregate: single query instead of pulling every row into Node.
+    // Was: fetch all user interviews -> filter/reduce in JS (O(n) memory per req).
+    const [statsRow] = await db
       .select({
-        status: interviews.status,
-        totalScore: interviews.totalScore,
+        totalInterviews: sql<number>`COUNT(*)::int`,
+        completedInterviews: sql<number>`COUNT(*) FILTER (WHERE ${interviews.status} = 'completed')::int`,
+        averageScore: sql<number>`COALESCE(ROUND(AVG(${interviews.totalScore}) FILTER (WHERE ${interviews.status} = 'completed' AND ${interviews.totalScore} IS NOT NULL)), 0)::int`,
+        bestScore: sql<number>`COALESCE(MAX(${interviews.totalScore}) FILTER (WHERE ${interviews.status} = 'completed'), 0)::int`,
       })
       .from(interviews)
       .where(eq(interviews.userId, user.id));
 
-    const totalInterviews = allUserInterviews.length;
-    const completedInterviews = allUserInterviews.filter(
-      (i) => i.status === "completed"
-    ).length;
-
-    const completedWithScores = allUserInterviews.filter(
-      (i) => i.status === "completed" && i.totalScore !== null
-    );
-
-    const averageScore =
-      completedWithScores.length > 0
-        ? Math.round(
-            completedWithScores.reduce((sum, i) => sum + (i.totalScore || 0), 0) /
-              completedWithScores.length
-          )
-        : 0;
-
-    const bestScore =
-      completedWithScores.length > 0
-        ? Math.max(...completedWithScores.map((i) => i.totalScore || 0))
-        : 0;
+    const totalInterviews = statsRow?.totalInterviews ?? 0;
+    const completedInterviews = statsRow?.completedInterviews ?? 0;
+    const averageScore = statsRow?.averageScore ?? 0;
+    const bestScore = statsRow?.bestScore ?? 0;
 
     return NextResponse.json({
       success: true,
@@ -116,10 +114,6 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error("History fetch error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch history" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/history");
   }
 }

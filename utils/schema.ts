@@ -11,13 +11,18 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 20 }).default("user").notNull(), // "user" | "admin"
   status: varchar("status", { length: 20 }).default("pending").notNull(), // "pending" | "approved" | "rejected"
   createdAt: timestamp("created_at").defaultNow(),
+  approvedAt: timestamp("approved_at"),
+  trialEndsAt: timestamp("trial_ends_at"),
+  subscriptionStatus: varchar("subscription_status", { length: 20 }).default("none").notNull(), // "none" | "trial" | "active" | "expired"
 });
 
 // Interviews table
 export const interviews = pgTable("interviews", {
   id: serial("id").primaryKey(),
   mockId: varchar("mock_id", { length: 36 }).unique().notNull(), // UUID
-  userId: integer("user_id").notNull(), // User ID reference
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   role: varchar("role", { length: 100 }).notNull(), // frontend, backend, fullstack, data, hr
   experienceLevel: varchar("experience_level", { length: 20 }).notNull(), // 0-1, 1-3, 3-5, 5+
   interviewType: varchar("interview_type", { length: 50 }).notNull(), // technical, hr, behavioral
@@ -67,6 +72,8 @@ export const interviewSummaries = pgTable("interview_summaries", {
   recommendedTopicsJson: text("recommended_topics_json"), // JSON array
   actionPlan: text("action_plan"),
   summaryText: text("summary_text"),
+  encouragement: text("encouragement"),
+  readinessLevel: varchar("readiness_level", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => [
   uniqueIndex("idx_summaries_interview_id").on(t.interviewId),

@@ -102,6 +102,21 @@ const interviewTypes = ["technical", "hr", "behavioral"] as const;
 const interviewModes = ["interview", "practice"] as const;
 const durations = ["15", "30"] as const;
 
+export const questionSchema = z.object({
+  id: z.number().int().nonnegative(),
+  text: z.string().min(1).max(5000),
+  difficulty: z.enum(["easy", "medium", "hard"]),
+  topic: z.string().max(200),
+  expectedTime: z.number().int().positive(),
+  keywords: z.array(z.string().max(100)).max(50).optional(),
+});
+
+export const techDeepDiveSchema = z.object({
+  technology: z.string().min(1).max(100),
+  subtopics: z.array(z.string().max(200)).max(20),
+  targetCompany: z.string().max(100).optional(),
+});
+
 export const createInterviewSchema = z.object({
   role: z.enum(interviewRoles, { message: "Invalid role" }),
   experienceLevel: z.enum(experienceLevels, { message: "Invalid experience level" }),
@@ -117,17 +132,29 @@ export const createInterviewSchema = z.object({
     .max(10, "Maximum 10 topics")
     .optional(),
   resumeText: z.string().max(50000, "Resume text too long").optional(),
+  customQuestions: z.array(questionSchema).max(100).optional(),
+  techDeepDive: techDeepDiveSchema.optional(),
 });
 
+export const speechMetricsSchema = z
+  .object({
+    fillerWordCount: z.number().int().nonnegative(),
+    fillerWords: z.record(z.string(), z.number().int().nonnegative()),
+    wordsPerMinute: z.number().nonnegative(),
+    speakingTime: z.number().nonnegative(),
+  })
+  .optional();
+
 export const evaluateAnswerSchema = z.object({
-  mockId: z.string().uuid("Invalid interview ID"),
+  interviewId: z.string().uuid("Invalid interview ID"),
   questionIndex: z.number().int().min(0).max(100),
   questionText: z.string().min(1, "Question text is required").max(5000),
   userAnswer: z.string().max(50000, "Answer too long").optional().default(""),
+  speechMetrics: speechMetricsSchema,
 });
 
 export const interviewSummarySchema = z.object({
-  mockId: z.string().uuid("Invalid interview ID"),
+  interviewId: z.string().uuid("Invalid interview ID"),
 });
 
 // ==================== FLASHCARD SCHEMAS ====================

@@ -3,7 +3,8 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { Errors, ErrorCodes, createErrorResponse, handleUnexpectedError } from "@/lib/errors";
+import { invalidateSubscriptionCache } from "@/lib/subscription";
 
 export async function POST(
   request: NextRequest,
@@ -11,22 +12,11 @@ export async function POST(
 ) {
   try {
     const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
+    if (!admin) return Errors.forbidden();
 
     const { id } = await params;
-    const userId = parseInt(id, 10);
-
-    if (isNaN(userId)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid user ID" },
-        { status: 400 }
-      );
-    }
+    const userId = Number.parseInt(id, 10);
+    if (Number.isNaN(userId)) return Errors.badRequest("Invalid user ID");
 
     const [user] = await db
       .select()
@@ -34,27 +24,32 @@ export async function POST(
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "User not found" },
-        { status: 404 }
+    if (!user) return Errors.userNotFound();
+
+    if (user.id === admin.id) {
+      return createErrorResponse(
+        ErrorCodes.ADMIN_SELF_MODIFY,
+        "Cannot reject your own account",
+        400
       );
     }
 
     await db
       .update(users)
-      .set({ status: "rejected" })
+      .set({
+        status: "rejected",
+        subscriptionStatus: "none",
+        trialEndsAt: null,
+      })
       .where(eq(users.id, userId));
+
+    await invalidateSubscriptionCache(userId);
 
     return NextResponse.json({
       success: true,
       message: `User ${user.email} rejected`,
     });
   } catch (error) {
-    logger.error("Admin reject error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "admin/users/reject");
   }
 }

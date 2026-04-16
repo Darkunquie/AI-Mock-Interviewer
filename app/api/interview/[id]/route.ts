@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { interviews, answers, interviewSummaries } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 
 export async function GET(
   _request: NextRequest,
@@ -11,10 +12,7 @@ export async function GET(
 ) {
   try {
     const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
     const { id: interviewId } = await params;
 
@@ -25,16 +23,11 @@ export async function GET(
       .where(eq(interviews.mockId, interviewId))
       .limit(1);
 
-    if (!interview.length) {
-      return NextResponse.json({ success: false, error: "Interview not found" }, { status: 404 });
-    }
+    if (!interview.length) return Errors.notFound("Interview");
 
     const interviewData = interview[0];
-
     // Verify user owns this interview
-    if (interviewData.userId !== user.id) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-    }
+    if (interviewData.userId !== user.id) return Errors.forbidden();
 
     // Get answers for this interview
     const interviewAnswers = await db
@@ -84,10 +77,6 @@ export async function GET(
         : null,
     });
   } catch (error) {
-    logger.error("Get interview error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Failed to get interview" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/[id]");
   }
 }

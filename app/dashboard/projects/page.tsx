@@ -26,10 +26,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  TECH_STACK_DEEP_DIVE,
-  TECH_CATEGORIES,
-} from "@/data/techStackTopics";
+import type { TechStackDeepDive } from "@/data/techStackTopics";
 import { PROJECT_DOMAINS } from "@/data/projectDomains";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ProjectSpecification } from "@/types/project";
@@ -41,10 +38,27 @@ export default function ProjectsPage() {
   const [generatedProjects, setGeneratedProjects] = useState<ProjectSpecification[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
 
+  // Tech stack reference data — fetched server-side to keep bundle small
+  const [techStacks, setTechStacks] = useState<TechStackDeepDive[]>([]);
+  const [techCategories, setTechCategories] = useState<{ id: string; name: string; icon: string }[]>([]);
+
   // Combination check state (for disabling button if already generated)
   const [combinationExists, setCombinationExists] = useState(false);
   const [checkingCombination, setCheckingCombination] = useState(false);
   const [isCached, setIsCached] = useState(false);
+
+  // Fetch tech stack reference data server-side — keeps 4 MB out of client bundle
+  useEffect(() => {
+    fetch("/api/v1/reference/tech-stacks")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setTechStacks(json.data.techStacks);
+          setTechCategories(json.data.categories);
+        }
+      })
+      .catch(() => {/* non-critical */});
+  }, []);
 
   // Generate projects function
   const handleGenerateProjects = useCallback(async () => {
@@ -172,12 +186,12 @@ export default function ProjectsPage() {
                     <SelectValue placeholder="Select technology" />
                   </SelectTrigger>
                   <SelectContent className="border-white/[0.08] bg-[#161616] max-h-80">
-                    {TECH_CATEGORIES.map((category) => (
+                    {techCategories.map((category) => (
                       <div key={category.id}>
                         <div className="px-2 py-1 text-xs text-zinc-500 font-bold uppercase tracking-wider mt-2 first:mt-0">
                           {category.icon} {category.name}
                         </div>
-                        {TECH_STACK_DEEP_DIVE.filter((t) => t.category === category.id).map((tech) => (
+                        {techStacks.filter((t) => t.category === category.id).map((tech) => (
                           <SelectItem
                             key={tech.id}
                             value={tech.name}

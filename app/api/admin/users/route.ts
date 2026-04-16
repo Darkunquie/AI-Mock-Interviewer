@@ -3,17 +3,12 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
 import { eq, desc, sql } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
   try {
     const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
+    if (!admin) return Errors.forbidden();
 
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get("status");
@@ -45,6 +40,8 @@ export async function GET(request: NextRequest) {
         role: users.role,
         status: users.status,
         createdAt: users.createdAt,
+        trialEndsAt: users.trialEndsAt,
+        subscriptionStatus: users.subscriptionStatus,
       })
       .from(users)
       .where(whereCondition)
@@ -63,10 +60,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error("Admin users list error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "admin/users");
   }
 }
