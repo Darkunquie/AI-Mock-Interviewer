@@ -1,35 +1,30 @@
+// v1: POST /api/v1/interviews/{interviewId}/retakes  (was /api/interview/retake)
+// Creates a NEW interview row with same parameters as the source, fresh
+// AI-generated questions. Returns the new interviewId.
+
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
 import { interviews } from "@/utils/schema";
 import { DURATION_CONFIG, InterviewDuration } from "@/types";
 import { getCurrentUser } from "@/lib/auth";
-import { retakeInterviewSchema, validateRequest } from "@/lib/validations";
-import { Errors, handleZodError, handleUnexpectedError } from "@/lib/errors";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 import {
   generateQuestions,
   getOwnedInterview,
   parseStringArray,
   InvalidAiOutputError,
 } from "@/lib/interviews";
-import { deprecated } from "@/lib/v0-deprecation";
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ interviewId: string }> },
+) {
   try {
     const user = await getCurrentUser();
     if (!user) return Errors.unauthorized();
 
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return Errors.invalidJson();
-    }
-
-    const validation = validateRequest(retakeInterviewSchema, body);
-    if (!validation.success) return handleZodError(validation.error);
-
-    const { interviewId } = validation.data;
+    const { interviewId } = await params;
 
     const lookup = await getOwnedInterview(interviewId, user.id);
     if (!lookup.ok) {
@@ -62,9 +57,9 @@ export async function POST(request: NextRequest) {
       throw err;
     }
 
-    const mockId = uuidv4();
+    const newId = uuidv4();
     await db.insert(interviews).values({
-      mockId,
+      mockId: newId,
       userId: user.id,
       role: original.role,
       experienceLevel: original.experienceLevel,
@@ -77,15 +72,18 @@ export async function POST(request: NextRequest) {
       questionsJson: JSON.stringify({ questions }),
     });
 
-    return deprecated(
-      NextResponse.json({
+    return NextResponse.json(
+      {
         success: true,
-        interviewId: mockId,
-        questions,
-      }),
-      `/api/v1/interviews/${interviewId}/retakes`,
+        data: { interviewId: newId, questions },
+        meta: {
+          requestId: request.headers.get("x-request-id") || undefined,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      { status: 201 },
     );
   } catch (error) {
-    return handleUnexpectedError(error, "interview/retake");
+    return handleUnexpectedError(error, "v1/interviews/retakes");
   }
 }

@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { createInterviewSchema, validateRequest } from "@/lib/validations";
 import { Errors, handleZodError, handleUnexpectedError } from "@/lib/errors";
 import { generateQuestions, InvalidAiOutputError } from "@/lib/interviews";
+import { deprecated } from "@/lib/v0-deprecation";
 
 interface TechDeepDiveConfig {
   technology: string;
@@ -101,11 +102,14 @@ export async function POST(request: NextRequest) {
       questionsJson: JSON.stringify({ questions }),
     });
 
-    return NextResponse.json({
-      success: true,
-      interviewId: mockId,
-      questions,
-    });
+    return deprecated(
+      NextResponse.json({
+        success: true,
+        interviewId: mockId,
+        questions,
+      }),
+      "/api/v1/interviews",
+    );
   } catch (error) {
     return handleUnexpectedError(error, "interview/create");
   }

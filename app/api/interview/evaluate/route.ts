@@ -7,6 +7,7 @@ import {
   getOwnedInterview,
   parseStoredQuestions,
 } from "@/lib/interviews";
+import { deprecated } from "@/lib/v0-deprecation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,7 +52,10 @@ export async function POST(request: NextRequest) {
       questionKeywords,
     });
 
-    return NextResponse.json({ success: true, evaluation });
+    return deprecated(
+      NextResponse.json({ success: true, evaluation }),
+      `/api/v1/interviews/${interviewId}/answers`,
+    );
   } catch (error) {
     return handleUnexpectedError(error, "interview/evaluate");
   }

@@ -1,11 +1,11 @@
+// v1: POST /api/v1/interviews/{interviewId}/summary  (was /api/interview/summary)
+
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { interviewSummarySchema, validateRequest } from "@/lib/validations";
 import {
   Errors,
   ErrorCodes,
   createErrorResponse,
-  handleZodError,
   handleUnexpectedError,
 } from "@/lib/errors";
 import {
@@ -13,26 +13,16 @@ import {
   getOwnedInterview,
   NoAnswersError,
 } from "@/lib/interviews";
-import { deprecated } from "@/lib/v0-deprecation";
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ interviewId: string }> },
+) {
   try {
     const user = await getCurrentUser();
     if (!user) return Errors.unauthorized();
 
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return Errors.invalidJson();
-    }
-
-    const validation = validateRequest(interviewSummarySchema, {
-      interviewId: body.interviewId,
-    });
-    if (!validation.success) return handleZodError(validation.error);
-
-    const { interviewId } = validation.data;
+    const { interviewId } = await params;
 
     const lookup = await getOwnedInterview(interviewId, user.id);
     if (!lookup.ok) {
@@ -43,10 +33,14 @@ export async function POST(request: NextRequest) {
 
     try {
       const summary = await generateSummary(lookup.interview);
-      return deprecated(
-        NextResponse.json({ success: true, summary }),
-        `/api/v1/interviews/${interviewId}/summary`,
-      );
+      return NextResponse.json({
+        success: true,
+        data: { summary },
+        meta: {
+          requestId: request.headers.get("x-request-id") || undefined,
+          timestamp: new Date().toISOString(),
+        },
+      });
     } catch (err) {
       if (err instanceof NoAnswersError) {
         return createErrorResponse(ErrorCodes.IV_NO_ANSWERS, "No answers found", 400);
@@ -54,6 +48,6 @@ export async function POST(request: NextRequest) {
       throw err;
     }
   } catch (error) {
-    return handleUnexpectedError(error, "interview/summary");
+    return handleUnexpectedError(error, "v1/interviews/summary");
   }
 }
