@@ -152,9 +152,27 @@ async function checkSubscription(
         }
       );
     }
-  } catch {
-    // If subscription check fails, let the request through
-    // Route handler will catch any real auth issues
+  } catch (err) {
+    // Fail closed: unknown failures in subscription check must NOT grant access.
+    // The previous behavior let requests through on any error, creating a free
+    // pass for expired-trial users any time the DB hiccupped.
+    console.error("[checkSubscription] unexpected failure", {
+      userId,
+      requestId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json(
+      { success: false, error: "Service temporarily unavailable" },
+      {
+        status: 503,
+        headers: {
+          ...getCorsHeaders(origin),
+          ...securityHeaders,
+          "X-Request-ID": requestId,
+          "Retry-After": "30",
+        },
+      }
+    );
   }
   return null;
 }
