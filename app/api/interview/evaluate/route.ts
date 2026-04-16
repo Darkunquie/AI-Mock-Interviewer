@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { evaluateAnswerSchema, validateRequest } from "@/lib/validations";
 import { Errors, handleZodError, handleUnexpectedError } from "@/lib/errors";
-import {
-  evaluateAnswer,
-  getOwnedInterview,
-  parseStoredQuestions,
-} from "@/lib/interviews";
+import { evaluateAnswer, getOwnedInterview, parseStoredQuestions } from "@/lib/interviews";
 import { deprecated } from "@/lib/v0-deprecation";
 
 export async function POST(request: NextRequest) {
@@ -15,41 +11,24 @@ export async function POST(request: NextRequest) {
     if (!user) return Errors.unauthorized();
 
     let body;
-    try {
-      body = await request.json();
-    } catch {
-      return Errors.invalidJson();
-    }
+    try { body = await request.json(); } catch { return Errors.invalidJson(); }
 
-    const validation = validateRequest(evaluateAnswerSchema, {
-      interviewId: body.interviewId,
-      questionIndex: body.questionIndex,
-      questionText: body.questionText,
-      userAnswer: body.userAnswer,
-      speechMetrics: body.speechMetrics,
-    });
+    const validation = validateRequest(evaluateAnswerSchema, body);
     if (!validation.success) return handleZodError(validation.error);
 
-    const { interviewId, questionIndex, questionText, userAnswer, speechMetrics } =
-      validation.data;
+    const { interviewId, questionIndex, questionText, userAnswer, speechMetrics } = validation.data;
 
     const lookup = await getOwnedInterview(interviewId, user.id);
-    if (!lookup.ok) {
-      return lookup.reason === "not_found"
-        ? Errors.notFound("Interview")
-        : Errors.forbidden();
-    }
+    if (!lookup.ok) return lookup.reason === "not_found" ? Errors.notFound("Interview") : Errors.forbidden();
 
     const storedQuestions = parseStoredQuestions(lookup.interview.questionsJson);
-    const questionKeywords = storedQuestions[questionIndex]?.keywords;
+    if (storedQuestions.length > 0 && (questionIndex < 0 || questionIndex >= storedQuestions.length)) {
+      return Errors.badRequest("Question index out of bounds");
+    }
 
     const evaluation = await evaluateAnswer({
-      interview: lookup.interview,
-      questionIndex,
-      questionText,
-      userAnswer,
-      speechMetrics,
-      questionKeywords,
+      interview: lookup.interview, questionIndex, questionText, userAnswer, speechMetrics,
+      questionKeywords: storedQuestions[questionIndex]?.keywords,
     });
 
     return deprecated(
