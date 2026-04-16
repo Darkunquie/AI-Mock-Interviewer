@@ -66,10 +66,10 @@ export async function POST(
       interviewType: original.interviewType,
       duration,
       mode,
-      techStack: techStack.length > 0 ? JSON.stringify(techStack) : null,
-      topics: topics.length > 0 ? JSON.stringify(topics) : null,
+      techStack: techStack.length > 0 ? techStack : null,
+      topics: topics.length > 0 ? topics : null,
       status: "pending",
-      questionsJson: JSON.stringify({ questions }),
+      questionsJson: { questions },
     });
 
     return NextResponse.json(

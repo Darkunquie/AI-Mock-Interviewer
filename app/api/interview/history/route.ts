@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const conditions = [eq(interviews.userId, user.id)];
 
     if (status && status !== "all") {
-      conditions.push(eq(interviews.status, status));
+      conditions.push(eq(interviews.status, status as "pending" | "in_progress" | "completed"));
     }
 
     if (role && role !== "all") {
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (type && type !== "all") {
-      conditions.push(eq(interviews.interviewType, type));
+      conditions.push(eq(interviews.interviewType, type as "technical" | "hr" | "behavioral"));
     }
 
     if (search) {

@@ -121,8 +121,17 @@ export async function getOwnedInterview(
   return { ok: true, interview };
 }
 
-export function parseStoredQuestions(raw: string | null): Question[] {
+// After jsonb migration questionsJson arrives as a native object; before migration
+// (or from legacy cached rows) it may still be a string. Handle both.
+export function parseStoredQuestions(
+  raw: { questions?: Question[] } | string | null | undefined,
+): Question[] {
   if (!raw) return [];
+  if (typeof raw === "object") {
+    return Array.isArray((raw as { questions?: Question[] }).questions)
+      ? (raw as { questions: Question[] }).questions
+      : [];
+  }
   try {
     const parsed = JSON.parse(raw) as { questions?: Question[] };
     return Array.isArray(parsed.questions) ? parsed.questions : [];
@@ -134,8 +143,10 @@ export function parseStoredQuestions(raw: string | null): Question[] {
   }
 }
 
-export function parseStringArray(raw: string | null): string[] {
+// After jsonb migration techStack/topics arrive as native arrays.
+export function parseStringArray(raw: string[] | string | null | undefined): string[] {
   if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];

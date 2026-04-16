@@ -190,7 +190,7 @@ async function upsertAnswer(
   const row = {
     questionText,
     userAnswer,
-    feedbackJson: JSON.stringify(evaluation),
+    feedbackJson: evaluation as unknown as Record<string, unknown>,
     technicalScore: evaluation.technicalScore,
     communicationScore: evaluation.communicationScore,
     depthScore: evaluation.depthScore,

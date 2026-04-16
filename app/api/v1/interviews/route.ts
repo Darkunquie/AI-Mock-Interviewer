@@ -100,10 +100,10 @@ export async function POST(request: NextRequest) {
       interviewType,
       duration: interviewDuration,
       mode: interviewMode,
-      techStack: techStack && techStack.length > 0 ? JSON.stringify(techStack) : null,
-      topics: topics && topics.length > 0 ? JSON.stringify(topics) : null,
+      techStack: techStack && techStack.length > 0 ? techStack : null,
+      topics: topics && topics.length > 0 ? topics : null,
       status: "pending",
-      questionsJson: JSON.stringify({ questions }),
+      questionsJson: { questions },
     });
 
     return NextResponse.json(
@@ -140,9 +140,9 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit;
 
     const conditions = [eq(interviews.userId, user.id)];
-    if (status && status !== "all") conditions.push(eq(interviews.status, status));
+    if (status && status !== "all") conditions.push(eq(interviews.status, status as "pending" | "in_progress" | "completed"));
     if (role && role !== "all") conditions.push(eq(interviews.role, role));
-    if (type && type !== "all") conditions.push(eq(interviews.interviewType, type));
+    if (type && type !== "all") conditions.push(eq(interviews.interviewType, type as "technical" | "hr" | "behavioral"));
     if (search) conditions.push(like(interviews.role, `%${search.toLowerCase()}%`));
 
     const [countResult] = await db
