@@ -2,12 +2,18 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { verifyTokenEdge } from "@/lib/auth-edge";
+import { checkRateLimit } from "@/lib/ratelimit";
 
-// In-memory rate limiter (simple implementation for single-server deployment)
-// For multi-server deployment, use Redis-based rate limiting
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+// Middleware runs on Node.js runtime (not Edge) so that ioredis (TCP-based)
+// can connect to the local Redis instance. This is the default on self-hosted
+// deployments; explicit here for clarity and to prevent accidental Edge
+// deployment breaking rate limits.
+export const runtime = "nodejs";
 
-// Rate limit configurations per route pattern
+// Rate limit configurations per route pattern.
+// Moved to Redis-backed sliding-window-counter — see lib/ratelimit.ts.
+// The in-memory Map was non-functional under pm2 cluster (each worker had
+// its own Map; attackers could bypass by hammering across workers).
 const rateLimitConfig: Record<string, { limit: number; windowMs: number }> = {
   "/api/auth/signin": { limit: 10, windowMs: 60000 },     // 10 requests per minute
   "/api/auth/signup": { limit: 5, windowMs: 60000 },      // 5 requests per minute
@@ -25,45 +31,13 @@ function getClientIP(request: NextRequest): string {
   return forwarded?.split(",")[0].trim() || realIP || "unknown";
 }
 
-function getRateLimitConfig(pathname: string): { limit: number; windowMs: number } {
+function getRateLimitConfig(pathname: string): { pattern: string; limit: number; windowMs: number } {
   for (const [pattern, config] of Object.entries(rateLimitConfig)) {
     if (pattern !== "default" && pathname.startsWith(pattern)) {
-      return config;
+      return { pattern, ...config };
     }
   }
-  return rateLimitConfig.default;
-}
-
-function checkRateLimit(
-  key: string,
-  limit: number,
-  windowMs: number
-): { allowed: boolean; remaining: number; resetTime: number } {
-  const now = Date.now();
-  const record = rateLimitMap.get(key);
-
-  // Clean up expired records periodically
-  if (rateLimitMap.size > 10000) {
-    for (const [k, v] of rateLimitMap.entries()) {
-      if (v.resetTime < now) {
-        rateLimitMap.delete(k);
-      }
-    }
-  }
-
-  if (!record || record.resetTime < now) {
-    // Create new window
-    const resetTime = now + windowMs;
-    rateLimitMap.set(key, { count: 1, resetTime });
-    return { allowed: true, remaining: limit - 1, resetTime };
-  }
-
-  if (record.count >= limit) {
-    return { allowed: false, remaining: 0, resetTime: record.resetTime };
-  }
-
-  record.count++;
-  return { allowed: true, remaining: limit - record.count, resetTime: record.resetTime };
+  return { pattern: "default", ...rateLimitConfig.default };
 }
 
 // Security headers
@@ -205,13 +179,13 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/api")) {
     const clientIP = getClientIP(request);
     const config = getRateLimitConfig(pathname);
-    // NOTE: This key groups /api/interview/* (create, evaluate, summary) into a
-    // single 30/min bucket, which is not security-critical but can cause UX
-    // issues during long interviews. Phase A replaces this with a per-route
-    // matched-pattern key when moving to Redis-backed rate limiting.
-    const rateLimitKey = `${clientIP}:${pathname.split("/").slice(0, 3).join("/")}`;
+    // Key by the matched pattern (not the request path prefix). This means
+    // /api/auth/signup and /api/auth/signin get distinct buckets, matching
+    // the rateLimitConfig entries. The prior slice(0,3) approach worked
+    // coincidentally but is harder to reason about.
+    const rateLimitKey = `rl:${clientIP}:${config.pattern}`;
 
-    const { allowed, remaining, resetTime } = checkRateLimit(
+    const { allowed, remaining, resetSeconds } = await checkRateLimit(
       rateLimitKey,
       config.limit,
       config.windowMs
@@ -230,8 +204,8 @@ export async function middleware(request: NextRequest) {
             ...securityHeaders,
             "X-RateLimit-Limit": config.limit.toString(),
             "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": Math.ceil(resetTime / 1000).toString(),
-            "Retry-After": Math.ceil((resetTime - Date.now()) / 1000).toString(),
+            "X-RateLimit-Reset": resetSeconds.toString(),
+            "Retry-After": Math.max(1, resetSeconds - Math.floor(Date.now() / 1000)).toString(),
             "X-Request-ID": requestId,
           },
         }
@@ -259,7 +233,7 @@ export async function middleware(request: NextRequest) {
     // Add rate limit headers
     response.headers.set("X-RateLimit-Limit", config.limit.toString());
     response.headers.set("X-RateLimit-Remaining", remaining.toString());
-    response.headers.set("X-RateLimit-Reset", Math.ceil(resetTime / 1000).toString());
+    response.headers.set("X-RateLimit-Reset", resetSeconds.toString());
     response.headers.set("X-Request-ID", requestId);
 
     // Add CORS headers
