@@ -1,6 +1,20 @@
+-- SUPERSEDED by 0005_same_vindicator.sql (drizzle-kit canonical).
+-- 0004 has idempotency guards; safe to run manually on existing DBs.
 -- C1 + C2: JSON columns → jsonb, varchar enum columns → pgEnum types.
 -- Idempotent: every change is wrapped in a DO block that skips if already applied.
--- Maintenance window: run during low-traffic period; no downtime required.
+--
+-- LOCKING WARNING: ALTER TABLE ... ALTER COLUMN ... TYPE acquires ACCESS EXCLUSIVE lock
+-- for the duration of the full-table rewrite. All reads and writes block until complete.
+-- Estimated row counts (check before running):
+--   SELECT relname, n_live_tup FROM pg_stat_user_tables
+--   WHERE relname IN ('users','interviews','answers','interview_summaries','generated_projects')
+--   ORDER BY n_live_tup DESC;
+-- Risk tiers (rough benchmarks on modern hardware, single column):
+--   < 100k rows  — seconds, acceptable during any low-traffic window
+--   100k–1M rows — tens of seconds, run during off-peak hours
+--   > 1M rows    — minutes+, consider pg_repack or CREATE TABLE AS ... swap pattern
+--
+-- Maintenance window: run during low-traffic period.
 --
 -- PRE-FLIGHT CHECKS — run these SELECT statements before applying:
 --   Malformed JSON guard:
@@ -8,7 +22,7 @@
 --     SELECT id FROM interviews WHERE topics IS NOT NULL AND left(topics::text,1) NOT IN ('[','n');
 --     SELECT id FROM interviews WHERE questions_json IS NOT NULL AND left(questions_json::text,1) <> '{';
 --     SELECT id FROM answers WHERE feedback_json IS NOT NULL AND left(feedback_json::text,1) <> '{';
---     SELECT id FROM generated_projects WHERE left(projects_json::text,1) <> '[';
+--     SELECT id FROM generated_projects WHERE projects_json IS NOT NULL AND left(projects_json::text,1) <> '[';
 --   Enum value guard:
 --     SELECT DISTINCT role FROM users;               -- expect: user, admin
 --     SELECT DISTINCT status FROM users;             -- expect: pending, approved, rejected
@@ -61,7 +75,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='users' AND column_name='role') = 'character varying' THEN
+      WHERE table_schema='public' AND table_name='users' AND column_name='role') = 'character varying' THEN
     ALTER TABLE "users" ALTER COLUMN "role" DROP DEFAULT;
     ALTER TABLE "users" ALTER COLUMN "role" TYPE user_role USING role::user_role;
     ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'user'::user_role;
@@ -70,7 +84,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='users' AND column_name='status') = 'character varying' THEN
+      WHERE table_schema='public' AND table_name='users' AND column_name='status') = 'character varying' THEN
     ALTER TABLE "users" ALTER COLUMN "status" DROP DEFAULT;
     ALTER TABLE "users" ALTER COLUMN "status" TYPE user_status USING status::user_status;
     ALTER TABLE "users" ALTER COLUMN "status" SET DEFAULT 'pending'::user_status;
@@ -79,7 +93,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='users' AND column_name='subscription_status') = 'character varying' THEN
+      WHERE table_schema='public' AND table_name='users' AND column_name='subscription_status') = 'character varying' THEN
     ALTER TABLE "users" ALTER COLUMN "subscription_status" DROP DEFAULT;
     ALTER TABLE "users" ALTER COLUMN "subscription_status" TYPE subscription_status USING subscription_status::subscription_status;
     ALTER TABLE "users" ALTER COLUMN "subscription_status" SET DEFAULT 'none'::subscription_status;
@@ -88,14 +102,14 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='interviews' AND column_name='interview_type') = 'character varying' THEN
+      WHERE table_schema='public' AND table_name='interviews' AND column_name='interview_type') = 'character varying' THEN
     ALTER TABLE "interviews" ALTER COLUMN "interview_type" TYPE interview_type USING interview_type::interview_type;
   END IF;
 END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='interviews' AND column_name='mode') = 'character varying' THEN
+      WHERE table_schema='public' AND table_name='interviews' AND column_name='mode') = 'character varying' THEN
     ALTER TABLE "interviews" ALTER COLUMN "mode" DROP DEFAULT;
     ALTER TABLE "interviews" ALTER COLUMN "mode" TYPE interview_mode USING mode::interview_mode;
     ALTER TABLE "interviews" ALTER COLUMN "mode" SET DEFAULT 'interview'::interview_mode;
@@ -104,7 +118,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='interviews' AND column_name='status') = 'character varying' THEN
+      WHERE table_schema='public' AND table_name='interviews' AND column_name='status') = 'character varying' THEN
     ALTER TABLE "interviews" ALTER COLUMN "status" DROP DEFAULT;
     ALTER TABLE "interviews" ALTER COLUMN "status" TYPE interview_status USING status::interview_status;
     ALTER TABLE "interviews" ALTER COLUMN "status" SET DEFAULT 'pending'::interview_status;
@@ -117,7 +131,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='interviews' AND column_name='tech_stack') = 'text' THEN
+      WHERE table_schema='public' AND table_name='interviews' AND column_name='tech_stack') = 'text' THEN
     ALTER TABLE "interviews"
       ALTER COLUMN "tech_stack" TYPE jsonb
       USING CASE WHEN tech_stack IS NULL THEN NULL ELSE tech_stack::jsonb END;
@@ -126,7 +140,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='interviews' AND column_name='topics') = 'text' THEN
+      WHERE table_schema='public' AND table_name='interviews' AND column_name='topics') = 'text' THEN
     ALTER TABLE "interviews"
       ALTER COLUMN "topics" TYPE jsonb
       USING CASE WHEN topics IS NULL THEN NULL ELSE topics::jsonb END;
@@ -135,7 +149,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='interviews' AND column_name='questions_json') = 'text' THEN
+      WHERE table_schema='public' AND table_name='interviews' AND column_name='questions_json') = 'text' THEN
     ALTER TABLE "interviews"
       ALTER COLUMN "questions_json" TYPE jsonb
       USING CASE WHEN questions_json IS NULL THEN NULL ELSE questions_json::jsonb END;
@@ -144,7 +158,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='answers' AND column_name='feedback_json') = 'text' THEN
+      WHERE table_schema='public' AND table_name='answers' AND column_name='feedback_json') = 'text' THEN
     ALTER TABLE "answers"
       ALTER COLUMN "feedback_json" TYPE jsonb
       USING CASE WHEN feedback_json IS NULL THEN NULL ELSE feedback_json::jsonb END;
@@ -153,7 +167,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='interview_summaries' AND column_name='strengths_json') = 'text' THEN
+      WHERE table_schema='public' AND table_name='interview_summaries' AND column_name='strengths_json') = 'text' THEN
     ALTER TABLE "interview_summaries"
       ALTER COLUMN "strengths_json" TYPE jsonb
       USING CASE WHEN strengths_json IS NULL THEN NULL ELSE strengths_json::jsonb END;
@@ -162,7 +176,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='interview_summaries' AND column_name='weaknesses_json') = 'text' THEN
+      WHERE table_schema='public' AND table_name='interview_summaries' AND column_name='weaknesses_json') = 'text' THEN
     ALTER TABLE "interview_summaries"
       ALTER COLUMN "weaknesses_json" TYPE jsonb
       USING CASE WHEN weaknesses_json IS NULL THEN NULL ELSE weaknesses_json::jsonb END;
@@ -171,7 +185,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='interview_summaries' AND column_name='recommended_topics_json') = 'text' THEN
+      WHERE table_schema='public' AND table_name='interview_summaries' AND column_name='recommended_topics_json') = 'text' THEN
     ALTER TABLE "interview_summaries"
       ALTER COLUMN "recommended_topics_json" TYPE jsonb
       USING CASE WHEN recommended_topics_json IS NULL THEN NULL ELSE recommended_topics_json::jsonb END;
@@ -180,7 +194,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
   IF (SELECT data_type FROM information_schema.columns
-      WHERE table_name='generated_projects' AND column_name='projects_json') = 'text' THEN
+      WHERE table_schema='public' AND table_name='generated_projects' AND column_name='projects_json') = 'text' THEN
     ALTER TABLE "generated_projects"
       ALTER COLUMN "projects_json" TYPE jsonb
       USING projects_json::jsonb;

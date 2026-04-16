@@ -42,11 +42,11 @@ DELETE FROM "interview_summaries" WHERE "interview_id" IS NULL;--> statement-bre
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_name='answers' AND column_name='interview_id' AND is_nullable='YES') THEN
+             WHERE table_schema='public' AND table_name='answers' AND column_name='interview_id' AND is_nullable='YES') THEN
     ALTER TABLE "answers" ALTER COLUMN "interview_id" SET NOT NULL;
   END IF;
   IF EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_name='interview_summaries' AND column_name='interview_id' AND is_nullable='YES') THEN
+             WHERE table_schema='public' AND table_name='interview_summaries' AND column_name='interview_id' AND is_nullable='YES') THEN
     ALTER TABLE "interview_summaries" ALTER COLUMN "interview_id" SET NOT NULL;
   END IF;
 END $$;--> statement-breakpoint

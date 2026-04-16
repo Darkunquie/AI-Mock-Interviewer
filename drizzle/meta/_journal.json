@@ -26,15 +26,8 @@
     {
       "idx": 3,
       "version": "7",
-      "when": 1776500000000,
-      "tag": "0003_summary_encouragement",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1745539200000,
-      "tag": "0004_data_hardening",
+      "when": 1776372178519,
+      "tag": "0005_same_vindicator",
       "breakpoints": true
     }
   ]
