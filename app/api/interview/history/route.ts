@@ -66,36 +66,22 @@ export async function GET(req: NextRequest) {
       .limit(limit)
       .offset(offset);
 
-    // Calculate stats (across all user interviews, not just current page)
-    const allUserInterviews = await db
+    // Stats aggregate: single query instead of pulling every row into Node.
+    // Was: fetch all user interviews -> filter/reduce in JS (O(n) memory per req).
+    const [statsRow] = await db
       .select({
-        status: interviews.status,
-        totalScore: interviews.totalScore,
+        totalInterviews: sql<number>`COUNT(*)::int`,
+        completedInterviews: sql<number>`COUNT(*) FILTER (WHERE ${interviews.status} = 'completed')::int`,
+        averageScore: sql<number>`COALESCE(ROUND(AVG(${interviews.totalScore}) FILTER (WHERE ${interviews.status} = 'completed' AND ${interviews.totalScore} IS NOT NULL)), 0)::int`,
+        bestScore: sql<number>`COALESCE(MAX(${interviews.totalScore}) FILTER (WHERE ${interviews.status} = 'completed'), 0)::int`,
       })
       .from(interviews)
       .where(eq(interviews.userId, user.id));
 
-    const totalInterviews = allUserInterviews.length;
-    const completedInterviews = allUserInterviews.filter(
-      (i) => i.status === "completed"
-    ).length;
-
-    const completedWithScores = allUserInterviews.filter(
-      (i) => i.status === "completed" && i.totalScore !== null
-    );
-
-    const averageScore =
-      completedWithScores.length > 0
-        ? Math.round(
-            completedWithScores.reduce((sum, i) => sum + (i.totalScore || 0), 0) /
-              completedWithScores.length
-          )
-        : 0;
-
-    const bestScore =
-      completedWithScores.length > 0
-        ? Math.max(...completedWithScores.map((i) => i.totalScore || 0))
-        : 0;
+    const totalInterviews = statsRow?.totalInterviews ?? 0;
+    const completedInterviews = statsRow?.completedInterviews ?? 0;
+    const averageScore = statsRow?.averageScore ?? 0;
+    const bestScore = statsRow?.bestScore ?? 0;
 
     return NextResponse.json({
       success: true,

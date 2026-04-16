@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, answers } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
@@ -99,30 +99,27 @@ export async function GET() {
       count: data.count,
     }));
 
-    // Skill breakdown - fetch answers for all completed interviews
-    const interviewIds = completedInterviews.map((i) => i.id);
+    // Skill breakdown — single query across the 5 most recent completed interviews
+    // (was N+1: one query per interview id).
+    const recentIds = completedInterviews.slice(0, 5).map((i) => i.id);
     let skillBreakdown = { technical: 0, communication: 0, depth: 0 };
 
-    if (interviewIds.length > 0) {
-      // Get average from recent interviews
+    if (recentIds.length > 0) {
+      const intAnswers = await db
+        .select({
+          technicalScore: answers.technicalScore,
+          communicationScore: answers.communicationScore,
+          depthScore: answers.depthScore,
+        })
+        .from(answers)
+        .where(inArray(answers.interviewId, recentIds));
+
       let techTotal = 0, commTotal = 0, depthTotal = 0, answerCount = 0;
-
-      for (const intId of interviewIds.slice(0, 5)) {
-        const intAnswers = await db
-          .select({
-            technicalScore: answers.technicalScore,
-            communicationScore: answers.communicationScore,
-            depthScore: answers.depthScore,
-          })
-          .from(answers)
-          .where(eq(answers.interviewId, intId));
-
-        intAnswers.forEach((a) => {
-          if (a.technicalScore) techTotal += a.technicalScore;
-          if (a.communicationScore) commTotal += a.communicationScore;
-          if (a.depthScore) depthTotal += a.depthScore;
-          answerCount++;
-        });
+      for (const a of intAnswers) {
+        if (a.technicalScore) techTotal += a.technicalScore;
+        if (a.communicationScore) commTotal += a.communicationScore;
+        if (a.depthScore) depthTotal += a.depthScore;
+        answerCount++;
       }
 
       if (answerCount > 0) {
