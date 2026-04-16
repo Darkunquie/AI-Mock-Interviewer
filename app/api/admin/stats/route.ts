@@ -3,17 +3,12 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
 import { eq, and, gt, lt, count } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 
 export async function GET() {
   try {
     const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
+    if (!admin) return Errors.forbidden();
 
     const [total] = await db.select({ count: count() }).from(users);
     const [pending] = await db
@@ -92,10 +87,6 @@ export async function GET() {
       },
     });
   } catch (error) {
-    logger.error("Admin stats error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "admin/stats");
   }
 }

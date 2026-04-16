@@ -9,14 +9,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { validateKeywords } from "@/lib/utils";
 import { evaluateAnswerSchema, validateRequest } from "@/lib/validations";
 import { logger } from "@/lib/logger";
+import { Errors, handleZodError, handleUnexpectedError } from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
     const body = await request.json();
 
@@ -27,12 +25,7 @@ export async function POST(request: NextRequest) {
       questionText: body.questionText,
       userAnswer: body.userAnswer,
     });
-    if (!validation.success) {
-      return NextResponse.json(
-        { success: false, error: validation.error.issues[0]?.message || "Invalid input" },
-        { status: 400 }
-      );
-    }
+    if (!validation.success) return handleZodError(validation.error);
 
     const interviewId = validation.data.mockId;
     const { questionIndex, questionText, userAnswer } = validation.data;
@@ -50,16 +43,11 @@ export async function POST(request: NextRequest) {
       .where(eq(interviews.mockId, interviewId))
       .limit(1);
 
-    if (!interview.length) {
-      return NextResponse.json({ success: false, error: "Interview not found" }, { status: 404 });
-    }
+    if (!interview.length) return Errors.notFound("Interview");
 
     const interviewData = interview[0];
-
     // Verify user owns this interview
-    if (interviewData.userId !== user.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
-    }
+    if (interviewData.userId !== user.id) return Errors.forbidden();
 
     // Get keywords from the question (if available from PDF upload)
     let questionKeywords: string[] | undefined;
@@ -246,10 +234,6 @@ export async function POST(request: NextRequest) {
       evaluation,
     });
   } catch (error) {
-    logger.error("Evaluate answer error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Failed to evaluate answer" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/evaluate");
   }
 }

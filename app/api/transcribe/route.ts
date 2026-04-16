@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_WHISPER_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
@@ -16,30 +17,17 @@ export async function POST(request: Request) {
   try {
     // Auth check
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    if (!user) return Errors.unauthorized();
 
     // Config check
-    if (!GROQ_API_KEY) {
-      return NextResponse.json(
-        { success: false, error: "Transcription service not configured" },
-        { status: 500 }
-      );
-    }
+    if (!GROQ_API_KEY) return Errors.aiServiceError();
 
     // Parse request
     const formData = await request.formData();
     const audioFile = formData.get("audio");
 
     if (!audioFile || !(audioFile instanceof File)) {
-      return NextResponse.json(
-        { success: false, error: "No audio file provided" },
-        { status: 400 }
-      );
+      return Errors.badRequest("No audio file provided");
     }
 
     // Skip small files (likely silence)
@@ -49,10 +37,7 @@ export async function POST(request: Request) {
 
     // Validate file size
     if (audioFile.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { success: false, error: "File too large (max 25MB)" },
-        { status: 400 }
-      );
+      return Errors.fileTooLarge("25MB");
     }
 
     // Call Groq Whisper API
@@ -72,10 +57,7 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errorText = await response.text();
       logger.error("[Transcribe] Groq error", new Error(errorText));
-      return NextResponse.json(
-        { success: false, error: "Transcription failed" },
-        { status: response.status }
-      );
+      return Errors.aiServiceError();
     }
 
     const result = await response.json();
@@ -85,10 +67,6 @@ export async function POST(request: Request) {
       text: result.text || "",
     });
   } catch (error) {
-    logger.error("[Transcribe] Error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Transcription failed" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "transcribe");
   }
 }

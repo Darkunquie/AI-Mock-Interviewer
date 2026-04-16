@@ -8,6 +8,7 @@ import { CreateInterviewRequest, DURATION_CONFIG, Question } from "@/types";
 import { getCurrentUser } from "@/lib/auth";
 import { createInterviewSchema, validateRequest } from "@/lib/validations";
 import { logger } from "@/lib/logger";
+import { Errors, handleZodError, handleUnexpectedError } from "@/lib/errors";
 
 interface TechDeepDiveConfig {
   technology: string;
@@ -24,10 +25,7 @@ interface ExtendedCreateInterviewRequest extends CreateInterviewRequest {
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
     const body: ExtendedCreateInterviewRequest = await request.json();
 
@@ -42,12 +40,7 @@ export async function POST(request: NextRequest) {
       topics: body.topics,
       resumeText: body.resumeText,
     });
-    if (!validation.success) {
-      return NextResponse.json(
-        { success: false, error: validation.error.issues[0]?.message || "Invalid input" },
-        { status: 400 }
-      );
-    }
+    if (!validation.success) return handleZodError(validation.error);
 
     const { role, experienceLevel, interviewType, mode, duration, techStack, topics } = validation.data;
     const { customQuestions, techDeepDive } = body;
@@ -118,10 +111,7 @@ export async function POST(request: NextRequest) {
         }
       } catch (parseError) {
         logger.error("JSON parse error", parseError instanceof Error ? parseError : new Error(String(parseError)));
-        return NextResponse.json(
-          { success: false, error: "Failed to generate valid questions" },
-          { status: 500 }
-        );
+        return Errors.aiInvalidOutput();
       }
     }
 
@@ -148,10 +138,6 @@ export async function POST(request: NextRequest) {
       questions: parsedQuestions.questions,
     });
   } catch (error) {
-    logger.error("Create interview error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Failed to create interview" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/create");
   }
 }

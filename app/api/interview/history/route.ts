@@ -3,14 +3,12 @@ import { eq, desc, and, like, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { logger } from "@/lib/logger";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
@@ -116,10 +114,6 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error("History fetch error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch history" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/history");
   }
 }

@@ -3,8 +3,8 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
-import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { Errors, ErrorCodes, createErrorResponse, handleUnexpectedError } from "@/lib/errors";
 
 const VALID_TRIAL_DAYS = [3, 6, 14] as const;
 
@@ -20,38 +20,21 @@ export async function POST(
 ) {
   try {
     const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
+    if (!admin) return Errors.forbidden();
 
     const { id } = await params;
     const userId = Number.parseInt(id, 10);
-
-    if (Number.isNaN(userId)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid user ID" },
-        { status: 400 }
-      );
-    }
+    if (Number.isNaN(userId)) return Errors.badRequest("Invalid user ID");
 
     let body;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json(
-        { success: false, error: "Invalid JSON body" },
-        { status: 400 }
-      );
+      return Errors.invalidJson();
     }
     const parsed = extendTrialSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: "Invalid trial duration. Must be 3, 6, or 14 days." },
-        { status: 400 }
-      );
+      return Errors.badRequest("Invalid trial duration. Must be 3, 6, or 14 days.");
     }
 
     const { trialDays } = parsed.data;
@@ -62,17 +45,13 @@ export async function POST(
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "User not found" },
-        { status: 404 }
-      );
-    }
+    if (!user) return Errors.userNotFound();
 
     if (user.status !== "approved") {
-      return NextResponse.json(
-        { success: false, error: "User must be approved before extending trial" },
-        { status: 400 }
+      return createErrorResponse(
+        ErrorCodes.SUB_INVALID_STATE,
+        "User must be approved before extending trial",
+        400
       );
     }
 
@@ -94,10 +73,6 @@ export async function POST(
       trialEndsAt: trialEnd.toISOString(),
     });
   } catch (error) {
-    logger.error("Admin extend trial error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "admin/users/extend-trial");
   }
 }

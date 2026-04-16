@@ -7,27 +7,18 @@ import { getSummaryGeneratorPrompt } from "@/utils/prompts";
 import { getCurrentUser } from "@/lib/auth";
 import { interviewSummarySchema, validateRequest } from "@/lib/validations";
 import { logger } from "@/lib/logger";
+import { Errors, ErrorCodes, createErrorResponse, handleZodError, handleUnexpectedError } from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
     const body = await request.json();
-
-    // Validate input with Zod
     const validation = validateRequest(interviewSummarySchema, {
       mockId: body.interviewId,
     });
-    if (!validation.success) {
-      return NextResponse.json(
-        { success: false, error: validation.error.issues[0]?.message || "Invalid input" },
-        { status: 400 }
-      );
-    }
+    if (!validation.success) return handleZodError(validation.error);
 
     const interviewId = validation.data.mockId;
 
@@ -38,15 +29,10 @@ export async function POST(request: NextRequest) {
       .where(eq(interviews.mockId, interviewId))
       .limit(1);
 
-    if (!interview.length) {
-      return NextResponse.json({ success: false, error: "Interview not found" }, { status: 404 });
-    }
+    if (!interview.length) return Errors.notFound("Interview");
 
     const interviewData = interview[0];
-
-    if (interviewData.userId !== user.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
-    }
+    if (interviewData.userId !== user.id) return Errors.forbidden();
 
     // Get all answers
     const interviewAnswers = await db
@@ -56,7 +42,7 @@ export async function POST(request: NextRequest) {
       .orderBy(answers.questionIndex);
 
     if (interviewAnswers.length === 0) {
-      return NextResponse.json({ success: false, error: "No answers found" }, { status: 400 });
+      return createErrorResponse(ErrorCodes.IV_NO_ANSWERS, "No answers found", 400);
     }
 
     // Get total number of questions
@@ -186,10 +172,6 @@ export async function POST(request: NextRequest) {
       summary: summaryData,
     });
   } catch (error) {
-    logger.error("Generate summary error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Failed to generate summary" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/summary");
   }
 }

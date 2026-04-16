@@ -9,33 +9,23 @@ import { DURATION_CONFIG, InterviewDuration } from "@/types";
 import { getCurrentUser } from "@/lib/auth";
 import { retakeInterviewSchema, validateRequest } from "@/lib/validations";
 import { logger } from "@/lib/logger";
+import { Errors, handleZodError, handleUnexpectedError } from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
     let body;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json(
-        { success: false, error: "Invalid JSON body" },
-        { status: 400 }
-      );
+      return Errors.invalidJson();
     }
 
     // Validate input with Zod
     const validation = validateRequest(retakeInterviewSchema, body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { success: false, error: validation.error.issues[0]?.message || "Invalid input" },
-        { status: 400 }
-      );
-    }
+    if (!validation.success) return handleZodError(validation.error);
 
     const { interviewId } = validation.data;
 
@@ -46,16 +36,12 @@ export async function POST(request: NextRequest) {
       .where(eq(interviews.mockId, interviewId))
       .limit(1);
 
-    if (!original.length) {
-      return NextResponse.json({ success: false, error: "Interview not found" }, { status: 404 });
-    }
+    if (!original.length) return Errors.notFound("Interview");
 
     const originalInterview = original[0];
 
     // Verify user owns this interview
-    if (originalInterview.userId !== user.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
-    }
+    if (originalInterview.userId !== user.id) return Errors.forbidden();
 
     // Use the same parameters from the original interview
     const role = originalInterview.role;
@@ -116,10 +102,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (parseError) {
       logger.error("JSON parse error", parseError instanceof Error ? parseError : new Error(String(parseError)));
-      return NextResponse.json(
-        { success: false, error: "Failed to generate valid questions" },
-        { status: 500 }
-      );
+      return Errors.aiInvalidOutput();
     }
 
     // Create new interview with same parameters
@@ -145,10 +128,6 @@ export async function POST(request: NextRequest) {
       questions: parsedQuestions.questions,
     });
   } catch (error) {
-    logger.error("Retake interview error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Failed to create retake interview" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/retake");
   }
 }

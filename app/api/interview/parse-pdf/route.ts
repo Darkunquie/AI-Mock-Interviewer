@@ -5,6 +5,7 @@ import { generateCompletion } from "@/lib/groq";
 import { getQuestionClassifierPrompt } from "@/utils/prompts";
 import { Question } from "@/types";
 import { logger } from "@/lib/logger";
+import { Errors, ErrorCodes, createErrorResponse, handleUnexpectedError } from "@/lib/errors";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
 const ALLOWED_MIME_TYPES = ["application/pdf"];
@@ -68,36 +69,15 @@ export async function POST(request: NextRequest) {
   try {
     // 1. Authenticate user
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
     // 2. Parse FormData and validate file
     const formData = await request.formData();
     const file = formData.get("pdf") as File | null;
 
-    if (!file) {
-      return NextResponse.json(
-        { error: "No PDF file provided" },
-        { status: 400 }
-      );
-    }
-
-    // Validate file type
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: "Invalid file type. Only PDF files are allowed." },
-        { status: 400 }
-      );
-    }
-
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: "File too large. Maximum size is 5MB." },
-        { status: 400 }
-      );
-    }
+    if (!file) return Errors.badRequest("No PDF file provided");
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) return Errors.fileInvalidType("PDF");
+    if (file.size > MAX_FILE_SIZE) return Errors.fileTooLarge("5MB");
 
     // 3. Convert to buffer and extract text
     const arrayBuffer = await file.arrayBuffer();
@@ -107,19 +87,18 @@ export async function POST(request: NextRequest) {
     try {
       extractedText = await extractTextFromPdf(buffer);
     } catch {
-      return NextResponse.json(
-        { error: "Failed to read PDF. The file may be corrupted." },
-        { status: 400 }
+      return createErrorResponse(
+        ErrorCodes.FILE_CORRUPT,
+        "Failed to read PDF. The file may be corrupted.",
+        400
       );
     }
 
     if (!extractedText || extractedText.trim().length === 0) {
-      return NextResponse.json(
-        {
-          error:
-            "Could not extract text from PDF. The file may be scanned or image-based.",
-        },
-        { status: 400 }
+      return createErrorResponse(
+        ErrorCodes.IV_PDF_PARSE_FAILED,
+        "Could not extract text from PDF. The file may be scanned or image-based.",
+        400
       );
     }
 
@@ -138,10 +117,7 @@ export async function POST(request: NextRequest) {
       ]);
     } catch (aiError) {
       logger.error("AI classification error", aiError instanceof Error ? aiError : new Error(String(aiError)));
-      return NextResponse.json(
-        { error: "Failed to classify questions. Please try again." },
-        { status: 500 }
-      );
+      return Errors.aiServiceError();
     }
 
     // 5. Parse and validate AI response
@@ -156,12 +132,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (parseError) {
       logger.error("JSON parse error", parseError instanceof Error ? parseError : new Error(String(parseError)));
-      return NextResponse.json(
-        {
-          error: "Failed to parse questions. The PDF format may not be supported.",
-        },
-        { status: 500 }
-      );
+      return Errors.aiInvalidOutput();
     }
 
     // 6. Validate each question has required fields
@@ -185,9 +156,10 @@ export async function POST(request: NextRequest) {
       }));
 
     if (validatedQuestions.length === 0) {
-      return NextResponse.json(
-        { error: "No valid questions could be extracted from the PDF." },
-        { status: 400 }
+      return createErrorResponse(
+        ErrorCodes.IV_NO_VALID_QUESTIONS,
+        "No valid questions could be extracted from the PDF.",
+        400
       );
     }
 
@@ -201,10 +173,6 @@ export async function POST(request: NextRequest) {
       suggestedRole: suggestedRole,
     });
   } catch (error) {
-    logger.error("PDF parse error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { error: "Failed to process PDF" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/parse-pdf");
   }
 }
