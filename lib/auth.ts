@@ -48,7 +48,10 @@ export function generateToken(user: AuthUser): string {
   );
 }
 
-// Verify JWT token
+// Verify JWT token (Node runtime) — uses jsonwebtoken, verifies signature.
+// For Edge runtime (middleware), use verifyTokenEdge from lib/auth-edge.ts
+// instead — jsonwebtoken depends on Node's crypto module and won't run
+// in Next.js middleware.
 export function verifyToken(token: string): AuthUser | null {
   try {
     const decoded = jwt.verify(token, getJwtSecret()) as unknown as AuthUser;

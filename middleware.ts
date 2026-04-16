@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import { verifyTokenEdge } from "@/lib/auth-edge";
 
 // In-memory rate limiter (simple implementation for single-server deployment)
 // For multi-server deployment, use Redis-based rate limiting
@@ -91,20 +92,6 @@ function isProtectedApiPath(pathname: string): boolean {
   if (pathname.startsWith("/api/projects")) return true;
   if (pathname === "/api/transcribe") return true;
   return false;
-}
-
-// Decode JWT payload without verification (lightweight, Edge-compatible)
-// Full verification happens in the route handler — this is just for the subscription guard
-function decodeJwtPayload(token: string): { id?: number; role?: string } | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const base64 = parts[1].replaceAll("-", "+").replaceAll("_", "/");
-    const payload = JSON.parse(atob(base64));
-    return payload;
-  } catch {
-    return null;
-  }
 }
 
 async function checkSubscription(
@@ -247,11 +234,14 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    // Subscription guard for protected API paths
+    // Subscription guard for protected API paths.
+    // Uses jose.jwtVerify to perform FULL signature verification — the prior
+    // implementation (decodeJwtPayload) only base64-decoded the claims, which
+    // meant a forged JWT with role:"admin" could bypass the subscription check.
     if (isProtectedApiPath(pathname)) {
       const authToken = request.cookies.get("auth_token")?.value;
       if (authToken) {
-        const payload = decodeJwtPayload(authToken);
+        const payload = await verifyTokenEdge(authToken);
         if (payload?.id && payload.role !== "admin") {
           const blocked = await checkSubscription(payload.id, origin, requestId);
           if (blocked) return blocked;

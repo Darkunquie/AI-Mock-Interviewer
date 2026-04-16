@@ -29,6 +29,7 @@
     "drizzle-orm": "^0.45.1",
     "framer-motion": "^12.31.0",
     "groq-sdk": "^0.37.0",
+    "jose": "^6.2.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.562.0",
     "mermaid": "^11.12.2",
