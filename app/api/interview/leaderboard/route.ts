@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, and, desc, sql, gte } from "drizzle-orm";
+import { eq, and, desc, sql, gte, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, users } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
         .where(
           and(
             eq(interviews.status, "completed"),
-            sql`${interviews.userId} = ANY(ARRAY[${sql.raw(userIds.join(","))}])`
+            inArray(interviews.userId, userIds)
           )
         )
         .groupBy(interviews.userId, interviews.role);
