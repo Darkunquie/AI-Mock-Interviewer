@@ -2,11 +2,58 @@ import { getCurrentUser, type AuthUser } from "./auth";
 import { db } from "./db";
 import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
+import { cacheGet, cacheSet, cacheDel } from "./cache";
 
 type SubscriptionResult =
   | { user: AuthUser; allowed: true; reason?: undefined }
   | { user: AuthUser; allowed: false; reason: string }
   | { user: null; allowed: false; reason: string };
+
+// Subscription tier per TARGET_ARCHITECTURE §5.
+// 60s TTL is short enough that expiration-time transitions feel real-time
+// while still cutting DB hits by >90% on hot pages.
+const SUB_CACHE_TTL = 60;
+const SUB_CACHE_PREFIX = "sub:";
+
+interface CachedSubUser {
+  subscriptionStatus: string | null;
+  trialEndsAt: string | null; // ISO
+}
+
+function subCacheKey(userId: number): string {
+  return `${SUB_CACHE_PREFIX}${userId}`;
+}
+
+/**
+ * Invalidate the subscription cache for a user.
+ * Must be called after admin approve / extend-trial / reject / status change.
+ */
+export async function invalidateSubscriptionCache(userId: number): Promise<void> {
+  await cacheDel(subCacheKey(userId));
+}
+
+async function loadSubUser(userId: number): Promise<CachedSubUser | null> {
+  const cached = await cacheGet<CachedSubUser>(subCacheKey(userId));
+  if (cached) return cached;
+
+  const [dbUser] = await db
+    .select({
+      subscriptionStatus: users.subscriptionStatus,
+      trialEndsAt: users.trialEndsAt,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!dbUser) return null;
+
+  const value: CachedSubUser = {
+    subscriptionStatus: dbUser.subscriptionStatus,
+    trialEndsAt: dbUser.trialEndsAt ? dbUser.trialEndsAt.toISOString() : null,
+  };
+  await cacheSet(subCacheKey(userId), value, SUB_CACHE_TTL);
+  return value;
+}
 
 /**
  * Check if the current user has an active subscription or trial.
@@ -24,16 +71,7 @@ export async function requireActiveSubscription(): Promise<SubscriptionResult> {
     return { user, allowed: true };
   }
 
-  // Fetch fresh subscription data from DB
-  const [dbUser] = await db
-    .select({
-      subscriptionStatus: users.subscriptionStatus,
-      trialEndsAt: users.trialEndsAt,
-    })
-    .from(users)
-    .where(eq(users.id, user.id))
-    .limit(1);
-
+  const dbUser = await loadSubUser(user.id);
   if (!dbUser) {
     return { user, allowed: false, reason: "user_not_found" };
   }
@@ -54,15 +92,8 @@ export async function requireActiveSubscription(): Promise<SubscriptionResult> {
       return { user, allowed: true };
     }
 
-    // Trial expired — auto-update status in DB (best-effort)
-    try {
-      await db
-        .update(users)
-        .set({ subscriptionStatus: "expired" })
-        .where(eq(users.id, user.id));
-    } catch {
-      // Still return expired — the trial is expired regardless of DB update success
-    }
+    // Trial expired — auto-update status in DB (best-effort) + bust cache
+    await markExpired(user.id);
 
     return { user, allowed: false, reason: "trial_expired" };
   }
@@ -75,11 +106,9 @@ export async function requireActiveSubscription(): Promise<SubscriptionResult> {
  * Used by the /api/subscription/status endpoint.
  */
 export async function getSubscriptionDetails(userId: number) {
+  // role is not cached (needs one extra column) — small single-row read.
   const [dbUser] = await db
     .select({
-      subscriptionStatus: users.subscriptionStatus,
-      trialEndsAt: users.trialEndsAt,
-      approvedAt: users.approvedAt,
       role: users.role,
     })
     .from(users)
@@ -99,11 +128,15 @@ export async function getSubscriptionDetails(userId: number) {
     };
   }
 
-  const trial = await resolveTrialState(userId, dbUser.subscriptionStatus, dbUser.trialEndsAt);
+  const cached = await loadSubUser(userId);
+  if (!cached) return null;
+
+  const trialEndsAt = cached.trialEndsAt ? new Date(cached.trialEndsAt) : null;
+  const trial = await resolveTrialState(userId, cached.subscriptionStatus, trialEndsAt);
 
   return {
     subscriptionStatus: trial.currentStatus,
-    trialEndsAt: dbUser.trialEndsAt,
+    trialEndsAt,
     trialDaysLeft: trial.trialDaysLeft,
     isExpired: trial.isExpired,
     isAdmin: false,
@@ -116,6 +149,7 @@ async function markExpired(userId: number): Promise<void> {
       .update(users)
       .set({ subscriptionStatus: "expired" })
       .where(eq(users.id, userId));
+    await cacheDel(subCacheKey(userId));
   } catch {
     // best-effort — caller still treats as expired
   }

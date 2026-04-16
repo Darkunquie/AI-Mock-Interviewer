@@ -5,6 +5,7 @@ import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { Errors, ErrorCodes, createErrorResponse, handleUnexpectedError } from "@/lib/errors";
+import { invalidateSubscriptionCache } from "@/lib/subscription";
 
 const VALID_TRIAL_DAYS = [0, 3, 6, 14] as const;
 
@@ -90,6 +91,8 @@ export async function POST(
         })
         .where(eq(users.id, userId));
     }
+
+    await invalidateSubscriptionCache(userId);
 
     return NextResponse.json({
       success: true,
