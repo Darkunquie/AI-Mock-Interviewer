@@ -37,12 +37,19 @@ export async function POST(
       );
     }
 
-    // Parse body (may be empty for backward compatibility)
+    // Parse body (may be empty for backward compatibility).
+    // Distinguish empty body (use defaults) from malformed JSON (400).
     let body: Record<string, unknown> = {};
     try {
-      body = await request.json();
+      const text = await request.text();
+      if (text.trim()) {
+        body = JSON.parse(text);
+      }
     } catch {
-      // No body sent — use defaults
+      return NextResponse.json(
+        { success: false, error: "Invalid JSON body" },
+        { status: 400 }
+      );
     }
 
     const parsed = approveSchema.safeParse(body);

@@ -185,7 +185,7 @@ export async function middleware(request: NextRequest) {
     // coincidentally but is harder to reason about.
     const rateLimitKey = `rl:${clientIP}:${config.pattern}`;
 
-    const { allowed, remaining, resetSeconds } = await checkRateLimit(
+    const { allowed, remaining, resetEpochSeconds } = await checkRateLimit(
       rateLimitKey,
       config.limit,
       config.windowMs
@@ -204,8 +204,8 @@ export async function middleware(request: NextRequest) {
             ...securityHeaders,
             "X-RateLimit-Limit": config.limit.toString(),
             "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": resetSeconds.toString(),
-            "Retry-After": Math.max(1, resetSeconds - Math.floor(Date.now() / 1000)).toString(),
+            "X-RateLimit-Reset": resetEpochSeconds.toString(),
+            "Retry-After": Math.max(1, resetEpochSeconds - Math.floor(Date.now() / 1000)).toString(),
             "X-Request-ID": requestId,
           },
         }
@@ -233,7 +233,7 @@ export async function middleware(request: NextRequest) {
     // Add rate limit headers
     response.headers.set("X-RateLimit-Limit", config.limit.toString());
     response.headers.set("X-RateLimit-Remaining", remaining.toString());
-    response.headers.set("X-RateLimit-Reset", resetSeconds.toString());
+    response.headers.set("X-RateLimit-Reset", resetEpochSeconds.toString());
     response.headers.set("X-Request-ID", requestId);
 
     // Add CORS headers

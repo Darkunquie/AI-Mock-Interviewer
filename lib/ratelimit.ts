@@ -59,7 +59,7 @@ export interface RateLimitResult {
   /** How many more requests this key may make before the window rolls. */
   remaining: number;
   /** Unix seconds at which the current window resets. */
-  resetSeconds: number;
+  resetEpochSeconds: number;
   /** True if Redis was unreachable and the limiter failed open. */
   degraded?: boolean;
 }
@@ -76,9 +76,18 @@ export async function checkRateLimit(
   limit: number,
   windowMs: number
 ): Promise<RateLimitResult> {
+  // Guard against misconfiguration. windowMs <= 0 divides by zero in the
+  // Lua script; limit <= 0 would block every request silently. NaN/Infinity
+  // rejected too. Throws (programmer error), not fail-open.
+  if (
+    !Number.isFinite(limit) || limit <= 0 ||
+    !Number.isFinite(windowMs) || windowMs <= 0
+  ) {
+    throw new Error(`Invalid rate limit params: limit=${limit}, windowMs=${windowMs}`);
+  }
   const windowSeconds = Math.ceil(windowMs / 1000);
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const resetSeconds = (Math.floor(nowSeconds / windowSeconds) + 1) * windowSeconds;
+  const resetEpochSeconds = (Math.floor(nowSeconds / windowSeconds) + 1) * windowSeconds;
 
   try {
     const result = (await getRedis().eval(
@@ -95,7 +104,7 @@ export async function checkRateLimit(
       allowed: allowedFlag === 1,
       count,
       remaining,
-      resetSeconds,
+      resetEpochSeconds,
     };
   } catch (err) {
     // Fail-open: log loudly and allow. See module docstring.
@@ -108,7 +117,7 @@ export async function checkRateLimit(
       allowed: true,
       count: 0,
       remaining: limit,
-      resetSeconds,
+      resetEpochSeconds,
       degraded: true,
     };
   }

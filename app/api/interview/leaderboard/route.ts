@@ -105,7 +105,10 @@ export async function GET(request: NextRequest) {
     const currentUserEntry = leaderboard.find((l) => l.userId === user.id);
     let currentUserRank = currentUserEntry?.rank || null;
 
-    // If user not in top 50, check their actual rank
+    // If user not in top 50, compute their actual rank against the full
+    // eligible pool (not just the fetched top 50). Previous implementation
+    // only filtered the leaderboard array, so any user ranked 51+ was
+    // reported as rank 51 regardless of true position.
     if (!currentUserRank) {
       const userRankResult = await db
         .select({
@@ -121,10 +124,27 @@ export async function GET(request: NextRequest) {
           )
         );
 
-      if (userRankResult.length > 0 && userRankResult[0].avgScore) {
+      // Explicit null check — avgScore of 0 is a legitimate value and
+      // must not short-circuit rank computation via a truthy test.
+      if (userRankResult.length > 0 && userRankResult[0].avgScore != null) {
         const userAvg = Number(userRankResult[0].avgScore);
-        // Count users with higher average
-        const higherCount = leaderboard.filter((l) => l.averageScore > userAvg).length;
+
+        // Count ALL users whose average is strictly greater than this user's.
+        // HAVING applies to aggregates, so wrap in a grouped subquery.
+        const higherAvgUsers = db
+          .select({ uid: interviews.userId })
+          .from(interviews)
+          .innerJoin(users, eq(interviews.userId, users.id))
+          .where(and(...conditions))
+          .groupBy(interviews.userId)
+          .having(sql`ROUND(AVG(${interviews.totalScore})) > ${userAvg}`)
+          .as("higher_avg_users");
+
+        const [higherCountResult] = await db
+          .select({ count: sql<number>`COUNT(*)::int` })
+          .from(higherAvgUsers);
+
+        const higherCount = higherCountResult?.count ?? 0;
         currentUserRank = higherCount + 1;
       }
     }

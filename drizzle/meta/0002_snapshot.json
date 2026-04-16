@@ -1,6 +1,6 @@
 {
-  "id": "64b4f6b0-3853-4b23-a32a-e9f34265d7c1",
-  "prevId": "68d53acb-2038-4f5c-ab1f-fe934b4339de",
+  "id": "acdb3833-2473-4e6a-90a9-0195d29c8e97",
+  "prevId": "64b4f6b0-3853-4b23-a32a-e9f34265d7c1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -480,7 +480,21 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "interviews_user_id_users_id_fk": {
+          "name": "interviews_user_id_users_id_fk",
+          "tableFrom": "interviews",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "interviews_mock_id_unique": {

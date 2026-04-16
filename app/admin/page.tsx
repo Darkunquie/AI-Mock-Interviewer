@@ -175,7 +175,9 @@ export default function AdminDashboard() {
       (r) => r.status === "fulfilled" && r.value.success
     ).length;
     const failed = results.length - succeeded;
-    if (failed === 0) {
+    if (succeeded === 0 && failed > 0) {
+      toast.error(opts.failureToast);
+    } else if (failed === 0) {
       toast.success(`All ${succeeded} users ${opts.successLabel}`);
     } else {
       toast.warning(`${succeeded} ${opts.successLabel}, ${failed} failed`);

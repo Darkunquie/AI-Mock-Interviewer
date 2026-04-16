@@ -19,12 +19,15 @@ function getJwtSecretEdge(): string {
 
 /**
  * Verifies a JWT signature and returns the decoded claims.
- * Returns null if the token is missing, malformed, expired, or has an
- * invalid signature. Never throws.
+ * Returns null for invalid-token conditions: missing, malformed, expired,
+ * or bad signature. Propagates configuration errors (missing JWT_SECRET)
+ * so a misconfigured deployment fails fast instead of silently 401-ing
+ * every user.
  */
 export async function verifyTokenEdge(token: string): Promise<AuthUser | null> {
+  // Resolve secret OUTSIDE the catch so config errors bubble up.
+  const secret = new TextEncoder().encode(getJwtSecretEdge());
   try {
-    const secret = new TextEncoder().encode(getJwtSecretEdge());
     const { payload } = await jwtVerify(token, secret);
     return payload as unknown as AuthUser;
   } catch {

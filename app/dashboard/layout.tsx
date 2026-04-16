@@ -45,14 +45,14 @@ export default function DashboardLayout({
     if (
       !isLoading &&
       !isSubLoading &&
+      user &&
       isSubscriptionExpired &&
       !isAdmin &&
       pathname !== "/dashboard/subscription"
     ) {
       router.push("/dashboard/subscription");
     }
-  }, [isLoading, isSubLoading, isSubscriptionExpired, isAdmin, pathname, router]);
-
+  }, [isLoading, isSubLoading, user, isSubscriptionExpired, isAdmin, pathname, router]);
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);

@@ -39,11 +39,14 @@ export default function SubscriptionPage() {
   if (isLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-yellow-400"></div>
+        <div 
+          className="animate-spin h-8 w-8 border-t-2 border-b-2 border-yellow-400"
+          role="status"
+          aria-label="Loading subscription status"
+        />
       </div>
     );
   }
-
   // Admin or paid users shouldn't see this page
   if (isAdmin || isSubscriptionActive) return null;
 
