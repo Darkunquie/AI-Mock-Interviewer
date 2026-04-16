@@ -232,7 +232,12 @@ export async function middleware(request: NextRequest) {
 
   // CSRF double-submit for state-changing /api/* requests.
   // Must run BEFORE rate limit so attacker can't probe limits on unprotected paths.
+  //
+  // Gated via CSRF_ENFORCE env var so the rollout is safe — cookie is seeded
+  // unconditionally (see below), then enforcement flipped on once all client
+  // code has been migrated to use apiFetch() from lib/client/api.ts.
   if (
+    process.env.CSRF_ENFORCE === "true" &&
     pathname.startsWith("/api") &&
     !isSafeMethod(request.method) &&
     !isCsrfExempt(pathname)
