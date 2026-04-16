@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { verifyTokenEdge } from "@/lib/auth-edge";
 import { checkRateLimit } from "@/lib/ratelimit";
+import crypto from "crypto";
 
 // Middleware runs on Node.js runtime (not Edge) so that ioredis (TCP-based)
 // can connect to the local Redis instance. This is the default on self-hosted
@@ -55,6 +56,60 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
 ].filter(Boolean);
+
+// ---- CSRF (double-submit cookie) ----
+// Protects state-changing requests against cross-origin form/fetch attacks.
+// Client sends the csrf_token cookie AND an X-CSRF-Token header. Both must
+// match. Attackers in cross-origin contexts can't read the cookie (SameSite)
+// and can't set the header (browser policy), so the check fails.
+//
+// Exemptions:
+// - Safe methods (GET/HEAD/OPTIONS) — no state change
+// - Pre-auth endpoints (signin/signup) — client has no session to carry a
+//   token yet; these are rate-limited instead
+// - Non-API paths — the middleware only guards /api/*
+
+const CSRF_COOKIE_NAME = "csrf_token";
+const CSRF_HEADER_NAME = "x-csrf-token";
+const CSRF_EXEMPT_PATHS = [
+  "/api/auth/signin",
+  "/api/auth/signup",
+];
+
+function isSafeMethod(method: string): boolean {
+  return method === "GET" || method === "HEAD" || method === "OPTIONS";
+}
+
+function isCsrfExempt(pathname: string): boolean {
+  return CSRF_EXEMPT_PATHS.some((p) => pathname.startsWith(p));
+}
+
+function timingSafeEquals(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  } catch {
+    return false;
+  }
+}
+
+function csrfForbidden(origin: string | null, requestId: string): NextResponse {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "CSRF token missing or invalid",
+      errorCode: "AUTH_004",
+    },
+    {
+      status: 403,
+      headers: {
+        ...getCorsHeaders(origin),
+        ...securityHeaders,
+        "X-Request-ID": requestId,
+      },
+    }
+  );
+}
 
 // Subscription guard — protected API paths that require active trial/subscription
 function isProtectedApiPath(pathname: string): boolean {
@@ -175,6 +230,20 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  // CSRF double-submit for state-changing /api/* requests.
+  // Must run BEFORE rate limit so attacker can't probe limits on unprotected paths.
+  if (
+    pathname.startsWith("/api") &&
+    !isSafeMethod(request.method) &&
+    !isCsrfExempt(pathname)
+  ) {
+    const cookie = request.cookies.get(CSRF_COOKIE_NAME)?.value;
+    const header = request.headers.get(CSRF_HEADER_NAME);
+    if (!cookie || !header || !timingSafeEquals(cookie, header)) {
+      return csrfForbidden(origin, requestId);
+    }
+  }
+
   // Only apply rate limiting to API routes
   if (pathname.startsWith("/api")) {
     const clientIP = getClientIP(request);
@@ -230,6 +299,22 @@ export async function middleware(request: NextRequest) {
     // Continue with the request, adding headers
     const response = NextResponse.next();
 
+    // Seed csrf_token cookie on safe /api/* reads if missing. Client JS can
+    // read it (non-HttpOnly) and mirror it into the X-CSRF-Token header on
+    // subsequent writes. SameSite=Strict stops cross-site senders.
+    if (isSafeMethod(request.method) && !request.cookies.get(CSRF_COOKIE_NAME)) {
+      const token = crypto.randomBytes(32).toString("hex");
+      response.cookies.set({
+        name: CSRF_COOKIE_NAME,
+        value: token,
+        httpOnly: false,
+        sameSite: "strict",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 60 * 60, // 1h
+      });
+    }
+
     // Add rate limit headers
     response.headers.set("X-RateLimit-Limit", config.limit.toString());
     response.headers.set("X-RateLimit-Remaining", remaining.toString());
@@ -254,6 +339,20 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
   for (const [key, value] of Object.entries(securityHeaders)) {
     response.headers.set(key, value);
+  }
+
+  // Seed csrf_token cookie on page navigation so subsequent API writes have it.
+  if (isSafeMethod(request.method) && !request.cookies.get(CSRF_COOKIE_NAME)) {
+    const token = crypto.randomBytes(32).toString("hex");
+    response.cookies.set({
+      name: CSRF_COOKIE_NAME,
+      value: token,
+      httpOnly: false,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60,
+    });
   }
 
   return response;
