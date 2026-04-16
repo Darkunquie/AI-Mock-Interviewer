@@ -46,7 +46,10 @@ export async function requireActiveSubscription(): Promise<SubscriptionResult> {
   }
 
   // Trial users — check if trial is still valid
-  if (status === "trial" && dbUser.trialEndsAt) {
+  if (status === "trial") {
+    if (!dbUser.trialEndsAt) {
+      return { user, allowed: false, reason: "trial_misconfigured" };
+    }
     if (new Date(dbUser.trialEndsAt) > new Date()) {
       return { user, allowed: true };
     }
@@ -96,37 +99,56 @@ export async function getSubscriptionDetails(userId: number) {
     };
   }
 
-  const now = new Date();
-  let trialDaysLeft: number | null = null;
-  let isExpired = false;
-  let currentStatus = dbUser.subscriptionStatus || "none";
-
-  if (currentStatus === "trial" && dbUser.trialEndsAt) {
-    const diff = new Date(dbUser.trialEndsAt).getTime() - now.getTime();
-    trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-
-    if (trialDaysLeft <= 0) {
-      isExpired = true;
-      currentStatus = "expired";
-      // Auto-update in DB (best-effort)
-      try {
-        await db
-          .update(users)
-          .set({ subscriptionStatus: "expired" })
-          .where(eq(users.id, userId));
-      } catch {
-        // Still mark as expired — the trial is expired regardless of DB update success
-      }
-    }
-  } else if (currentStatus === "expired") {
-    isExpired = true;
-  }
+  const trial = await resolveTrialState(userId, dbUser.subscriptionStatus, dbUser.trialEndsAt);
 
   return {
-    subscriptionStatus: currentStatus,
+    subscriptionStatus: trial.currentStatus,
     trialEndsAt: dbUser.trialEndsAt,
-    trialDaysLeft,
-    isExpired,
+    trialDaysLeft: trial.trialDaysLeft,
+    isExpired: trial.isExpired,
     isAdmin: false,
   };
+}
+
+async function markExpired(userId: number): Promise<void> {
+  try {
+    await db
+      .update(users)
+      .set({ subscriptionStatus: "expired" })
+      .where(eq(users.id, userId));
+  } catch {
+    // best-effort — caller still treats as expired
+  }
+}
+
+async function resolveTrialState(
+  userId: number,
+  status: string | null,
+  trialEndsAt: Date | null,
+): Promise<{ currentStatus: string; trialDaysLeft: number | null; isExpired: boolean }> {
+  const currentStatus = status || "none";
+
+  if (currentStatus === "expired") {
+    return { currentStatus, trialDaysLeft: null, isExpired: true };
+  }
+
+  if (currentStatus !== "trial") {
+    return { currentStatus, trialDaysLeft: null, isExpired: false };
+  }
+
+  // Trial without trialEndsAt — treat as expired/invalid
+  if (!trialEndsAt) {
+    await markExpired(userId);
+    return { currentStatus: "expired", trialDaysLeft: 0, isExpired: true };
+  }
+
+  const diff = new Date(trialEndsAt).getTime() - Date.now();
+  const trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+
+  if (trialDaysLeft <= 0) {
+    await markExpired(userId);
+    return { currentStatus: "expired", trialDaysLeft: 0, isExpired: true };
+  }
+
+  return { currentStatus, trialDaysLeft, isExpired: false };
 }

@@ -24,17 +24,12 @@ export async function POST(request: NextRequest) {
       questionIndex: body.questionIndex,
       questionText: body.questionText,
       userAnswer: body.userAnswer,
+      speechMetrics: body.speechMetrics,
     });
     if (!validation.success) return handleZodError(validation.error);
 
     const interviewId = validation.data.mockId;
-    const { questionIndex, questionText, userAnswer } = validation.data;
-    const speechMetrics = body.speechMetrics as {
-      fillerWordCount: number;
-      fillerWords: Record<string, number>;
-      wordsPerMinute: number;
-      speakingTime: number;
-    } | undefined;
+    const { questionIndex, questionText, userAnswer, speechMetrics } = validation.data;
 
     // Get interview details
     const interview = await db
@@ -89,7 +84,9 @@ export async function POST(request: NextRequest) {
       if (
         typeof evaluation.technicalScore !== "number" ||
         typeof evaluation.communicationScore !== "number" ||
-        typeof evaluation.depthScore !== "number"
+        typeof evaluation.depthScore !== "number" ||
+        !Array.isArray(evaluation.strengths) ||
+        !Array.isArray(evaluation.weaknesses)
       ) {
         throw new Error("Invalid evaluation format");
       }

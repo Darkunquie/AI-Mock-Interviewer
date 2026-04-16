@@ -14,7 +14,12 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user) return Errors.unauthorized();
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return Errors.invalidJson();
+    }
     const validation = validateRequest(interviewSummarySchema, {
       mockId: body.interviewId,
     });
@@ -46,8 +51,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get total number of questions
-    const questionsData = JSON.parse(interviewData.questionsJson as string);
-    const totalQuestions = questionsData.questions?.length || 0;
+    let totalQuestions = 0;
+    try {
+      const questionsData = JSON.parse(interviewData.questionsJson as string);
+      totalQuestions = questionsData.questions?.length || 0;
+    } catch {
+      logger.warn("Failed to parse questionsJson for interview", { interviewId });
+    }
 
     // Prepare answers for summary generation
     const answersData = interviewAnswers.map((a) => ({

@@ -14,6 +14,9 @@ import {
   FileText,
 } from "lucide-react";
 
+const SUPPORT_EMAIL =
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@skillforge.com";
+
 const lockedFeatures = [
   { icon: Zap, label: "AI Mock Interviews", description: "Unlimited practice sessions with AI feedback" },
   { icon: Mic, label: "Voice Transcription", description: "Real-time speech-to-text during interviews" },
@@ -116,7 +119,7 @@ export default function SubscriptionPage() {
       {/* Contact */}
       <p className="text-center text-xs text-zinc-600 mt-6">
         Need help?{" "}
-        <a href="mailto:yashadepu6@gmail.com" className="text-zinc-400 hover:text-white underline">
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-zinc-400 hover:text-white underline">
           Contact support
         </a>{" "}
         for assistance with your account.

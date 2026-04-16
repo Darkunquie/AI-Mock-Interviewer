@@ -11,6 +11,12 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
+if (!process.argv.includes("--i-know-what-i-am-doing")) {
+  console.error(
+    "Safety check: run with --i-know-what-i-am-doing to confirm you are targeting a local/dev database."
+  );
+  process.exit(1);
+}
 if (!process.env.DATABASE_URL) {
   console.error("Error: DATABASE_URL environment variable is not set");
   process.exit(1);

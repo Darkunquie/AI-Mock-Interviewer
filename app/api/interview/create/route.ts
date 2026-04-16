@@ -39,11 +39,22 @@ export async function POST(request: NextRequest) {
       techStack: body.techStack,
       topics: body.topics,
       resumeText: body.resumeText,
+      customQuestions: body.customQuestions,
+      techDeepDive: body.techDeepDive,
     });
     if (!validation.success) return handleZodError(validation.error);
 
-    const { role, experienceLevel, interviewType, mode, duration, techStack, topics } = validation.data;
-    const { customQuestions, techDeepDive } = body;
+    const {
+      role,
+      experienceLevel,
+      interviewType,
+      mode,
+      duration,
+      techStack,
+      topics,
+      customQuestions,
+      techDeepDive,
+    } = validation.data;
 
     const interviewDuration = duration && DURATION_CONFIG[duration] ? duration : "15";
     const questionCount = DURATION_CONFIG[interviewDuration].questionCount;
