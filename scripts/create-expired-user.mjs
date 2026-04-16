@@ -31,6 +31,7 @@ try {
   console.log("Trial ended:", expiredTrialEnd.toISOString());
 } catch (e) {
   console.error("Error:", e.message);
+  process.exit(1);
 }
 
 console.log("\n--- Expired Trial Credentials ---");

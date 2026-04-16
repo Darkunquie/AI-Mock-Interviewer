@@ -145,29 +145,58 @@ export default function AdminDashboard() {
     setApproveDialogOpen(true);
   };
 
+  /**
+   * Run the same POST action against every pending user in parallel and
+   * report a single aggregate toast. Rejects individual requests on any
+   * non-2xx HTTP status so they're counted as failures, not as "success:false"
+   * from a non-JSON error body.
+   */
+  const runBulkAction = async (opts: {
+    path: (userId: number) => string;
+    body?: unknown;
+    successLabel: string; // e.g. "approved" | "rejected"
+    failureToast: string; // e.g. "Failed to approve users"
+  }) => {
+    const results = await Promise.allSettled(
+      pendingUsers.map((user) =>
+        fetch(opts.path(user.id), {
+          method: "POST",
+          ...(opts.body !== undefined && {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(opts.body),
+          }),
+        }).then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+      )
+    );
+    const succeeded = results.filter(
+      (r) => r.status === "fulfilled" && r.value.success
+    ).length;
+    const failed = results.length - succeeded;
+    if (succeeded === 0 && failed > 0) {
+      toast.error(opts.failureToast);
+    } else if (failed === 0) {
+      toast.success(`All ${succeeded} users ${opts.successLabel}`);
+    } else {
+      toast.warning(`${succeeded} ${opts.successLabel}, ${failed} failed`);
+    }
+    fetchData();
+    return { succeeded, failed };
+  };
+
   const handleBulkApprove = async () => {
     setBulkLoading(true);
     try {
       const trialDays = applyTrial ? selectedTrialDays : 0;
-      const results = await Promise.allSettled(
-        pendingUsers.map((user) =>
-          fetch(`/api/admin/users/${user.id}/approve`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ trialDays }),
-          }).then((res) => res.json())
-        )
-      );
-      const succeeded = results.filter(
-        (r) => r.status === "fulfilled" && r.value.success
-      ).length;
-      const failed = results.length - succeeded;
-      if (failed === 0) {
-        toast.success(`All ${succeeded} users approved`);
-      } else {
-        toast.warning(`${succeeded} approved, ${failed} failed`);
-      }      setApproveDialogOpen(false);
-      fetchData();
+      await runBulkAction({
+        path: (id) => `/api/admin/users/${id}/approve`,
+        body: { trialDays },
+        successLabel: "approved",
+        failureToast: "Failed to approve users",
+      });
+      setApproveDialogOpen(false);
     } catch {
       toast.error("Failed to approve users");
     } finally {
@@ -178,23 +207,11 @@ export default function AdminDashboard() {
   const handleBulkReject = async () => {
     setBulkLoading(true);
     try {
-      const results = await Promise.allSettled(
-        pendingUsers.map((user) =>
-          fetch(`/api/admin/users/${user.id}/reject`, {
-            method: "POST",
-          }).then((res) => res.json())
-        )
-      );
-      const succeeded = results.filter(
-        (r) => r.status === "fulfilled" && r.value.success
-      ).length;
-      const failed = results.length - succeeded;
-      if (failed === 0) {
-        toast.success(`All ${succeeded} users rejected`);
-      } else {
-        toast.warning(`${succeeded} rejected, ${failed} failed`);
-      }
-      fetchData();
+      await runBulkAction({
+        path: (id) => `/api/admin/users/${id}/reject`,
+        successLabel: "rejected",
+        failureToast: "Failed to reject users",
+      });
     } catch {
       toast.error("Failed to reject users");
     } finally {

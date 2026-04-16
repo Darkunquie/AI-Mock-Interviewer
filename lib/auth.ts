@@ -5,18 +5,20 @@ import { db } from "./db";
 import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
 
-// JWT Secret - MUST be set in all environments
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error(
-    "JWT_SECRET environment variable is required. " +
-    "Set it in .env.local for development or in your deployment environment for production. " +
-    "Generate one with: node -e \"console.log(require('crypto').randomBytes(64).toString('hex'))\""
-  );
+// JWT Secret - validated at runtime (first use), not at module load.
+// Throwing at import time breaks `next build` in CI environments without JWT_SECRET set.
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error(
+      "JWT_SECRET environment variable is required at runtime. " +
+      "Set it in .env.local for development or in your deployment environment for production. " +
+      "Generate one with: node -e \"console.log(require('crypto').randomBytes(64).toString('hex'))\""
+    );
+  }
+  return secret;
 }
 
-const getJwtSecret = (): string => JWT_SECRET;
 const COOKIE_NAME = "auth_token";
 
 export interface AuthUser {
@@ -46,7 +48,10 @@ export function generateToken(user: AuthUser): string {
   );
 }
 
-// Verify JWT token
+// Verify JWT token (Node runtime) — uses jsonwebtoken, verifies signature.
+// For Edge runtime (middleware), use verifyTokenEdge from lib/auth-edge.ts
+// instead — jsonwebtoken depends on Node's crypto module and won't run
+// in Next.js middleware.
 export function verifyToken(token: string): AuthUser | null {
   try {
     const decoded = jwt.verify(token, getJwtSecret()) as unknown as AuthUser;

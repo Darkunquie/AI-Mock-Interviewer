@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import { verifyTokenEdge } from "@/lib/auth-edge";
+import { checkRateLimit } from "@/lib/ratelimit";
 
-// In-memory rate limiter (simple implementation for single-server deployment)
-// For multi-server deployment, use Redis-based rate limiting
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+// Middleware runs on Node.js runtime (not Edge) so that ioredis (TCP-based)
+// can connect to the local Redis instance. This is the default on self-hosted
+// deployments; explicit here for clarity and to prevent accidental Edge
+// deployment breaking rate limits.
+export const runtime = "nodejs";
 
-// Rate limit configurations per route pattern
+// Rate limit configurations per route pattern.
+// Moved to Redis-backed sliding-window-counter — see lib/ratelimit.ts.
+// The in-memory Map was non-functional under pm2 cluster (each worker had
+// its own Map; attackers could bypass by hammering across workers).
 const rateLimitConfig: Record<string, { limit: number; windowMs: number }> = {
   "/api/auth/signin": { limit: 10, windowMs: 60000 },     // 10 requests per minute
   "/api/auth/signup": { limit: 5, windowMs: 60000 },      // 5 requests per minute
@@ -24,45 +31,13 @@ function getClientIP(request: NextRequest): string {
   return forwarded?.split(",")[0].trim() || realIP || "unknown";
 }
 
-function getRateLimitConfig(pathname: string): { limit: number; windowMs: number } {
+function getRateLimitConfig(pathname: string): { pattern: string; limit: number; windowMs: number } {
   for (const [pattern, config] of Object.entries(rateLimitConfig)) {
     if (pattern !== "default" && pathname.startsWith(pattern)) {
-      return config;
+      return { pattern, ...config };
     }
   }
-  return rateLimitConfig.default;
-}
-
-function checkRateLimit(
-  key: string,
-  limit: number,
-  windowMs: number
-): { allowed: boolean; remaining: number; resetTime: number } {
-  const now = Date.now();
-  const record = rateLimitMap.get(key);
-
-  // Clean up expired records periodically
-  if (rateLimitMap.size > 10000) {
-    for (const [k, v] of rateLimitMap.entries()) {
-      if (v.resetTime < now) {
-        rateLimitMap.delete(k);
-      }
-    }
-  }
-
-  if (!record || record.resetTime < now) {
-    // Create new window
-    const resetTime = now + windowMs;
-    rateLimitMap.set(key, { count: 1, resetTime });
-    return { allowed: true, remaining: limit - 1, resetTime };
-  }
-
-  if (record.count >= limit) {
-    return { allowed: false, remaining: 0, resetTime: record.resetTime };
-  }
-
-  record.count++;
-  return { allowed: true, remaining: limit - record.count, resetTime: record.resetTime };
+  return { pattern: "default", ...rateLimitConfig.default };
 }
 
 // Security headers
@@ -91,20 +66,6 @@ function isProtectedApiPath(pathname: string): boolean {
   if (pathname.startsWith("/api/projects")) return true;
   if (pathname === "/api/transcribe") return true;
   return false;
-}
-
-// Decode JWT payload without verification (lightweight, Edge-compatible)
-// Full verification happens in the route handler — this is just for the subscription guard
-function decodeJwtPayload(token: string): { id?: number; role?: string } | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const base64 = parts[1].replaceAll("-", "+").replaceAll("_", "/");
-    const payload = JSON.parse(atob(base64));
-    return payload;
-  } catch {
-    return null;
-  }
 }
 
 async function checkSubscription(
@@ -152,9 +113,27 @@ async function checkSubscription(
         }
       );
     }
-  } catch {
-    // If subscription check fails, let the request through
-    // Route handler will catch any real auth issues
+  } catch (err) {
+    // Fail closed: unknown failures in subscription check must NOT grant access.
+    // The previous behavior let requests through on any error, creating a free
+    // pass for expired-trial users any time the DB hiccupped.
+    console.error("[checkSubscription] unexpected failure", {
+      userId,
+      requestId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json(
+      { success: false, error: "Service temporarily unavailable" },
+      {
+        status: 503,
+        headers: {
+          ...getCorsHeaders(origin),
+          ...securityHeaders,
+          "X-Request-ID": requestId,
+          "Retry-After": "30",
+        },
+      }
+    );
   }
   return null;
 }
@@ -200,9 +179,13 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/api")) {
     const clientIP = getClientIP(request);
     const config = getRateLimitConfig(pathname);
-    const rateLimitKey = `${clientIP}:${pathname.split("/").slice(0, 3).join("/")}`;
+    // Key by the matched pattern (not the request path prefix). This means
+    // /api/auth/signup and /api/auth/signin get distinct buckets, matching
+    // the rateLimitConfig entries. The prior slice(0,3) approach worked
+    // coincidentally but is harder to reason about.
+    const rateLimitKey = `rl:${clientIP}:${config.pattern}`;
 
-    const { allowed, remaining, resetTime } = checkRateLimit(
+    const { allowed, remaining, resetEpochSeconds } = await checkRateLimit(
       rateLimitKey,
       config.limit,
       config.windowMs
@@ -221,19 +204,22 @@ export async function middleware(request: NextRequest) {
             ...securityHeaders,
             "X-RateLimit-Limit": config.limit.toString(),
             "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": Math.ceil(resetTime / 1000).toString(),
-            "Retry-After": Math.ceil((resetTime - Date.now()) / 1000).toString(),
+            "X-RateLimit-Reset": resetEpochSeconds.toString(),
+            "Retry-After": Math.max(1, resetEpochSeconds - Math.floor(Date.now() / 1000)).toString(),
             "X-Request-ID": requestId,
           },
         }
       );
     }
 
-    // Subscription guard for protected API paths
+    // Subscription guard for protected API paths.
+    // Uses jose.jwtVerify to perform FULL signature verification — the prior
+    // implementation (decodeJwtPayload) only base64-decoded the claims, which
+    // meant a forged JWT with role:"admin" could bypass the subscription check.
     if (isProtectedApiPath(pathname)) {
       const authToken = request.cookies.get("auth_token")?.value;
       if (authToken) {
-        const payload = decodeJwtPayload(authToken);
+        const payload = await verifyTokenEdge(authToken);
         if (payload?.id && payload.role !== "admin") {
           const blocked = await checkSubscription(payload.id, origin, requestId);
           if (blocked) return blocked;
@@ -247,7 +233,7 @@ export async function middleware(request: NextRequest) {
     // Add rate limit headers
     response.headers.set("X-RateLimit-Limit", config.limit.toString());
     response.headers.set("X-RateLimit-Remaining", remaining.toString());
-    response.headers.set("X-RateLimit-Reset", Math.ceil(resetTime / 1000).toString());
+    response.headers.set("X-RateLimit-Reset", resetEpochSeconds.toString());
     response.headers.set("X-Request-ID", requestId);
 
     // Add CORS headers

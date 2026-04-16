@@ -20,7 +20,9 @@ export const users = pgTable("users", {
 export const interviews = pgTable("interviews", {
   id: serial("id").primaryKey(),
   mockId: varchar("mock_id", { length: 36 }).unique().notNull(), // UUID
-  userId: integer("user_id").notNull(), // User ID reference
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   role: varchar("role", { length: 100 }).notNull(), // frontend, backend, fullstack, data, hr
   experienceLevel: varchar("experience_level", { length: 20 }).notNull(), // 0-1, 1-3, 3-5, 5+
   interviewType: varchar("interview_type", { length: 50 }).notNull(), // technical, hr, behavioral

@@ -194,6 +194,12 @@ export default function AdminUsersPage() {
           </span>
         );
       }
+      // Trial has ended - show as expired
+      return (
+        <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border bg-red-400/10 text-red-400 border-red-400/20">
+          Expired
+        </span>
+      );
     }
     const styles: Record<string, string> = {
       active: "bg-green-400/10 text-green-400 border-green-400/20",

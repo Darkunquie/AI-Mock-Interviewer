@@ -20,7 +20,15 @@ export function useSubscription() {
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
-          setData(json);
+          // API responds with { success, ...SubscriptionStatus }.
+          // Pick only the declared fields so state matches its type exactly.
+          setData({
+            subscriptionStatus: json.subscriptionStatus,
+            trialEndsAt: json.trialEndsAt,
+            trialDaysLeft: json.trialDaysLeft,
+            isExpired: json.isExpired,
+            isAdmin: json.isAdmin,
+          });
         }
       }
     } catch {
