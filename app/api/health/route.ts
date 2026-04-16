@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
+import { groqCircuit } from "@/lib/groq";
 
 interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
@@ -10,12 +11,17 @@ interface HealthStatus {
   services: {
     database: "up" | "down";
     api: "up";
+    groq: "ok" | "degraded" | "fail";
   };
   checks?: {
     database?: {
       status: "up" | "down";
       latency?: number;
       error?: string;
+    };
+    groq?: {
+      state: "closed" | "open" | "half_open";
+      consecutiveFailures: number;
     };
   };
 }
@@ -41,9 +47,22 @@ export async function GET() {
     dbStatus = "down";
   }
 
-  // Determine overall status
-  const status: HealthStatus["status"] =
-    dbStatus === "up" ? "healthy" : "unhealthy";
+  // Groq circuit breaker snapshot
+  const circuit = groqCircuit.snapshot();
+  let groqHealth: "ok" | "degraded" | "fail";
+  if (circuit.state === "closed") groqHealth = "ok";
+  else if (circuit.state === "half_open") groqHealth = "degraded";
+  else groqHealth = "fail";
+
+  // Determine overall status — DB down = unhealthy; Groq open = degraded.
+  let status: HealthStatus["status"];
+  if (dbStatus !== "up") {
+    status = "unhealthy";
+  } else if (groqHealth === "fail") {
+    status = "degraded";
+  } else {
+    status = "healthy";
+  }
 
   const healthResponse: HealthStatus = {
     status,
@@ -53,12 +72,17 @@ export async function GET() {
     services: {
       database: dbStatus,
       api: "up",
+      groq: groqHealth,
     },
     checks: {
       database: {
         status: dbStatus,
         latency: dbLatency,
         error: process.env.NODE_ENV === "production" ? undefined : dbError,
+      },
+      groq: {
+        state: circuit.state,
+        consecutiveFailures: circuit.failures,
       },
     },
   };

@@ -1,5 +1,7 @@
 // Shared parsing + ownership helpers for interview service.
 // Pulls JSON.parse / ownership / status-check logic out of route handlers.
+// AI responses are validated via Zod schemas from lib/validations/ai.ts
+// so malformed/hallucinated output is rejected before reaching DB or client.
 
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -7,6 +9,12 @@ import { interviews } from "@/utils/schema";
 import type { Question, AnswerEvaluation } from "@/types";
 import { logger } from "@/lib/logger";
 import { LOG_PREFIX } from "./constants";
+import {
+  questionsOutSchema,
+  evalOutSchema,
+  summaryOutSchema,
+  type SummaryOut,
+} from "@/lib/validations/ai";
 
 export type InterviewRow = typeof interviews.$inferSelect;
 
@@ -20,33 +28,60 @@ export function stripCodeFences(raw: string): string {
 
 export function parseQuestionsJson(jsonString: string): { questions: Question[] } {
   const cleaned = stripCodeFences(jsonString);
-  const parsed = JSON.parse(cleaned);
-
-  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.questions)) {
-    throw new Error("Invalid questions format: missing 'questions' array");
+  const raw = JSON.parse(cleaned);
+  const parsed = questionsOutSchema.safeParse(raw);
+  if (!parsed.success) {
+    logger.warn(`${LOG_PREFIX} questions schema rejected AI output`, {
+      issues: parsed.error.issues.slice(0, 3),
+    });
+    throw new Error("Invalid questions format: schema validation failed");
   }
-  return parsed as { questions: Question[] };
+  // id is server-assigned if missing
+  const questions: Question[] = parsed.data.questions.map((q, i) => ({
+    id: q.id ?? i + 1,
+    text: q.text,
+    difficulty: q.difficulty,
+    topic: q.topic,
+    expectedTime: q.expectedTime,
+    keywords: q.keywords,
+  }));
+  return { questions };
 }
 
 export function parseEvaluationJson(jsonString: string): AnswerEvaluation {
   const cleaned = stripCodeFences(jsonString);
-  const parsed = JSON.parse(cleaned) as AnswerEvaluation;
-
-  if (
-    typeof parsed.technicalScore !== "number" ||
-    typeof parsed.communicationScore !== "number" ||
-    typeof parsed.depthScore !== "number" ||
-    !Array.isArray(parsed.strengths) ||
-    !Array.isArray(parsed.weaknesses)
-  ) {
-    throw new Error("Invalid evaluation format");
+  const raw = JSON.parse(cleaned);
+  const parsed = evalOutSchema.safeParse(raw);
+  if (!parsed.success) {
+    logger.warn(`${LOG_PREFIX} evaluation schema rejected AI output`, {
+      issues: parsed.error.issues.slice(0, 3),
+    });
+    throw new Error("Invalid evaluation format: schema validation failed");
   }
-  return parsed;
+  return {
+    technicalScore: parsed.data.technicalScore,
+    communicationScore: parsed.data.communicationScore,
+    depthScore: parsed.data.depthScore,
+    overallScore: parsed.data.overallScore ?? 0,
+    strengths: parsed.data.strengths,
+    weaknesses: parsed.data.weaknesses,
+    idealAnswer: parsed.data.idealAnswer,
+    followUpTip: parsed.data.followUpTip,
+    encouragement: parsed.data.encouragement,
+  };
 }
 
-export function parseSummaryJson(jsonString: string): Record<string, unknown> {
+export function parseSummaryJson(jsonString: string): Partial<SummaryOut> {
   const cleaned = stripCodeFences(jsonString);
-  return JSON.parse(cleaned) as Record<string, unknown>;
+  const raw = JSON.parse(cleaned);
+  const parsed = summaryOutSchema.safeParse(raw);
+  if (!parsed.success) {
+    logger.warn(`${LOG_PREFIX} summary schema rejected AI output`, {
+      issues: parsed.error.issues.slice(0, 3),
+    });
+    throw new Error("Invalid summary format: schema validation failed");
+  }
+  return parsed.data;
 }
 
 export type InterviewLookup =

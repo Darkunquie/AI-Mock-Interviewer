@@ -144,20 +144,15 @@ export async function generateSummary(interview: InterviewRow): Promise<SummaryR
     const parsed = parseSummaryJson(raw);
 
     summaryData = {
-      overallScore,
-      rating,
-      strengths: Array.isArray(parsed.strengths) ? (parsed.strengths as string[]) : [],
-      weaknesses: Array.isArray(parsed.weaknesses) ? (parsed.weaknesses as string[]) : [],
-      recommendedTopics: Array.isArray(parsed.recommendedTopics)
-        ? (parsed.recommendedTopics as string[])
-        : [],
-      actionPlan: typeof parsed.actionPlan === "string" ? parsed.actionPlan : "",
-      performanceSummary:
-        typeof parsed.performanceSummary === "string" ? parsed.performanceSummary : "",
-      encouragement:
-        typeof parsed.encouragement === "string" ? parsed.encouragement : undefined,
-      readinessLevel:
-        typeof parsed.readinessLevel === "string" ? parsed.readinessLevel : undefined,
+      overallScore, // server-authoritative, not AI-reported
+      rating, // server-authoritative
+      strengths: parsed.strengths ?? [],
+      weaknesses: parsed.weaknesses ?? [],
+      recommendedTopics: parsed.recommendedTopics ?? [],
+      actionPlan: parsed.actionPlan ?? "",
+      performanceSummary: parsed.performanceSummary ?? "",
+      encouragement: parsed.encouragement,
+      readinessLevel: parsed.readinessLevel,
     };
   } catch (err) {
     logger.error(
