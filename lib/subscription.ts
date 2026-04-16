@@ -59,6 +59,7 @@ async function loadSubUser(userId: number): Promise<CachedSubUser | null> {
 /**
  * Check if the current user has an active subscription or trial.
  * Admin users always have full access.
+ * 
  * Returns { user, allowed, reason } — use in middleware or route guards.
  */
 export async function requireActiveSubscription(): Promise<SubscriptionResult> {
