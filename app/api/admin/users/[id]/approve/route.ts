@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { Errors, ErrorCodes, createErrorResponse, handleUnexpectedError } from "@/lib/errors";
 import { invalidateSubscriptionCache } from "@/lib/subscription";
+import { logger } from "@/lib/logger";
 
 const VALID_TRIAL_DAYS = [0, 3, 6, 14] as const;
 
@@ -92,7 +93,15 @@ export async function POST(
         .where(eq(users.id, userId));
     }
 
-    await invalidateSubscriptionCache(userId);
+    try {
+      await invalidateSubscriptionCache(userId);
+    } catch (cacheError) {
+      logger.warn("Failed to invalidate subscription cache after approve", {
+        userId,
+        error: cacheError instanceof Error ? cacheError.message : String(cacheError),
+      });
+      // Continue — DB update succeeded, cache will expire naturally
+    }
 
     return NextResponse.json({
       success: true,

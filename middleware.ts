@@ -134,9 +134,8 @@ async function checkSubscription(
       // Fail closed — block access when subscription check is impossible
       return NextResponse.json(
         { success: false, error: "Service temporarily unavailable" },
-        { status: 503, headers: { ...securityHeaders } }
-      );
-    }
+        { status: 503, headers: { ...getCorsHeaders(origin), ...securityHeaders, "X-Request-ID": requestId } }
+      );    }
     const sql = neon(process.env.DATABASE_URL);
     const result = await sql`
       SELECT subscription_status, trial_ends_at
@@ -318,6 +317,18 @@ export async function middleware(request: NextRequest) {
         path: "/",
         maxAge: 60 * 60, // 1h
       });
+    }
+
+    // Deprecation headers for v0 API routes (RFC 8594).
+    // v1 equivalents live under /api/v1/*. Added centrally here rather than
+    // per-route so the 60-day window is consistent and no route is missed.
+    if (!pathname.startsWith("/api/v1/")) {
+      const sunset = process.env.V0_SUNSET_DATE
+        ? new Date(process.env.V0_SUNSET_DATE).toUTCString()
+        : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toUTCString();
+      response.headers.set("Deprecation", "true");
+      response.headers.set("Sunset", sunset);
+      response.headers.set("Link", `</api/v1>; rel="successor-version"`);
     }
 
     // Add rate limit headers
