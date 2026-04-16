@@ -205,6 +205,10 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/api")) {
     const clientIP = getClientIP(request);
     const config = getRateLimitConfig(pathname);
+    // NOTE: This key groups /api/interview/* (create, evaluate, summary) into a
+    // single 30/min bucket, which is not security-critical but can cause UX
+    // issues during long interviews. Phase A replaces this with a per-route
+    // matched-pattern key when moving to Redis-backed rate limiting.
     const rateLimitKey = `${clientIP}:${pathname.split("/").slice(0, 3).join("/")}`;
 
     const { allowed, remaining, resetTime } = checkRateLimit(
