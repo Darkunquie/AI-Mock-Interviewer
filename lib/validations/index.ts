@@ -146,7 +146,7 @@ export const speechMetricsSchema = z
   .optional();
 
 export const evaluateAnswerSchema = z.object({
-  mockId: z.string().uuid("Invalid interview ID"),
+  interviewId: z.string().uuid("Invalid interview ID"),
   questionIndex: z.number().int().min(0).max(100),
   questionText: z.string().min(1, "Question text is required").max(5000),
   userAnswer: z.string().max(50000, "Answer too long").optional().default(""),
@@ -154,7 +154,7 @@ export const evaluateAnswerSchema = z.object({
 });
 
 export const interviewSummarySchema = z.object({
-  mockId: z.string().uuid("Invalid interview ID"),
+  interviewId: z.string().uuid("Invalid interview ID"),
 });
 
 // ==================== FLASHCARD SCHEMAS ====================

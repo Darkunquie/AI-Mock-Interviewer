@@ -60,10 +60,11 @@ export async function GET() {
     status = "unhealthy";
   } else if (groqHealth === "fail") {
     status = "degraded";
+  } else if (groqHealth === "degraded") {
+    status = "degraded";
   } else {
     status = "healthy";
   }
-
   const healthResponse: HealthStatus = {
     status,
     timestamp,

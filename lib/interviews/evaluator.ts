@@ -1,7 +1,7 @@
 // Answer evaluator — called by interview/evaluate route.
 // Groq call, fallback, score clamping, speech-metric injection, keyword validation.
 
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { answers, interviews } from "@/utils/schema";
 import { generateCompletion } from "@/lib/groq";
@@ -187,14 +187,6 @@ async function upsertAnswer(
   userAnswer: string,
   evaluation: AnswerEvaluation,
 ): Promise<void> {
-  const existing = await db
-    .select({ id: answers.id })
-    .from(answers)
-    .where(
-      and(eq(answers.interviewId, interviewDbId), eq(answers.questionIndex, questionIndex)),
-    )
-    .limit(1);
-
   const row = {
     questionText,
     userAnswer,
@@ -205,13 +197,17 @@ async function upsertAnswer(
     idealAnswer: evaluation.idealAnswer,
   };
 
-  if (existing.length > 0) {
-    await db.update(answers).set(row).where(eq(answers.id, existing[0].id));
-  } else {
-    await db.insert(answers).values({
+  // Atomic upsert — relies on unique index idx_answers_interview_question
+  // on (interview_id, question_index). Prevents race on concurrent writes.
+  await db
+    .insert(answers)
+    .values({
       interviewId: interviewDbId,
       questionIndex,
       ...row,
+    })
+    .onConflictDoUpdate({
+      target: [answers.interviewId, answers.questionIndex],
+      set: row,
     });
-  }
 }

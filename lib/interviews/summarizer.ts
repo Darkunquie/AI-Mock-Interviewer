@@ -104,6 +104,8 @@ export async function generateSummary(interview: InterviewRow): Promise<SummaryR
       recommendedTopics: safeParseArray(row.recommendedTopicsJson),
       actionPlan: row.actionPlan ?? "",
       performanceSummary: row.summaryText ?? "",
+      encouragement: row.encouragement ?? undefined,
+      readinessLevel: row.readinessLevel ?? undefined,
       idempotent: true,
     };
   }
@@ -176,6 +178,8 @@ export async function generateSummary(interview: InterviewRow): Promise<SummaryR
       recommendedTopicsJson: JSON.stringify(summaryData.recommendedTopics),
       actionPlan: summaryData.actionPlan,
       summaryText: summaryData.performanceSummary,
+      encouragement: summaryData.encouragement,
+      readinessLevel: summaryData.readinessLevel,
     })
     .onConflictDoUpdate({
       target: interviewSummaries.interviewId,
@@ -187,6 +191,8 @@ export async function generateSummary(interview: InterviewRow): Promise<SummaryR
         recommendedTopicsJson: JSON.stringify(summaryData.recommendedTopics),
         actionPlan: summaryData.actionPlan,
         summaryText: summaryData.performanceSummary,
+        encouragement: summaryData.encouragement,
+        readinessLevel: summaryData.readinessLevel,
       },
     });
 

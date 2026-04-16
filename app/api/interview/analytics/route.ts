@@ -17,7 +17,9 @@ export async function GET() {
     const user = await getCurrentUser();
     if (!user) return Errors.unauthorized();
 
-    // Fetch all completed interviews with scores
+    // Fetch all completed interviews with scores.
+    // `mockId` alias stays here (internal use only — never returned in this
+    // route's response payload).
     const userInterviews = await db
       .select({
         id: interviews.id,

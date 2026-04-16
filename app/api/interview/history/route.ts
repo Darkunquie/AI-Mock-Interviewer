@@ -49,8 +49,11 @@ export async function GET(req: NextRequest) {
       .where(and(...conditions));
     const total = countResult?.count || 0;
 
-    // Fetch interviews with filters + pagination
-    const userInterviews = await db
+    // Fetch interviews with filters + pagination.
+    // Dual-emits both `mockId` (v0 deprecated) and `interviewId` (v1 canonical)
+    // so the transition is backwards-compatible. mockId will be dropped after
+    // the 60-day deprecation window.
+    const rawInterviews = await db
       .select({
         mockId: interviews.mockId,
         role: interviews.role,
@@ -65,6 +68,17 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(interviews.createdAt))
       .limit(limit)
       .offset(offset);
+
+    const userInterviews = rawInterviews.map((i) => ({
+      interviewId: i.mockId,
+      mockId: i.mockId, // deprecated alias
+      role: i.role,
+      experienceLevel: i.experienceLevel,
+      interviewType: i.interviewType,
+      status: i.status,
+      totalScore: i.totalScore,
+      createdAt: i.createdAt,
+    }));
 
     // Stats aggregate: single query instead of pulling every row into Node.
     // Was: fetch all user interviews -> filter/reduce in JS (O(n) memory per req).

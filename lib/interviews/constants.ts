@@ -2,6 +2,7 @@
 // Shared by create + retake to eliminate the 2x duplication in route handlers.
 
 import type { Question, Difficulty } from "@/types";
+import { logger } from "@/lib/logger";
 
 export const LOG_PREFIX = "[Interviews]";
 
@@ -34,9 +35,12 @@ const FALLBACK_TEMPLATES: FallbackTemplate[] = [
   { text: () => `What motivates you to keep growing in your career?`, difficulty: "easy", topic: "motivation", expectedTime: 60 },
   { text: () => `If you could improve one thing about your current skill set, what would it be?`, difficulty: "medium", topic: "self-awareness", expectedTime: 90 },
 ];
-
 export function buildFallbackQuestions(role: string, count: number): Question[] {
-  return FALLBACK_TEMPLATES.slice(0, count).map((t, i) => ({
+  const actualCount = Math.min(count, FALLBACK_TEMPLATES.length);
+  if (actualCount < count) {
+    logger.warn(`${LOG_PREFIX} Requested ${count} fallback questions but only ${FALLBACK_TEMPLATES.length} templates available`);
+  }
+  return FALLBACK_TEMPLATES.slice(0, actualCount).map((t, i) => ({
     id: i + 1,
     text: t.text(role),
     difficulty: t.difficulty,

@@ -28,7 +28,12 @@ export function stripCodeFences(raw: string): string {
 
 export function parseQuestionsJson(jsonString: string): { questions: Question[] } {
   const cleaned = stripCodeFences(jsonString);
-  const raw = JSON.parse(cleaned);
+  let raw: unknown;
+  try {
+    raw = JSON.parse(cleaned);
+  } catch {
+    throw new Error("Invalid questions format: malformed JSON");
+  }
   const parsed = questionsOutSchema.safeParse(raw);
   if (!parsed.success) {
     logger.warn(`${LOG_PREFIX} questions schema rejected AI output`, {
@@ -48,9 +53,17 @@ export function parseQuestionsJson(jsonString: string): { questions: Question[] 
   return { questions };
 }
 
+function safeJsonParse(cleaned: string, kind: string): unknown {
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    throw new Error(`Invalid ${kind} format: malformed JSON`);
+  }
+}
+
 export function parseEvaluationJson(jsonString: string): AnswerEvaluation {
   const cleaned = stripCodeFences(jsonString);
-  const raw = JSON.parse(cleaned);
+  const raw = safeJsonParse(cleaned, "evaluation");
   const parsed = evalOutSchema.safeParse(raw);
   if (!parsed.success) {
     logger.warn(`${LOG_PREFIX} evaluation schema rejected AI output`, {
@@ -73,7 +86,7 @@ export function parseEvaluationJson(jsonString: string): AnswerEvaluation {
 
 export function parseSummaryJson(jsonString: string): Partial<SummaryOut> {
   const cleaned = stripCodeFences(jsonString);
-  const raw = JSON.parse(cleaned);
+  const raw = safeJsonParse(cleaned, "summary");
   const parsed = summaryOutSchema.safeParse(raw);
   if (!parsed.success) {
     logger.warn(`${LOG_PREFIX} summary schema rejected AI output`, {

@@ -51,7 +51,8 @@ async function loadSubUser(userId: number): Promise<CachedSubUser | null> {
     subscriptionStatus: dbUser.subscriptionStatus,
     trialEndsAt: dbUser.trialEndsAt ? dbUser.trialEndsAt.toISOString() : null,
   };
-  await cacheSet(subCacheKey(userId), value, SUB_CACHE_TTL);
+  // Fire-and-forget: cache failure shouldn't block returning valid data
+  cacheSet(subCacheKey(userId), value, SUB_CACHE_TTL).catch(() => {});
   return value;
 }
 

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const validation = validateRequest(evaluateAnswerSchema, {
-      mockId: body.interviewId,
+      interviewId: body.interviewId,
       questionIndex: body.questionIndex,
       questionText: body.questionText,
       userAnswer: body.userAnswer,
@@ -29,9 +29,8 @@ export async function POST(request: NextRequest) {
     });
     if (!validation.success) return handleZodError(validation.error);
 
-    const { questionIndex, questionText, userAnswer, speechMetrics } =
+    const { interviewId, questionIndex, questionText, userAnswer, speechMetrics } =
       validation.data;
-    const interviewId = validation.data.mockId;
 
     const lookup = await getOwnedInterview(interviewId, user.id);
     if (!lookup.ok) {

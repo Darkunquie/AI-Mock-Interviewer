@@ -83,7 +83,12 @@ export async function generateQuestions(
   try {
     const parsed = parseQuestionsJson(questionsJson);
     // Best-effort cache write — never blocks the response on failure.
-    await cacheSet(cacheKey, parsed.questions, QUESTION_CACHE_TTL);
+    cacheSet(cacheKey, parsed.questions, QUESTION_CACHE_TTL).catch((cacheErr) => {
+      logger.warn(`${LOG_PREFIX} Cache write failed (non-fatal)`, {
+        cacheKey,
+        error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+      });
+    });
     return { questions: parsed.questions, usedFallback: false, cacheHit: false };
   } catch (parseErr) {
     logger.error(
