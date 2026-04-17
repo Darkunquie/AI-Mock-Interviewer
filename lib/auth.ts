@@ -103,13 +103,13 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 // Sign up a new user
-export async function signUp(email: string, password: string, name: string, phone?: string): Promise<{ success: boolean; error?: string; user?: AuthUser; pending?: boolean }> {
+export async function signUp(email: string, password: string, name: string, phone?: string): Promise<{ success: boolean; code?: string; error?: string; user?: AuthUser; pending?: boolean }> {
   try {
     // Check if user already exists
     const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
     if (existingUser.length > 0) {
-      return { success: false, error: "Email already registered" };
+      return { success: false, code: "EMAIL_EXISTS", error: "Email already registered" };
     }
 
     // Check if this is the admin email (auto-approve)

@@ -42,19 +42,18 @@ DELETE FROM "interview_summaries" WHERE "interview_id" IS NULL;--> statement-bre
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_name='answers' AND column_name='interview_id' AND is_nullable='YES') THEN
+             WHERE table_schema='public' AND table_name='answers' AND column_name='interview_id' AND is_nullable='YES') THEN
     ALTER TABLE "answers" ALTER COLUMN "interview_id" SET NOT NULL;
   END IF;
   IF EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_name='interview_summaries' AND column_name='interview_id' AND is_nullable='YES') THEN
+             WHERE table_schema='public' AND table_name='interview_summaries' AND column_name='interview_id' AND is_nullable='YES') THEN
     ALTER TABLE "interview_summaries" ALTER COLUMN "interview_id" SET NOT NULL;
   END IF;
 END $$;--> statement-breakpoint
 
 -- ADD CONSTRAINT has no IF NOT EXISTS in Postgres. Wrap in DO block
--- with pg_constraint check so re-running is safe even if the DROP
--- CONSTRAINT above was a no-op and the FK still exists.
-DO $$
+-- with pg_constraint check so re-running is safe.
+DO $DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint

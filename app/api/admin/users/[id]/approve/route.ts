@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
-import { eq } from "drizzle-orm";
+import { eq, ne, and } from "drizzle-orm";
 import { z } from "zod";
 import { Errors, ErrorCodes, createErrorResponse, handleUnexpectedError } from "@/lib/errors";
 import { invalidateSubscriptionCache } from "@/lib/subscription";
+import { logger } from "@/lib/logger";
 
 const VALID_TRIAL_DAYS = [0, 3, 6, 14] as const;
 
@@ -59,7 +60,28 @@ export async function POST(
       );
     }
 
-    if (user.status === "approved") {
+    const now = new Date();
+    const updateData = trialDays > 0
+      ? {
+          status: "approved" as const,
+          approvedAt: now,
+          trialEndsAt: new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000),
+          subscriptionStatus: "trial" as const,
+        }
+      : {
+          status: "approved" as const,
+          approvedAt: now,
+          trialEndsAt: null,
+          subscriptionStatus: "none" as const,
+        };
+
+    const result = await db
+      .update(users)
+      .set(updateData)
+      .where(and(eq(users.id, userId), ne(users.status, "approved")))
+      .returning({ id: users.id });
+
+    if (result.length === 0) {
       return createErrorResponse(
         ErrorCodes.ADMIN_ALREADY_APPROVED,
         "User is already approved",
@@ -67,32 +89,15 @@ export async function POST(
       );
     }
 
-    const now = new Date();
-
-    if (trialDays > 0) {
-      const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
-      await db
-        .update(users)
-        .set({
-          status: "approved",
-          approvedAt: now,
-          trialEndsAt: trialEnd,
-          subscriptionStatus: "trial",
-        })
-        .where(eq(users.id, userId));
-    } else {
-      await db
-        .update(users)
-        .set({
-          status: "approved",
-          approvedAt: now,
-          trialEndsAt: null,
-          subscriptionStatus: "none",
-        })
-        .where(eq(users.id, userId));
+    try {
+      await invalidateSubscriptionCache(userId);
+    } catch (cacheError) {
+      logger.warn("Failed to invalidate subscription cache after approve", {
+        userId,
+        error: cacheError instanceof Error ? cacheError.message : String(cacheError),
+      });
+      // Continue — DB update succeeded, cache will expire naturally
     }
-
-    await invalidateSubscriptionCache(userId);
 
     return NextResponse.json({
       success: true,

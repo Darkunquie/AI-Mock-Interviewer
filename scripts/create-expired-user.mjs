@@ -7,6 +7,12 @@ if (!process.env.DATABASE_URL) {
   console.error("Error: DATABASE_URL environment variable is not set");
   process.exit(1);
 }
+
+if (process.env.NODE_ENV === "production") {
+  console.error("Error: This script should not be run in production");
+  process.exit(1);
+}
+
 const sql = neon(process.env.DATABASE_URL);
 
 const password = "Test@1234";

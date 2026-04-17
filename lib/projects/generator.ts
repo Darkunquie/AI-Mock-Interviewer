@@ -52,7 +52,7 @@ export class ProjectGenerator {
 
     if (cached.length > 0) {
       console.log(`${LOG_PREFIX} Cache hit!`);
-      const projects = JSON.parse(cached[0].projectsJson);
+      const projects = cached[0].projectsJson;
       return {
         projects,
         cachedAt: cached[0].createdAt?.toISOString() || new Date().toISOString(),
@@ -136,7 +136,7 @@ export class ProjectGenerator {
       await db.insert(generatedProjects).values({
         technology,
         domain,
-        projectsJson: JSON.stringify(projects),
+        projectsJson: projects,
       });
       console.log(`${LOG_PREFIX} Saved to database successfully`);
     } catch (error) {

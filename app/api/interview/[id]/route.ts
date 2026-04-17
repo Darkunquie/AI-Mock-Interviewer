@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, answers, interviewSummaries } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { logger } from "@/lib/logger";
+
 import { Errors, handleUnexpectedError } from "@/lib/errors";
 
 export async function GET(
@@ -43,36 +43,20 @@ export async function GET(
       .where(eq(interviewSummaries.interviewId, interviewData.id))
       .limit(1);
 
-    // Parse questions JSON
-    let questions = [];
-    try {
-      const parsed = JSON.parse(interviewData.questionsJson || "{}");
-      questions = parsed.questions || [];
-    } catch (e) {
-      logger.error("Error parsing questions", e instanceof Error ? e : new Error(String(e)));
-    }
+    const questions = interviewData.questionsJson?.questions ?? [];
 
     return NextResponse.json({
-      interview: {
-        ...interviewData,
-        questions,
-      },
+      interview: { ...interviewData, questions },
       answers: interviewAnswers.map((a) => ({
         ...a,
-        feedback: a.feedbackJson ? JSON.parse(a.feedbackJson) : null,
+        feedback: a.feedbackJson ?? null,
       })),
       summary: summary.length
         ? {
             ...summary[0],
-            strengths: summary[0].strengthsJson
-              ? JSON.parse(summary[0].strengthsJson)
-              : [],
-            weaknesses: summary[0].weaknessesJson
-              ? JSON.parse(summary[0].weaknessesJson)
-              : [],
-            recommendedTopics: summary[0].recommendedTopicsJson
-              ? JSON.parse(summary[0].recommendedTopicsJson)
-              : [],
+            strengths: summary[0].strengthsJson ?? [],
+            weaknesses: summary[0].weaknessesJson ?? [],
+            recommendedTopics: summary[0].recommendedTopicsJson ?? [],
           }
         : null,
     });

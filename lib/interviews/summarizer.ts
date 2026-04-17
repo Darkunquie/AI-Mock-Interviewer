@@ -165,51 +165,53 @@ export async function generateSummary(interview: InterviewRow): Promise<SummaryR
     summaryData = fallbackSummary(answerRows.length, totalQuestions, overallScore);
   }
 
-  // Persist: insert summary, flip interview to completed.
-  // Upsert against unique index on interview_id for idempotency under concurrent requests.
-  await db
-    .insert(interviewSummaries)
-    .values({
+  // C3: Atomic transaction — summary insert + interview status flip.
+  // If either write fails the other is rolled back, preventing orphan summaries
+  // or completed interviews with no summary row.
+  await db.transaction(async (tx) => {
+    const summaryValues = {
       interviewId: interview.id,
       overallScore: summaryData.overallScore,
       rating: summaryData.rating,
-      strengthsJson: JSON.stringify(summaryData.strengths),
-      weaknessesJson: JSON.stringify(summaryData.weaknesses),
-      recommendedTopicsJson: JSON.stringify(summaryData.recommendedTopics),
+      strengthsJson: summaryData.strengths,
+      weaknessesJson: summaryData.weaknesses,
+      recommendedTopicsJson: summaryData.recommendedTopics,
       actionPlan: summaryData.actionPlan,
       summaryText: summaryData.performanceSummary,
       encouragement: summaryData.encouragement,
       readinessLevel: summaryData.readinessLevel,
-    })
-    .onConflictDoUpdate({
-      target: interviewSummaries.interviewId,
-      set: {
-        overallScore: summaryData.overallScore,
-        rating: summaryData.rating,
-        strengthsJson: JSON.stringify(summaryData.strengths),
-        weaknessesJson: JSON.stringify(summaryData.weaknesses),
-        recommendedTopicsJson: JSON.stringify(summaryData.recommendedTopics),
-        actionPlan: summaryData.actionPlan,
-        summaryText: summaryData.performanceSummary,
-        encouragement: summaryData.encouragement,
-        readinessLevel: summaryData.readinessLevel,
-      },
-    });
+    };
 
-  await db
-    .update(interviews)
-    .set({
-      status: "completed",
-      totalScore: summaryData.overallScore,
-      completedAt: new Date(),
-    })
-    .where(eq(interviews.mockId, interview.mockId));
+    await tx
+      .insert(interviewSummaries)
+      .values(summaryValues)
+      .onConflictDoUpdate({
+        target: interviewSummaries.interviewId,
+        set: {
+          overallScore: summaryData.overallScore,
+          rating: summaryData.rating,
+          strengthsJson: summaryData.strengths,
+          weaknessesJson: summaryData.weaknesses,
+          recommendedTopicsJson: summaryData.recommendedTopics,
+          actionPlan: summaryData.actionPlan,
+          summaryText: summaryData.performanceSummary,
+          encouragement: summaryData.encouragement,
+          readinessLevel: summaryData.readinessLevel,
+        },
+      });
+
+    await tx
+      .update(interviews)
+      .set({ status: "completed", totalScore: summaryData.overallScore, completedAt: new Date() })
+      .where(eq(interviews.mockId, interview.mockId));
+  });
 
   return { ...summaryData, idempotent: false };
 }
 
-function safeParseArray(raw: string | null | undefined): string[] {
+function safeParseArray(raw: string[] | string | null | undefined): string[] {
   if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];

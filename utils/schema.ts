@@ -1,4 +1,32 @@
-import { pgTable, serial, varchar, text, integer, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  pgEnum,
+  serial,
+  varchar,
+  text,
+  integer,
+  timestamp,
+  index,
+  uniqueIndex,
+  jsonb,
+} from "drizzle-orm/pg-core";
+import type { Question } from "@/types";
+import type { ProjectSpecification } from "@/types/project";
+
+// =============================================================================
+// pgEnum type declarations (C2 — DB-level enforcement of valid enum values)
+// =============================================================================
+
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
+export const userStatusEnum = pgEnum("user_status", ["pending", "approved", "rejected"]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["none", "trial", "active", "expired"]);
+export const interviewTypeEnum = pgEnum("interview_type", ["technical", "hr", "behavioral"]);
+export const interviewModeEnum = pgEnum("interview_mode", ["interview", "practice"]);
+export const interviewStatusEnum = pgEnum("interview_status", ["pending", "in_progress", "completed"]);
+
+// =============================================================================
+// Tables
+// =============================================================================
 
 // Users table (basic auth)
 export const users = pgTable("users", {
@@ -8,12 +36,12 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }),
   phone: varchar("phone", { length: 20 }),
   imageUrl: text("image_url"),
-  role: varchar("role", { length: 20 }).default("user").notNull(), // "user" | "admin"
-  status: varchar("status", { length: 20 }).default("pending").notNull(), // "pending" | "approved" | "rejected"
+  role: userRoleEnum("role").default("user").notNull(),
+  status: userStatusEnum("status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   approvedAt: timestamp("approved_at"),
   trialEndsAt: timestamp("trial_ends_at"),
-  subscriptionStatus: varchar("subscription_status", { length: 20 }).default("none").notNull(), // "none" | "trial" | "active" | "expired"
+  subscriptionStatus: subscriptionStatusEnum("subscription_status").default("none").notNull(),
 });
 
 // Interviews table
@@ -21,18 +49,17 @@ export const interviews = pgTable("interviews", {
   id: serial("id").primaryKey(),
   mockId: varchar("mock_id", { length: 36 }).unique().notNull(), // UUID
   userId: integer("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  role: varchar("role", { length: 100 }).notNull(), // frontend, backend, fullstack, data, hr
-  experienceLevel: varchar("experience_level", { length: 20 }).notNull(), // 0-1, 1-3, 3-5, 5+
-  interviewType: varchar("interview_type", { length: 50 }).notNull(), // technical, hr, behavioral
-  duration: varchar("duration", { length: 10 }).default("15"), // 15 or 30 minutes
-  mode: varchar("mode", { length: 20 }).default("interview"), // interview or practice
-  techStack: text("tech_stack"), // JSON array of selected technologies
-  topics: text("topics"), // JSON array of practice topics
+    .references(() => users.id, { onDelete: "set null" }),
+  role: varchar("role", { length: 100 }).notNull(),
+  experienceLevel: varchar("experience_level", { length: 20 }).notNull(),
+  interviewType: interviewTypeEnum("interview_type").notNull(),
+  duration: varchar("duration", { length: 10 }).default("15"),
+  mode: interviewModeEnum("mode").default("interview"),
+  techStack: jsonb("tech_stack").$type<string[]>(),
+  topics: jsonb("topics").$type<string[]>(),
   totalScore: integer("total_score").default(0),
-  status: varchar("status", { length: 20 }).default("pending"), // pending, in_progress, completed
-  questionsJson: text("questions_json"), // JSON string of generated questions
+  status: interviewStatusEnum("status").default("pending"),
+  questionsJson: jsonb("questions_json").$type<{ questions: Question[] }>(),
   createdAt: timestamp("created_at").defaultNow(),
   completedAt: timestamp("completed_at"),
 }, (t) => [
@@ -49,7 +76,7 @@ export const answers = pgTable("answers", {
   questionIndex: integer("question_index").notNull(),
   questionText: text("question_text").notNull(),
   userAnswer: text("user_answer"),
-  feedbackJson: text("feedback_json"), // AI evaluation JSON
+  feedbackJson: jsonb("feedback_json").$type<Record<string, unknown>>(),
   technicalScore: integer("technical_score"),
   communicationScore: integer("communication_score"),
   depthScore: integer("depth_score"),
@@ -66,10 +93,10 @@ export const interviewSummaries = pgTable("interview_summaries", {
   id: serial("id").primaryKey(),
   interviewId: integer("interview_id").references(() => interviews.id, { onDelete: "cascade" }).notNull(),
   overallScore: integer("overall_score"),
-  rating: varchar("rating", { length: 50 }), // Excellent, Good, Average, Needs Improvement
-  strengthsJson: text("strengths_json"), // JSON array
-  weaknessesJson: text("weaknesses_json"), // JSON array
-  recommendedTopicsJson: text("recommended_topics_json"), // JSON array
+  rating: varchar("rating", { length: 50 }),
+  strengthsJson: jsonb("strengths_json").$type<string[]>(),
+  weaknessesJson: jsonb("weaknesses_json").$type<string[]>(),
+  recommendedTopicsJson: jsonb("recommended_topics_json").$type<string[]>(),
   actionPlan: text("action_plan"),
   summaryText: text("summary_text"),
   encouragement: text("encouragement"),
@@ -79,19 +106,21 @@ export const interviewSummaries = pgTable("interview_summaries", {
   uniqueIndex("idx_summaries_interview_id").on(t.interviewId),
 ]);
 
-// Generated Projects table - stores AI-generated project specifications
-// One-time generation per technology + domain combination (no regeneration)
+// Generated Projects table
 export const generatedProjects = pgTable("generated_projects", {
   id: serial("id").primaryKey(),
   technology: varchar("technology", { length: 255 }).notNull(),
   domain: varchar("domain", { length: 255 }).notNull(),
-  projectsJson: text("projects_json").notNull(), // Full ProjectSpecification[] JSON
+  projectsJson: jsonb("projects_json").$type<ProjectSpecification[]>().notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => [
   uniqueIndex("idx_projects_tech_domain").on(t.technology, t.domain),
 ]);
 
-// Types for TypeScript
+// =============================================================================
+// TypeScript types
+// =============================================================================
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Interview = typeof interviews.$inferSelect;

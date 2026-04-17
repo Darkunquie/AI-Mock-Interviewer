@@ -26,6 +26,17 @@ const rateLimitConfig: Record<string, { limit: number; windowMs: number }> = {
   default: { limit: 100, windowMs: 60000 },               // Default: 100 requests per minute
 };
 
+// Fixed sunset date for v0 API deprecation (RFC 8594).
+// Computed once at module load so every response returns the same deadline.
+const V0_SUNSET_DATE = (() => {
+  if (process.env.V0_SUNSET_DATE) {
+    const parsed = new Date(process.env.V0_SUNSET_DATE);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toUTCString();
+    console.warn("[middleware] Invalid V0_SUNSET_DATE, falling back to 60-day default");
+  }
+  return new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toUTCString();
+})();
+
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
   const realIP = request.headers.get("x-real-ip");
@@ -134,9 +145,8 @@ async function checkSubscription(
       // Fail closed — block access when subscription check is impossible
       return NextResponse.json(
         { success: false, error: "Service temporarily unavailable" },
-        { status: 503, headers: { ...securityHeaders } }
-      );
-    }
+        { status: 503, headers: { ...getCorsHeaders(origin), ...securityHeaders, "X-Request-ID": requestId } }
+      );    }
     const sql = neon(process.env.DATABASE_URL);
     const result = await sql`
       SELECT subscription_status, trial_ends_at
@@ -318,6 +328,13 @@ export async function middleware(request: NextRequest) {
         path: "/",
         maxAge: 60 * 60, // 1h
       });
+    }
+
+    // Deprecation headers for v0 API routes (RFC 8594).
+    if (!pathname.startsWith("/api/v1/")) {
+      response.headers.set("Deprecation", "true");
+      response.headers.set("Sunset", V0_SUNSET_DATE);
+      response.headers.set("Link", `</api/v1>; rel="successor-version"`);
     }
 
     // Add rate limit headers

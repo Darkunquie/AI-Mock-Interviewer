@@ -96,6 +96,7 @@ export async function cacheDel(...keys: string[]): Promise<void> {
  */
 function normalizeValue(v: unknown): unknown {
   if (v === null || v === undefined || v === "") return undefined;
+  if (v instanceof Date) return v.toISOString().toLowerCase();
   if (Array.isArray(v)) {
     const arr = v
       .map(normalizeValue)

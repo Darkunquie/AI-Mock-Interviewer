@@ -7,6 +7,12 @@ if (!process.env.DATABASE_URL) {
   console.error("Error: DATABASE_URL environment variable is not set");
   process.exit(1);
 }
+
+if (process.env.NODE_ENV === "production") {
+  console.error("Error: This script should not be run in production");
+  process.exit(1);
+}
+
 const sql = neon(process.env.DATABASE_URL);
 
 const password = "Test@1234";
@@ -17,7 +23,7 @@ try {
   await sql`
     INSERT INTO users (email, password, name, phone, role, status, subscription_status)
     VALUES ('testadmin@skillforge.com', ${hashedPassword}, 'Test Admin', '1234567890', 'admin', 'approved', 'active')
-    ON CONFLICT (email) DO UPDATE SET password = ${hashedPassword}, role = 'admin', status = 'approved'
+    ON CONFLICT (email) DO UPDATE SET password = ${hashedPassword}, role = 'admin', status = 'approved', subscription_status = 'active'
   `;
   console.log("Admin created: testadmin@skillforge.com");
 } catch (e) {
@@ -32,9 +38,8 @@ try {
   await sql`
     INSERT INTO users (email, password, name, phone, role, status, approved_at, trial_ends_at, subscription_status)
     VALUES ('testuser@skillforge.com', ${hashedPassword}, 'Test User', '9876543210', 'user', 'approved', ${now.toISOString()}, ${trialEnd.toISOString()}, 'trial')
-    ON CONFLICT (email) DO UPDATE SET password = ${hashedPassword}, status = 'approved', approved_at = ${now.toISOString()}, trial_ends_at = ${trialEnd.toISOString()}, subscription_status = 'trial'
-  `;
-  console.log("User created: testuser@skillforge.com");
+    ON CONFLICT (email) DO UPDATE SET password = ${hashedPassword}, role = 'user', status = 'approved', approved_at = ${now.toISOString()}, trial_ends_at = ${trialEnd.toISOString()}, subscription_status = 'trial'
+  `;  console.log("User created: testuser@skillforge.com");
 } catch (e) {
   console.error("User error:", e.message);
 }

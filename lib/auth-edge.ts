@@ -29,6 +29,14 @@ export async function verifyTokenEdge(token: string): Promise<AuthUser | null> {
   const secret = new TextEncoder().encode(getJwtSecretEdge());
   try {
     const { payload } = await jwtVerify(token, secret);
+    if (
+      typeof payload.id !== "number" ||
+      typeof payload.email !== "string" ||
+      typeof payload.role !== "string" ||
+      typeof payload.status !== "string"
+    ) {
+      return null;
+    }
     return payload as unknown as AuthUser;
   } catch {
     return null;

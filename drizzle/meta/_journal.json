@@ -22,6 +22,20 @@
       "when": 1776341317210,
       "tag": "0002_subscription_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776372178519,
+      "tag": "0005_same_vindicator",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776406090828,
+      "tag": "0004_old_tattoo",
+      "breakpoints": true
     }
   ]
 }
