@@ -109,17 +109,28 @@ export default function PracticePage() {
 
   // Fetch tech stack data from server — keeps 4 MB payload out of client bundle
   useEffect(() => {
-    fetch("/api/v1/reference/tech-stacks")
+    const controller = new AbortController();
+    let isMounted = true;
+
+    fetch("/api/v1/reference/tech-stacks", { signal: controller.signal })
       .then((r) => r.json())
       .then((json) => {
+        if (!isMounted) return;
         if (json.success) {
           setTechStacks(json.data.techStacks);
           setTechCategories(json.data.categories);
         }
       })
-      .catch(() => {/* non-critical: deep dive tab will show empty state */});
-  }, []);
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        /* non-critical: deep dive tab will show empty state */
+      });
 
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, []);
   // Get topics for current role
   const getRoleTopics = () => {
     const roleStack = ROLE_TECH_STACKS.find((r) => r.roleId === role);

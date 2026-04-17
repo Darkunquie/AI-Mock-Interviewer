@@ -6,7 +6,12 @@ import { Errors, handleZodError, handleUnexpectedError } from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return Errors.badRequest("Invalid JSON body");
+    }
     const validation = validateRequest(signUpSchema, body);
     if (!validation.success) return handleZodError(validation.error);
 
@@ -15,8 +20,10 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       logger.warn("Signup failed", { email, reason: result.error });
-      // Most common cause = email already registered → 409
-      if (result.error?.toLowerCase().includes("already registered")) {
+      if (result.code === "EMAIL_EXISTS") {
+        // SECURITY NOTE: returning 409 reveals whether an email is registered (user enumeration).
+        // Accepted trade-off for this app — UX clarity outweighs the disclosure risk.
+        // If hardening is needed, return 200 with a generic "check your email" response instead.
         return Errors.emailExists();
       }
       return Errors.badRequest(result.error || "Failed to create account");

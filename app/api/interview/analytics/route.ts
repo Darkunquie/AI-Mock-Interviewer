@@ -118,9 +118,9 @@ export async function GET() {
 
       let techTotal = 0, commTotal = 0, depthTotal = 0, answerCount = 0;
       for (const a of intAnswers) {
-        if (a.technicalScore) techTotal += a.technicalScore;
-        if (a.communicationScore) commTotal += a.communicationScore;
-        if (a.depthScore) depthTotal += a.depthScore;
+        if (a.technicalScore != null) techTotal += a.technicalScore;
+        if (a.communicationScore != null) commTotal += a.communicationScore;
+        if (a.depthScore != null) depthTotal += a.depthScore;
         answerCount++;
       }
 

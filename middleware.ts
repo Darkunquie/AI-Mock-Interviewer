@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { neon } from "@neondatabase/serverless";
-import { verifyTokenEdge } from "@/lib/auth-edge";
+
 import { checkRateLimit } from "@/lib/ratelimit";
 import crypto from "crypto";
 
@@ -25,6 +24,17 @@ const rateLimitConfig: Record<string, { limit: number; windowMs: number }> = {
   "/api/admin": { limit: 30, windowMs: 60000 },           // 30 requests per minute
   default: { limit: 100, windowMs: 60000 },               // Default: 100 requests per minute
 };
+
+// Fixed sunset date for v0 API deprecation (RFC 8594).
+// Computed once at module load so every response returns the same deadline.
+const V0_SUNSET_DATE = (() => {
+  if (process.env.V0_SUNSET_DATE) {
+    const parsed = new Date(process.env.V0_SUNSET_DATE);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toUTCString();
+    console.warn("[middleware] Invalid V0_SUNSET_DATE, falling back to 60-day default");
+  }
+  return new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toUTCString();
+})();
 
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -111,87 +121,6 @@ function csrfForbidden(origin: string | null, requestId: string): NextResponse {
   );
 }
 
-// Subscription guard — protected API paths that require active trial/subscription
-function isProtectedApiPath(pathname: string): boolean {
-  // Leaderboard is free (view-only)
-  if (pathname === "/api/interview/leaderboard") return false;
-  // All other interview routes are protected (including /api/interview/[id])
-  if (pathname.startsWith("/api/interview")) return true;
-  if (pathname.startsWith("/api/flashcards")) return true;
-  if (pathname.startsWith("/api/projects")) return true;
-  if (pathname === "/api/transcribe") return true;
-  return false;
-}
-
-async function checkSubscription(
-  userId: number,
-  origin: string | null,
-  requestId: string
-): Promise<NextResponse | null> {
-  try {
-    if (!process.env.DATABASE_URL) {
-      console.error("[checkSubscription] DATABASE_URL not configured");
-      // Fail closed — block access when subscription check is impossible
-      return NextResponse.json(
-        { success: false, error: "Service temporarily unavailable" },
-        { status: 503, headers: { ...securityHeaders } }
-      );
-    }
-    const sql = neon(process.env.DATABASE_URL);
-    const result = await sql`
-      SELECT subscription_status, trial_ends_at
-      FROM users WHERE id = ${userId} LIMIT 1
-    `;
-    const user = result[0];
-    if (!user) return null; // Let route handler deal with missing user
-
-    const status = user.subscription_status;
-    const trialEnds = user.trial_ends_at ? new Date(user.trial_ends_at as string) : null;
-    const isActive =
-      status === "active" ||
-      (status === "trial" && trialEnds && trialEnds > new Date());
-
-    if (!isActive) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Subscription required",
-          reason: status === "trial" ? "trial_expired" : "no_subscription",
-        },
-        {
-          status: 403,
-          headers: {
-            ...getCorsHeaders(origin),
-            ...securityHeaders,
-            "X-Request-ID": requestId,
-          },
-        }
-      );
-    }
-  } catch (err) {
-    // Fail closed: unknown failures in subscription check must NOT grant access.
-    // The previous behavior let requests through on any error, creating a free
-    // pass for expired-trial users any time the DB hiccupped.
-    console.error("[checkSubscription] unexpected failure", {
-      userId,
-      requestId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return NextResponse.json(
-      { success: false, error: "Service temporarily unavailable" },
-      {
-        status: 503,
-        headers: {
-          ...getCorsHeaders(origin),
-          ...securityHeaders,
-          "X-Request-ID": requestId,
-          "Retry-After": "30",
-        },
-      }
-    );
-  }
-  return null;
-}
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
@@ -286,21 +215,6 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    // Subscription guard for protected API paths.
-    // Uses jose.jwtVerify to perform FULL signature verification — the prior
-    // implementation (decodeJwtPayload) only base64-decoded the claims, which
-    // meant a forged JWT with role:"admin" could bypass the subscription check.
-    if (isProtectedApiPath(pathname)) {
-      const authToken = request.cookies.get("auth_token")?.value;
-      if (authToken) {
-        const payload = await verifyTokenEdge(authToken);
-        if (payload?.id && payload.role !== "admin") {
-          const blocked = await checkSubscription(payload.id, origin, requestId);
-          if (blocked) return blocked;
-        }
-      }
-    }
-
     // Continue with the request, adding headers
     const response = NextResponse.next();
 
@@ -318,6 +232,13 @@ export async function middleware(request: NextRequest) {
         path: "/",
         maxAge: 60 * 60, // 1h
       });
+    }
+
+    // Deprecation headers for v0 API routes (RFC 8594).
+    if (!pathname.startsWith("/api/v1/")) {
+      response.headers.set("Deprecation", "true");
+      response.headers.set("Sunset", V0_SUNSET_DATE);
+      response.headers.set("Link", `</api/v1>; rel="successor-version"`);
     }
 
     // Add rate limit headers

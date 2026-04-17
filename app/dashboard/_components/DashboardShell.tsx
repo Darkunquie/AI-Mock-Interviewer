@@ -17,7 +17,7 @@ import {
   Shield,
   Trophy,
 } from "lucide-react";
-import { useSubscription } from "@/hooks/useSubscription";
+import { toast } from "sonner";
 import type { AuthUser } from "@/lib/auth";
 
 const NAV_ITEMS = [
@@ -42,28 +42,27 @@ export default function DashboardShell({
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { isExpired: isSubscriptionExpired, isLoading: isSubLoading } = useSubscription();
-
+  const [isSigningOut, setIsSigningOut] = useState(false);
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
 
-  // Subscription expired → redirect to subscription page
-  useEffect(() => {
-    if (
-      !isSubLoading &&
-      isSubscriptionExpired &&
-      !isAdmin &&
-      pathname !== "/dashboard/subscription"
-    ) {
-      router.push("/dashboard/subscription");
-    }
-  }, [isSubLoading, isSubscriptionExpired, isAdmin, pathname, router]);
-
   const handleSignOut = async () => {
-    await fetch("/api/auth/signout", { method: "POST" });
-    router.push("/");
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      const res = await fetch("/api/auth/signout", { method: "POST" });
+      if (!res.ok) {
+        toast.error("Sign out failed. Please try again.");
+        return;
+      }
+      router.push("/");
+    } catch {
+      toast.error("Sign out error. Please try again.");
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   const isActive = (href: string) => {
@@ -153,7 +152,8 @@ export default function DashboardShell({
 
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:bg-[#161616] hover:text-white transition-colors w-full"
+            disabled={isSigningOut}
+            className="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:bg-[#161616] hover:text-white transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed"
             title="Sign out"
           >
             <LogOut className="h-5 w-5 min-w-[20px] flex-shrink-0" />

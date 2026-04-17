@@ -1,7 +1,7 @@
 // v1: GET /api/v1/interviews/{interviewId}  (was /api/interview/[id])
 
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, answers, interviewSummaries } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
@@ -35,6 +35,7 @@ export async function GET(
         .select()
         .from(interviewSummaries)
         .where(eq(interviewSummaries.interviewId, interview.id))
+        .orderBy(desc(interviewSummaries.createdAt))
         .limit(1),
     ]);
 

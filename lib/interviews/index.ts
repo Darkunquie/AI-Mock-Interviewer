@@ -28,3 +28,8 @@ export {
   NoAnswersError,
   type SummaryResult,
 } from "./summarizer";
+export {
+  createInterview,
+  retakeInterview,
+  type InterviewCreationResult,
+} from "./service";

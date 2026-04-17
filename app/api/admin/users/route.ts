@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     // Build where condition
     const whereCondition = statusFilter && ["pending", "approved", "rejected"].includes(statusFilter)
-      ? eq(users.status, statusFilter)
+      ? eq(users.status, statusFilter as "pending" | "approved" | "rejected")
       : undefined;
 
     // Get total count
@@ -40,8 +40,6 @@ export async function GET(request: NextRequest) {
         role: users.role,
         status: users.status,
         createdAt: users.createdAt,
-        trialEndsAt: users.trialEndsAt,
-        subscriptionStatus: users.subscriptionStatus,
       })
       .from(users)
       .where(whereCondition)

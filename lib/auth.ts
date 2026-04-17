@@ -103,23 +103,25 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 // Sign up a new user
-export async function signUp(email: string, password: string, name: string, phone?: string): Promise<{ success: boolean; error?: string; user?: AuthUser; pending?: boolean }> {
+export async function signUp(email: string, password: string, name: string, phone?: string): Promise<{ success: boolean; code?: string; error?: string; user?: AuthUser; pending?: boolean }> {
   try {
+    const normalizedEmail = email.toLowerCase();
+
     // Check if user already exists
-    const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const existingUser = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
 
     if (existingUser.length > 0) {
-      return { success: false, error: "Email already registered" };
+      return { success: false, code: "EMAIL_EXISTS", error: "Email already registered" };
     }
 
     // Check if this is the admin email (auto-approve)
     const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
-    const isAdmin = adminEmail && email.toLowerCase() === adminEmail;
+    const isAdmin = adminEmail && normalizedEmail === adminEmail;
 
     // Hash password and create user
     const hashedPassword = await hashPassword(password);
     const [newUser] = await db.insert(users).values({
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       name,
       phone: phone || null,
@@ -153,7 +155,7 @@ export async function signUp(email: string, password: string, name: string, phon
 export async function signIn(email: string, password: string): Promise<{ success: boolean; error?: string; user?: AuthUser; pending?: boolean }> {
   try {
     // Find user by email
-    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
 
     if (!user) {
       return { success: false, error: "Invalid email or password" };

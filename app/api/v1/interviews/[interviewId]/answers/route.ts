@@ -49,6 +49,9 @@ export async function POST(
     }
 
     const storedQuestions = parseStoredQuestions(lookup.interview.questionsJson);
+    if (questionIndex < 0 || (storedQuestions.length > 0 && questionIndex >= storedQuestions.length)) {
+      return Errors.badRequest("Question index out of bounds");
+    }
     const questionKeywords = storedQuestions[questionIndex]?.keywords;
 
     const evaluation = await evaluateAnswer({
