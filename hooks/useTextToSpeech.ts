@@ -65,21 +65,28 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
   useEffect(() => {
     if (!isSupported) return;
 
+    const isFemaleVoice = (v: SpeechSynthesisVoice) =>
+      /female|zira|heera|neerja|sapna|swara|woman|aria|jenny|sonia/i.test(v.name);
+
     const selectBestVoice = (availableVoices: SpeechSynthesisVoice[]) => {
       return (
-        // Priority 1: Google en-IN voice
+        // Priority 1: Female Google en-IN voice
         availableVoices.find(
-          (v) => v.lang === "en-IN" && v.name.includes("Google")
+          (v) => v.lang === "en-IN" && v.name.includes("Google") && isFemaleVoice(v)
         ) ||
-        // Priority 2: Microsoft en-IN voice
+        // Priority 2: Female Microsoft en-IN voice (Neerja/Sapna)
         availableVoices.find(
-          (v) => v.lang === "en-IN" && v.name.includes("Microsoft")
+          (v) => v.lang === "en-IN" && v.name.includes("Microsoft") && isFemaleVoice(v)
         ) ||
-        // Priority 3: Any en-IN voice
+        // Priority 3: Any female en-IN voice
+        availableVoices.find((v) => v.lang === "en-IN" && isFemaleVoice(v)) ||
+        // Priority 4: Any en-IN voice
         availableVoices.find((v) => v.lang === "en-IN") ||
-        // Priority 4: Any English voice
+        // Priority 5: Any female English voice
+        availableVoices.find((v) => v.lang.startsWith("en") && isFemaleVoice(v)) ||
+        // Priority 6: Any English voice
         availableVoices.find((v) => v.lang.startsWith("en")) ||
-        // Priority 5: First available voice
+        // Priority 7: First available voice
         availableVoices[0]
       );
     };

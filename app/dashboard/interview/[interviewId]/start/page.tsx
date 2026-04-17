@@ -48,11 +48,11 @@ const TIMER_DURATION = 180;
 
 function getSpeedForExperience(level: ExperienceLevel): number {
   switch (level) {
-    case "0-1": return 0.9;   // Beginner: slower
-    case "1-3": return 1.0;   // Intermediate: normal
-    case "3-5": return 1.05;  // Advanced: slightly faster
-    case "5+":  return 1.05;  // Senior: slightly faster
-    default:    return 1.0;
+    case "0-1": return 0.8;   // Beginner: slower
+    case "1-3": return 0.85;  // Intermediate: slightly slow
+    case "3-5": return 0.9;   // Advanced: moderate
+    case "5+":  return 0.9;   // Senior: moderate
+    default:    return 0.85;
   }
 }
 
