@@ -54,11 +54,9 @@ import {
 } from "@/data/learningPaths";
 import { useLearningProgress } from "@/hooks/useLearningProgress";
 import { Progress } from "@/components/ui/progress";
-import {
-  TECH_STACK_DEEP_DIVE,
+import type {
   TechStackDeepDive,
   TechCategory,
-  TECH_CATEGORIES,
 } from "@/data/techStackTopics";
 import { TechIcon, CategoryIcon } from "@/components/TechIcon";
 
@@ -74,6 +72,8 @@ export default function PracticePage() {
   const [learningPath, setLearningPath] = useState<LearningPath | null>(null);
 
   // Tech Deep Dive state
+  const [techStacks, setTechStacks] = useState<TechStackDeepDive[]>([]);
+  const [techCategories, setTechCategories] = useState<{ id: TechCategory; name: string; icon: string }[]>([]);
   const [selectedTech, setSelectedTech] = useState<TechStackDeepDive | null>(null);
   const [techCategory, setTechCategory] = useState<TechCategory | "all">("all");
   const [selectedSubtopics, setSelectedSubtopics] = useState<string[]>([]);
@@ -107,6 +107,19 @@ export default function PracticePage() {
     }
   }, [role, progressLoaded, initializeRole]);
 
+  // Fetch tech stack data from server — keeps 4 MB payload out of client bundle
+  useEffect(() => {
+    fetch("/api/v1/reference/tech-stacks")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setTechStacks(json.data.techStacks);
+          setTechCategories(json.data.categories);
+        }
+      })
+      .catch(() => {/* non-critical: deep dive tab will show empty state */});
+  }, []);
+
   // Get topics for current role
   const getRoleTopics = () => {
     const roleStack = ROLE_TECH_STACKS.find((r) => r.roleId === role);
@@ -125,7 +138,7 @@ export default function PracticePage() {
   };
 
   // Tech Deep Dive helper functions
-  const filteredTechStacks = TECH_STACK_DEEP_DIVE.filter((t) => {
+  const filteredTechStacks = techStacks.filter((t) => {
     const matchesCategory = techCategory === "all" || t.category === techCategory;
     const matchesSearch = !techSearchQuery ||
       t.name.toLowerCase().includes(techSearchQuery.toLowerCase()) ||
@@ -731,7 +744,7 @@ export default function PracticePage() {
                   <Filter className="h-4 w-4" />
                   All
                 </button>
-                {TECH_CATEGORIES.map((cat) => (
+                {techCategories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => setTechCategory(cat.id)}

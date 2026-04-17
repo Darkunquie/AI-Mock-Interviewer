@@ -3,8 +3,9 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
-import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { Errors, ErrorCodes, createErrorResponse, handleUnexpectedError } from "@/lib/errors";
+import { invalidateSubscriptionCache } from "@/lib/subscription";
 
 const VALID_TRIAL_DAYS = [0, 3, 6, 14] as const;
 
@@ -20,44 +21,24 @@ export async function POST(
 ) {
   try {
     const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
+    if (!admin) return Errors.forbidden();
 
     const { id } = await params;
-    const userId = parseInt(id, 10);
+    const userId = Number.parseInt(id, 10);
+    if (Number.isNaN(userId)) return Errors.badRequest("Invalid user ID");
 
-    if (isNaN(userId)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid user ID" },
-        { status: 400 }
-      );
-    }
-
-    // Parse body (may be empty for backward compatibility).
-    // Distinguish empty body (use defaults) from malformed JSON (400).
+    // Parse body (may be empty for backward compat).
     let body: Record<string, unknown> = {};
     try {
       const text = await request.text();
-      if (text.trim()) {
-        body = JSON.parse(text);
-      }
+      if (text.trim()) body = JSON.parse(text);
     } catch {
-      return NextResponse.json(
-        { success: false, error: "Invalid JSON body" },
-        { status: 400 }
-      );
+      return Errors.invalidJson();
     }
 
     const parsed = approveSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: "Invalid trial duration. Must be 0, 3, 6, or 14 days." },
-        { status: 400 }
-      );
+      return Errors.badRequest("Invalid trial duration. Must be 0, 3, 6, or 14 days.");
     }
 
     const { trialDays } = parsed.data;
@@ -68,24 +49,21 @@ export async function POST(
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "User not found" },
-        { status: 404 }
-      );
-    }
+    if (!user) return Errors.userNotFound();
 
     if (user.id === admin.id) {
-      return NextResponse.json(
-        { success: false, error: "Cannot modify your own account" },
-        { status: 400 }
+      return createErrorResponse(
+        ErrorCodes.ADMIN_SELF_MODIFY,
+        "Cannot modify your own account",
+        400
       );
     }
 
     if (user.status === "approved") {
-      return NextResponse.json(
-        { success: false, error: "User is already approved" },
-        { status: 400 }
+      return createErrorResponse(
+        ErrorCodes.ADMIN_ALREADY_APPROVED,
+        "User is already approved",
+        400
       );
     }
 
@@ -114,6 +92,8 @@ export async function POST(
         .where(eq(users.id, userId));
     }
 
+    await invalidateSubscriptionCache(userId);
+
     return NextResponse.json({
       success: true,
       message: trialDays > 0
@@ -121,10 +101,6 @@ export async function POST(
         : `User ${user.email} approved without trial`,
     });
   } catch (error) {
-    logger.error("Admin approve error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "admin/users/approve");
   }
 }

@@ -3,7 +3,7 @@ import { eq, and, desc, sql, gte, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, users } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { logger } from "@/lib/logger";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 import {
   ROLE_DISPLAY_NAMES,
   InterviewRole,
@@ -12,9 +12,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return Errors.unauthorized();
 
     const { searchParams } = new URL(request.url);
     const role = searchParams.get("role");
@@ -156,10 +154,6 @@ export async function GET(request: NextRequest) {
       totalUsers: leaderboard.length,
     });
   } catch (error) {
-    logger.error("Leaderboard fetch error", error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch leaderboard" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "interview/leaderboard");
   }
 }

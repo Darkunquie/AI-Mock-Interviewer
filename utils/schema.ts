@@ -72,6 +72,8 @@ export const interviewSummaries = pgTable("interview_summaries", {
   recommendedTopicsJson: text("recommended_topics_json"), // JSON array
   actionPlan: text("action_plan"),
   summaryText: text("summary_text"),
+  encouragement: text("encouragement"),
+  readinessLevel: varchar("readiness_level", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => [
   uniqueIndex("idx_summaries_interview_id").on(t.interviewId),

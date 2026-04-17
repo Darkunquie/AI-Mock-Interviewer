@@ -1,39 +1,20 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getSubscriptionDetails } from "@/lib/subscription";
-import { logger } from "@/lib/logger";
+import { Errors, handleUnexpectedError } from "@/lib/errors";
 
 export async function GET() {
   try {
     const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    if (!user) return Errors.unauthorized();
 
     const details = await getSubscriptionDetails(user.id);
+    if (!details) return Errors.notFound("Subscription");
 
-    if (!details) {
-      return NextResponse.json(
-        { success: false, error: "Subscription not found" },
-        { status: 404 }
-      );
-    }
-    return NextResponse.json({
-      success: true,
-      ...details,
-    });
+    // Spread at top level for v0 client compat (useSubscription reads
+    // `data.subscriptionStatus` etc. directly).
+    return NextResponse.json({ success: true, ...details });
   } catch (error) {
-    logger.error(
-      "Subscription status error",
-      error instanceof Error ? error : new Error(String(error))
-    );
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleUnexpectedError(error, "subscription/status");
   }
 }

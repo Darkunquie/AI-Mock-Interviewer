@@ -60,6 +60,10 @@ export async function cacheGet<T = unknown>(key: string): Promise<T | null> {
  * Use when cache write is best-effort (e.g. after a successful DB write).
  */
 export async function cacheSet(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+  if (ttlSeconds <= 0) {
+    logger.warn("cacheSet called with invalid TTL", { key, ttlSeconds });
+    return;
+  }
   try {
     await getRedis().set(key, JSON.stringify(value), "EX", ttlSeconds);
   } catch (err) {
@@ -90,29 +94,33 @@ export async function cacheDel(...keys: string[]): Promise<void> {
  *
  * Returns SHA-1 hex digest.
  */
-export function canonicalKey(params: Record<string, unknown>): string {
-  const normalized: Record<string, unknown> = {};
-  const keys = Object.keys(params).sort();
-
-  for (const k of keys) {
-    const v = params[k];
-    if (v === null || v === undefined || v === "") continue;
-
-    if (Array.isArray(v)) {
-      const arr = v
-        .filter((x) => x !== null && x !== undefined && x !== "")
-        .map((x) => (typeof x === "string" ? x.toLowerCase() : x));
-      if (arr.length === 0) continue;
-      normalized[k] = [...arr].sort((a, b) => String(a).localeCompare(String(b)));
-    } else if (typeof v === "string") {
-      normalized[k] = v.toLowerCase();
-    } else {
-      normalized[k] = v;
-    }
+function normalizeValue(v: unknown): unknown {
+  if (v === null || v === undefined || v === "") return undefined;
+  if (Array.isArray(v)) {
+    const arr = v
+      .map(normalizeValue)
+      .filter((x) => x !== undefined);
+    return arr.length
+      ? [...arr].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+      : undefined;
   }
+  if (typeof v === "object") {
+    const obj: Record<string, unknown> = {};
+    for (const k of Object.keys(v as Record<string, unknown>).sort((a, b) => a.localeCompare(b))) {
+      const normalized = normalizeValue((v as Record<string, unknown>)[k]);
+      if (normalized !== undefined) obj[k] = normalized;
+    }
+    return Object.keys(obj).length ? obj : undefined;
+  }
+  if (typeof v === "string") return v.toLowerCase();
+  return v;
+}
+
+export function canonicalKey(params: Record<string, unknown>): string {
+  const normalized = normalizeValue(params) as Record<string, unknown>;
 
   return crypto
     .createHash("sha1")
-    .update(JSON.stringify(normalized))
+    .update(JSON.stringify(normalized ?? {}))
     .digest("hex");
 }
