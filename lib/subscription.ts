@@ -178,9 +178,8 @@ async function resolveTrialState(
     return { currentStatus: "expired", trialDaysLeft: 0, isExpired: true };
   }
 
-  const diff = new Date(trialEndsAt).getTime() - Date.now();
+  const diff = trialEndsAt.getTime() - Date.now();
   const trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-
   if (trialDaysLeft <= 0) {
     await markExpired(userId);
     return { currentStatus: "expired", trialDaysLeft: 0, isExpired: true };

@@ -35,6 +35,7 @@ export async function GET(
         .select()
         .from(interviewSummaries)
         .where(eq(interviewSummaries.interviewId, interview.id))
+        .orderBy(desc(interviewSummaries.createdAt))
         .limit(1),
     ]);
 

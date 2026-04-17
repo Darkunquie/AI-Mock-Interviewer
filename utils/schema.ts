@@ -49,8 +49,7 @@ export const interviews = pgTable("interviews", {
   id: serial("id").primaryKey(),
   mockId: varchar("mock_id", { length: 36 }).unique().notNull(), // UUID
   userId: integer("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "set null" }),
   role: varchar("role", { length: 100 }).notNull(),
   experienceLevel: varchar("experience_level", { length: 20 }).notNull(),
   interviewType: interviewTypeEnum("interview_type").notNull(),

@@ -15,6 +15,7 @@ export function useSubscription() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchStatus = useCallback(async () => {
+    setIsLoading(true);
     try {
       const res = await fetch("/api/subscription/status");
       if (res.ok) {

@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-import { eq, desc, and, like, sql } from "drizzle-orm";
+import { eq, desc, and, ilike, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews } from "@/utils/schema";
 import { CreateInterviewRequest, DURATION_CONFIG, Question } from "@/types";
@@ -139,11 +139,21 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, Number.isNaN(parsedLimit) ? 20 : parsedLimit));
     const offset = (page - 1) * limit;
 
+    const VALID_STATUSES = ["pending", "in_progress", "completed"] as const;
+    const VALID_TYPES = ["technical", "hr", "behavioral"] as const;
+
     const conditions = [eq(interviews.userId, user.id)];
-    if (status && status !== "all") conditions.push(eq(interviews.status, status as "pending" | "in_progress" | "completed"));
+    if (status && status !== "all" && VALID_STATUSES.includes(status as typeof VALID_STATUSES[number])) {
+      conditions.push(eq(interviews.status, status as typeof VALID_STATUSES[number]));
+    }
     if (role && role !== "all") conditions.push(eq(interviews.role, role));
-    if (type && type !== "all") conditions.push(eq(interviews.interviewType, type as "technical" | "hr" | "behavioral"));
-    if (search) conditions.push(like(interviews.role, `%${search.toLowerCase()}%`));
+    if (type && type !== "all" && VALID_TYPES.includes(type as typeof VALID_TYPES[number])) {
+      conditions.push(eq(interviews.interviewType, type as typeof VALID_TYPES[number]));
+    }
+    if (search) {
+      const escapedSearch = search.replaceAll(/[%_]/g, String.raw`\$&`);
+      conditions.push(ilike(interviews.role, `%${escapedSearch}%`));
+    }
 
     const [countResult] = await db
       .select({ count: sql<number>`COUNT(*)::int` })

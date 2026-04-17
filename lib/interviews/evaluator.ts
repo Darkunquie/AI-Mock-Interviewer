@@ -34,11 +34,14 @@ export interface EvaluateAnswerInput {
 }
 
 function fallbackEvaluation(): AnswerEvaluation {
+  const technicalScore = 5;
+  const communicationScore = 5;
+  const depthScore = 5;
   return {
-    technicalScore: 5,
-    communicationScore: 5,
-    depthScore: 5,
-    overallScore: 50,
+    technicalScore,
+    communicationScore,
+    depthScore,
+    overallScore: computeAnswerOverall(technicalScore, communicationScore, depthScore),
     strengths: ["Attempted to answer the question"],
     weaknesses: ["Could provide more detailed response"],
     idealAnswer:

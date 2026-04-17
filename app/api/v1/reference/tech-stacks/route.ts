@@ -8,7 +8,8 @@ import { cacheGet, cacheSet } from "@/lib/cache";
 import { TECH_STACK_DEEP_DIVE, TECH_CATEGORIES } from "@/data/techStackTopics";
 import { handleUnexpectedError } from "@/lib/errors";
 
-const CACHE_KEY = "ref:techstacks:v1";
+const BUILD_ID = process.env.NEXT_BUILD_ID ?? "dev";
+const CACHE_KEY = `ref:techstacks:v1:${BUILD_ID}`;
 const CACHE_TTL = 3600; // 1 hour
 
 export async function GET() {
@@ -21,7 +22,8 @@ export async function GET() {
     }
 
     const data = { techStacks: TECH_STACK_DEEP_DIVE, categories: TECH_CATEGORIES };
-    await cacheSet(CACHE_KEY, data, CACHE_TTL);
+    // Fire-and-forget: don't block response on cache write
+    cacheSet(CACHE_KEY, data, CACHE_TTL).catch(() => {});
 
     return NextResponse.json({ success: true, data }, {
       headers: { "X-Cache": "MISS", "Cache-Control": "public, max-age=3600" },

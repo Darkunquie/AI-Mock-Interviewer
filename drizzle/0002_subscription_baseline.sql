@@ -52,9 +52,8 @@ BEGIN
 END $$;--> statement-breakpoint
 
 -- ADD CONSTRAINT has no IF NOT EXISTS in Postgres. Wrap in DO block
--- with pg_constraint check so re-running is safe even if the DROP
--- CONSTRAINT above was a no-op and the FK still exists.
-DO $$
+-- with pg_constraint check so re-running is safe.
+DO $DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint

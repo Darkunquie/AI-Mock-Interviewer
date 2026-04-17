@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     if (!lookup.ok) return lookup.reason === "not_found" ? Errors.notFound("Interview") : Errors.forbidden();
 
     const storedQuestions = parseStoredQuestions(lookup.interview.questionsJson);
-    if (storedQuestions.length > 0 && (questionIndex < 0 || questionIndex >= storedQuestions.length)) {
+    if (questionIndex < 0 || (storedQuestions.length > 0 && questionIndex >= storedQuestions.length)) {
       return Errors.badRequest("Question index out of bounds");
     }
 

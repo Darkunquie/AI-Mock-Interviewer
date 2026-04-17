@@ -56,6 +56,14 @@ export async function POST(
       );
     }
 
+    if (user.subscriptionStatus === "active") {
+      return createErrorResponse(
+        ErrorCodes.SUB_INVALID_STATE,
+        "Cannot extend trial for user with active subscription",
+        400
+      );
+    }
+
     const now = new Date();
     const baseDate = user.trialEndsAt && new Date(user.trialEndsAt) > now ? new Date(user.trialEndsAt) : now;
     const trialEnd = new Date(baseDate.getTime() + trialDays * 24 * 60 * 60 * 1000);

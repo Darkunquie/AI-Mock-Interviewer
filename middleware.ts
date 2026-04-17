@@ -28,9 +28,14 @@ const rateLimitConfig: Record<string, { limit: number; windowMs: number }> = {
 
 // Fixed sunset date for v0 API deprecation (RFC 8594).
 // Computed once at module load so every response returns the same deadline.
-const V0_SUNSET_DATE = process.env.V0_SUNSET_DATE
-  ? new Date(process.env.V0_SUNSET_DATE).toUTCString()
-  : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toUTCString();
+const V0_SUNSET_DATE = (() => {
+  if (process.env.V0_SUNSET_DATE) {
+    const parsed = new Date(process.env.V0_SUNSET_DATE);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toUTCString();
+    console.warn("[middleware] Invalid V0_SUNSET_DATE, falling back to 60-day default");
+  }
+  return new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toUTCString();
+})();
 
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");

@@ -66,12 +66,12 @@ export async function retakeInterview(
   userId: number,
   original: InterviewRow,
 ): Promise<InterviewCreationResult> {
-  const dur = ((original.duration || "15") as InterviewDuration);
+  const dur = (DURATION_CONFIG[(original.duration || "15") as InterviewDuration]
+    ? original.duration
+    : "15") as InterviewDuration;
   const mode = (original.mode ?? "interview") as "interview" | "practice";
   const techStack = parseStringArray(original.techStack);
   const topics = parseStringArray(original.topics);
-  const questionCount = DURATION_CONFIG[dur]?.questionCount ?? 10;
-
   const result = await generateQuestions({
     role: original.role,
     experience: original.experienceLevel,
@@ -79,6 +79,9 @@ export async function retakeInterview(
     questionCount,
     techStack: techStack.length ? techStack : undefined,
     mode,
+    topics: topics.length ? topics : undefined,
+    techDeepDive: original.techDeepDive,
+  });
     topics: topics.length ? topics : undefined,
   });
 

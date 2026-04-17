@@ -182,9 +182,8 @@ export default function AdminDashboard() {
     } else {
       toast.warning(`${succeeded} ${opts.successLabel}, ${failed} failed`);
     }
-    fetchData();
-    return { succeeded, failed };
-  };
+    await fetchData();
+    return { succeeded, failed };  };
 
   const handleBulkApprove = async () => {
     setBulkLoading(true);

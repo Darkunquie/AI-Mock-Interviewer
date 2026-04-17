@@ -203,6 +203,7 @@ export default function AdminUsersPage() {
     }
     const styles: Record<string, string> = {
       active: "bg-green-400/10 text-green-400 border-green-400/20",
+      // Fallback for trial status without a trialEndsAt date (data inconsistency)
       trial: "bg-orange-400/10 text-orange-400 border-orange-400/20",
       expired: "bg-red-400/10 text-red-400 border-red-400/20",
       none: "bg-zinc-800 text-zinc-400 border-zinc-700",
@@ -499,7 +500,7 @@ export default function AdminUsersPage() {
               Cancel
             </button>
             <button
-              onClick={() => extendUserId && handleExtendTrial(extendUserId)}
+              onClick={() => extendUserId !== null && handleExtendTrial(extendUserId)}
               disabled={actionLoading !== null}
               className="px-4 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider hover:bg-blue-500/20 transition-colors disabled:opacity-50"
             >
