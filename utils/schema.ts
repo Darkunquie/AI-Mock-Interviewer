@@ -19,7 +19,6 @@ import type { ProjectSpecification } from "@/types/project";
 
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 export const userStatusEnum = pgEnum("user_status", ["pending", "approved", "rejected"]);
-export const subscriptionStatusEnum = pgEnum("subscription_status", ["none", "trial", "active", "expired"]);
 export const interviewTypeEnum = pgEnum("interview_type", ["technical", "hr", "behavioral"]);
 export const interviewModeEnum = pgEnum("interview_mode", ["interview", "practice"]);
 export const interviewStatusEnum = pgEnum("interview_status", ["pending", "in_progress", "completed"]);
@@ -40,8 +39,6 @@ export const users = pgTable("users", {
   status: userStatusEnum("status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   approvedAt: timestamp("approved_at"),
-  trialEndsAt: timestamp("trial_ends_at"),
-  subscriptionStatus: subscriptionStatusEnum("subscription_status").default("none").notNull(),
 });
 
 // Interviews table

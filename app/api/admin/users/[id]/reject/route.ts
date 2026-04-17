@@ -1,13 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
 import { Errors, ErrorCodes, createErrorResponse, handleUnexpectedError } from "@/lib/errors";
-import { invalidateSubscriptionCache } from "@/lib/subscription";
 
 export async function POST(
-  request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -36,14 +35,8 @@ export async function POST(
 
     await db
       .update(users)
-      .set({
-        status: "rejected",
-        subscriptionStatus: "none",
-        trialEndsAt: null,
-      })
+      .set({ status: "rejected" })
       .where(eq(users.id, userId));
-
-    await invalidateSubscriptionCache(userId);
 
     return NextResponse.json({
       success: true,

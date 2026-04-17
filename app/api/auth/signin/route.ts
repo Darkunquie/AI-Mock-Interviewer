@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signIn } from "@/lib/auth";
 import { signInSchema, validateRequest } from "@/lib/validations";
-import { getSubscriptionDetails } from "@/lib/subscription";
 import { logger } from "@/lib/logger";
 import { handleZodError, handleUnexpectedError, createErrorResponse, ErrorCodes } from "@/lib/errors";
 
@@ -32,23 +31,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if trial is expired for redirect hint
-    let isTrialExpired = false;
-    if (result.user && result.user.role !== "admin") {
-      try {
-        const details = await getSubscriptionDetails(result.user.id);
-        isTrialExpired = details?.isExpired ?? false;
-      } catch (err) {
-        logger.warn("Failed to check subscription status", { userId: result.user.id, error: err });
-        // Continue with sign-in; trial status is non-critical
-      }
-    }
-
     logger.info("User signed in", { email });
     return NextResponse.json({
       success: true,
       user: result.user,
-      isTrialExpired,
     });
   } catch (error) {
     return handleUnexpectedError(error, "auth/signin");

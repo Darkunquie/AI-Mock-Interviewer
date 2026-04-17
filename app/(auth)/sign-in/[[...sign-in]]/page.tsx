@@ -28,7 +28,7 @@ export default function SignInPage() {
 
       if (data.success) {
         toast.success("Signed in successfully!");
-        router.push(data.isTrialExpired ? "/dashboard/subscription" : "/dashboard");
+        router.push("/dashboard");
       } else if (data.pending) {
         toast.error("Your account is pending admin approval");
         router.push("/pending-approval");

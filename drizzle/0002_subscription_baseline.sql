@@ -39,18 +39,17 @@ EXECUTE FUNCTION set_updated_at();--> statement-breakpoint
 --    and back up the rows via `SELECT ... WHERE interview_id IS NULL` first.
 DELETE FROM "answers" WHERE "interview_id" IS NULL;--> statement-breakpoint
 DELETE FROM "interview_summaries" WHERE "interview_id" IS NULL;--> statement-breakpoint
-DO $$
+DO $
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_schema='public' AND table_name='answers' AND column_name='interview_id' AND is_nullable='YES') THEN
+             WHERE table_schema = current_schema() AND table_name='answers' AND column_name='interview_id' AND is_nullable='YES') THEN
     ALTER TABLE "answers" ALTER COLUMN "interview_id" SET NOT NULL;
   END IF;
   IF EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_schema='public' AND table_name='interview_summaries' AND column_name='interview_id' AND is_nullable='YES') THEN
+             WHERE table_schema = current_schema() AND table_name='interview_summaries' AND column_name='interview_id' AND is_nullable='YES') THEN
     ALTER TABLE "interview_summaries" ALTER COLUMN "interview_id" SET NOT NULL;
   END IF;
-END $$;--> statement-breakpoint
-
+END $;--> statement-breakpoint
 -- ADD CONSTRAINT has no IF NOT EXISTS in Postgres. Wrap in DO block
 -- with pg_constraint check so re-running is safe.
 DO $DO $$

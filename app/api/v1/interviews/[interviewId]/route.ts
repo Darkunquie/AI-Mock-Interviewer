@@ -1,7 +1,7 @@
 // v1: GET /api/v1/interviews/{interviewId}  (was /api/interview/[id])
 
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews, answers, interviewSummaries } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";

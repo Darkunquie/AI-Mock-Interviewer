@@ -70,6 +70,7 @@ export async function retakeInterview(
     ? original.duration
     : "15") as InterviewDuration;
   const mode = (original.mode ?? "interview") as "interview" | "practice";
+  const questionCount = DURATION_CONFIG[dur].questionCount;
   const techStack = parseStringArray(original.techStack);
   const topics = parseStringArray(original.topics);
   const result = await generateQuestions({
@@ -79,9 +80,6 @@ export async function retakeInterview(
     questionCount,
     techStack: techStack.length ? techStack : undefined,
     mode,
-    topics: topics.length ? topics : undefined,
-    techDeepDive: original.techDeepDive,
-  });
     topics: topics.length ? topics : undefined,
   });
 

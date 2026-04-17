@@ -18,7 +18,6 @@ import {
   Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useSubscription } from "@/hooks/useSubscription";
 import type { AuthUser } from "@/lib/auth";
 
 const NAV_ITEMS = [
@@ -44,24 +43,10 @@ export default function DashboardShell({
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const { isExpired: isSubscriptionExpired, isLoading: isSubLoading } = useSubscription();
-
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
-
-  // Subscription expired → redirect to subscription page
-  useEffect(() => {
-    if (
-      !isSubLoading &&
-      isSubscriptionExpired &&
-      !isAdmin &&
-      pathname !== "/dashboard/subscription"
-    ) {
-      router.push("/dashboard/subscription");
-    }
-  }, [isSubLoading, isSubscriptionExpired, isAdmin, pathname, router]);
 
   const handleSignOut = async () => {
     if (isSigningOut) return;
