@@ -1,24 +1,24 @@
 import { config } from "dotenv";
-import { neon } from "@neondatabase/serverless";
+import pg from "pg";
 
 // Load env from .env.local
 config({ path: ".env.local" });
 
 async function resetDatabase() {
-  const sql = neon(process.env.DATABASE_URL!);
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL! });
 
   console.log("Dropping existing tables...");
 
   // Drop tables in correct order (respect foreign keys)
-  await sql`DROP TABLE IF EXISTS interview_summaries CASCADE`;
-  await sql`DROP TABLE IF EXISTS answers CASCADE`;
-  await sql`DROP TABLE IF EXISTS interviews CASCADE`;
-  await sql`DROP TABLE IF EXISTS users CASCADE`;
+  await pool.query("DROP TABLE IF EXISTS interview_summaries CASCADE");
+  await pool.query("DROP TABLE IF EXISTS answers CASCADE");
+  await pool.query("DROP TABLE IF EXISTS interviews CASCADE");
+  await pool.query("DROP TABLE IF EXISTS users CASCADE");
 
   console.log("Creating new tables...");
 
   // Create users table
-  await sql`
+  await pool.query(`
     CREATE TABLE users (
       id SERIAL PRIMARY KEY,
       email VARCHAR(255) UNIQUE NOT NULL,
@@ -27,10 +27,10 @@ async function resetDatabase() {
       image_url TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     )
-  `;
+  `);
 
   // Create interviews table
-  await sql`
+  await pool.query(`
     CREATE TABLE interviews (
       id SERIAL PRIMARY KEY,
       mock_id VARCHAR(36) UNIQUE NOT NULL,
@@ -44,10 +44,10 @@ async function resetDatabase() {
       created_at TIMESTAMP DEFAULT NOW(),
       completed_at TIMESTAMP
     )
-  `;
+  `);
 
   // Create answers table
-  await sql`
+  await pool.query(`
     CREATE TABLE answers (
       id SERIAL PRIMARY KEY,
       interview_id INTEGER REFERENCES interviews(id),
@@ -61,10 +61,10 @@ async function resetDatabase() {
       ideal_answer TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     )
-  `;
+  `);
 
   // Create interview_summaries table
-  await sql`
+  await pool.query(`
     CREATE TABLE interview_summaries (
       id SERIAL PRIMARY KEY,
       interview_id INTEGER REFERENCES interviews(id),
@@ -77,9 +77,10 @@ async function resetDatabase() {
       summary_text TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     )
-  `;
+  `);
 
   console.log("Database reset complete!");
+  await pool.end();
 }
 
 resetDatabase().catch(console.error);

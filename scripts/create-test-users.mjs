@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless";
+import pg from "pg";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
@@ -13,33 +13,35 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const sql = neon(process.env.DATABASE_URL);
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 const password = "Test@1234";
 const hashedPassword = await bcrypt.hash(password, 12);
 
 // Create test admin
 try {
-  await sql`
-    INSERT INTO users (email, password, name, phone, role, status, subscription_status)
-    VALUES ('testadmin@skillforge.com', ${hashedPassword}, 'Test Admin', '1234567890', 'admin', 'approved', 'active')
-    ON CONFLICT (email) DO UPDATE SET password = ${hashedPassword}, role = 'admin', status = 'approved', subscription_status = 'active'
-  `;
+  await pool.query(
+    `INSERT INTO users (email, password, name, phone, role, status)
+     VALUES ($1, $2, 'Test Admin', '1234567890', 'admin', 'approved')
+     ON CONFLICT (email) DO UPDATE SET password = $2, role = 'admin', status = 'approved'`,
+    ["testadmin@skillforge.com", hashedPassword]
+  );
   console.log("Admin created: testadmin@skillforge.com");
 } catch (e) {
   console.error("Admin error:", e.message);
 }
 
-// Create test user (with 3-day trial)
+// Create test user
 const now = new Date();
-const trialEnd = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
 try {
-  await sql`
-    INSERT INTO users (email, password, name, phone, role, status, approved_at, trial_ends_at, subscription_status)
-    VALUES ('testuser@skillforge.com', ${hashedPassword}, 'Test User', '9876543210', 'user', 'approved', ${now.toISOString()}, ${trialEnd.toISOString()}, 'trial')
-    ON CONFLICT (email) DO UPDATE SET password = ${hashedPassword}, role = 'user', status = 'approved', approved_at = ${now.toISOString()}, trial_ends_at = ${trialEnd.toISOString()}, subscription_status = 'trial'
-  `;  console.log("User created: testuser@skillforge.com");
+  await pool.query(
+    `INSERT INTO users (email, password, name, phone, role, status, approved_at)
+     VALUES ($1, $2, 'Test User', '9876543210', 'user', 'approved', $3)
+     ON CONFLICT (email) DO UPDATE SET password = $2, role = 'user', status = 'approved', approved_at = $3`,
+    ["testuser@skillforge.com", hashedPassword, now.toISOString()]
+  );
+  console.log("User created: testuser@skillforge.com");
 } catch (e) {
   console.error("User error:", e.message);
 }
@@ -47,4 +49,5 @@ try {
 console.log("\n--- Test Credentials ---");
 console.log("Admin:  testadmin@skillforge.com / Test@1234");
 console.log("User:   testuser@skillforge.com  / Test@1234");
-console.log("Trial expires:", trialEnd.toISOString());
+
+await pool.end();

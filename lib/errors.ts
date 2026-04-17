@@ -21,11 +21,6 @@ export const ErrorCodes = {
   VALIDATION_FAILED: "VAL_001",
   INVALID_INPUT: "VAL_002",
 
-  // Subscription (SUB_XXX)
-  SUB_REQUIRED: "SUB_001",
-  SUB_TRIAL_EXPIRED: "SUB_002",
-  SUB_INVALID_STATE: "SUB_003",
-
   // Database errors (DB_XXX)
   DATABASE_ERROR: "DB_001",
   NOT_FOUND: "DB_002",
@@ -52,7 +47,6 @@ export const ErrorCodes = {
   // Admin operations (ADMIN_XXX)
   ADMIN_SELF_MODIFY: "ADMIN_001",
   ADMIN_ALREADY_APPROVED: "ADMIN_002",
-  ADMIN_INVALID_TRIAL: "ADMIN_003",
 
   // General errors
   INTERNAL_ERROR: "ERR_001",
@@ -203,18 +197,6 @@ export const Errors = {
       ErrorCodes.RATE_LIMIT_EXCEEDED,
       "Too many requests. Please try again later.",
       429
-    ),
-
-  subscriptionRequired: (reason: "trial_expired" | "no_subscription" = "no_subscription") =>
-    createErrorResponse(
-      reason === "trial_expired"
-        ? ErrorCodes.SUB_TRIAL_EXPIRED
-        : ErrorCodes.SUB_REQUIRED,
-      reason === "trial_expired"
-        ? "Your trial has expired. Please subscribe to continue."
-        : "Subscription required",
-      403,
-      { reason }
     ),
 
   notFound: (resource: string = "Resource") =>
