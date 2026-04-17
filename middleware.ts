@@ -26,6 +26,12 @@ const rateLimitConfig: Record<string, { limit: number; windowMs: number }> = {
   default: { limit: 100, windowMs: 60000 },               // Default: 100 requests per minute
 };
 
+// Fixed sunset date for v0 API deprecation (RFC 8594).
+// Computed once at module load so every response returns the same deadline.
+const V0_SUNSET_DATE = process.env.V0_SUNSET_DATE
+  ? new Date(process.env.V0_SUNSET_DATE).toUTCString()
+  : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toUTCString();
+
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
   const realIP = request.headers.get("x-real-ip");
@@ -320,14 +326,9 @@ export async function middleware(request: NextRequest) {
     }
 
     // Deprecation headers for v0 API routes (RFC 8594).
-    // v1 equivalents live under /api/v1/*. Added centrally here rather than
-    // per-route so the 60-day window is consistent and no route is missed.
     if (!pathname.startsWith("/api/v1/")) {
-      const sunset = process.env.V0_SUNSET_DATE
-        ? new Date(process.env.V0_SUNSET_DATE).toUTCString()
-        : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toUTCString();
       response.headers.set("Deprecation", "true");
-      response.headers.set("Sunset", sunset);
+      response.headers.set("Sunset", V0_SUNSET_DATE);
       response.headers.set("Link", `</api/v1>; rel="successor-version"`);
     }
 

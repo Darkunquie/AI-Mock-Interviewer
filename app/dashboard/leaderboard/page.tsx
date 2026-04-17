@@ -5,8 +5,6 @@ import { Loader2, Trophy, Medal, Crown, Users, Star } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useUser } from "@/app/providers";
-
 interface LeaderboardEntry {
   rank: number;
   userId: number;
@@ -32,7 +30,6 @@ const PERIODS = [
 ];
 
 export default function LeaderboardPage() {
-  const user = useUser();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [period, setPeriod] = useState("all");
