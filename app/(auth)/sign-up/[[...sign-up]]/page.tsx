@@ -28,11 +28,7 @@ export default function SignUpPage() {
       toast.error("Password must be at least 8 characters with uppercase, lowercase, and a number");
       setIsLoading(false);
       return;
-    }      toast.error("Password must be at least 8 characters with uppercase, lowercase, and a number");
-      setIsLoading(false);
-      return;
     }
-
     try {
       const res = await apiFetch("/api/auth/signup", {
         method: "POST",
