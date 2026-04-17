@@ -174,7 +174,7 @@ describe("createInterviewSchema", () => {
 describe("evaluateAnswerSchema", () => {
   it("accepts valid evaluation data", () => {
     const result = evaluateAnswerSchema.safeParse({
-      mockId: "550e8400-e29b-41d4-a716-446655440000",
+      interviewId: "550e8400-e29b-41d4-a716-446655440000",
       questionIndex: 0,
       questionText: "What is React?",
     });
@@ -183,7 +183,7 @@ describe("evaluateAnswerSchema", () => {
 
   it("rejects invalid UUID", () => {
     const result = evaluateAnswerSchema.safeParse({
-      mockId: "not-a-uuid",
+      interviewId: "not-a-uuid",
       questionIndex: 0,
       questionText: "What is React?",
     });
@@ -192,7 +192,7 @@ describe("evaluateAnswerSchema", () => {
 
   it("rejects negative question index", () => {
     const result = evaluateAnswerSchema.safeParse({
-      mockId: "550e8400-e29b-41d4-a716-446655440000",
+      interviewId: "550e8400-e29b-41d4-a716-446655440000",
       questionIndex: -1,
       questionText: "What is React?",
     });
@@ -204,14 +204,14 @@ describe("evaluateAnswerSchema", () => {
 describe("interviewSummarySchema", () => {
   it("accepts valid UUID", () => {
     const result = interviewSummarySchema.safeParse({
-      mockId: "550e8400-e29b-41d4-a716-446655440000",
+      interviewId: "550e8400-e29b-41d4-a716-446655440000",
     });
     expect(result.success).toBe(true);
   });
 
   it("rejects invalid UUID", () => {
     const result = interviewSummarySchema.safeParse({
-      mockId: "not-valid",
+      interviewId: "not-valid",
     });
     expect(result.success).toBe(false);
   });

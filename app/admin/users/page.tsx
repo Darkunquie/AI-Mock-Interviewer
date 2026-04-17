@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Search } from "lucide-react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/client/api";
 
 interface UserRecord {
   id: number;
@@ -43,7 +44,7 @@ export default function AdminUsersPage() {
   const handleApprove = async (userId: number) => {
     setActionLoading(userId);
     try {
-      const res = await fetch(`/api/admin/users/${userId}/approve`, { method: "POST" });
+      const res = await apiFetch(`/api/admin/users/${userId}/approve`, { method: "POST" });
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) { toast.success(data.message); fetchUsers(); }
@@ -58,7 +59,7 @@ export default function AdminUsersPage() {
   const handleReject = async (userId: number) => {
     setActionLoading(userId);
     try {
-      const res = await fetch(`/api/admin/users/${userId}/reject`, { method: "POST" });
+      const res = await apiFetch(`/api/admin/users/${userId}/reject`, { method: "POST" });
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) { toast.success(data.message); fetchUsers(); }

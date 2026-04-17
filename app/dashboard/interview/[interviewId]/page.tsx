@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Play, ArrowRight, Clock, Target, RotateCcw } from "lucide-react";
+import { apiFetch } from "@/lib/client/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +80,7 @@ export default function InterviewDetailPage() {
   const handleRetake = async () => {
     setRetaking(true);
     try {
-      const response = await fetch("/api/interview/retake", {
+      const response = await apiFetch("/api/interview/retake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ interviewId }),

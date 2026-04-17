@@ -16,6 +16,7 @@ import {
   Home,
   RotateCcw,
 } from "lucide-react";
+import { apiFetch } from "@/lib/client/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -116,7 +117,7 @@ export default function FeedbackPage() {
   const handleRetake = async () => {
     setRetaking(true);
     try {
-      const response = await fetch("/api/interview/retake", {
+      const response = await apiFetch("/api/interview/retake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ interviewId }),

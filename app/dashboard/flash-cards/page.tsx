@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, Layers, ChevronRight, RotateCcw, ChevronLeft, Sparkles, BookOpen, Check, X } from "lucide-react";
+import { apiFetch } from "@/lib/client/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -112,6 +113,7 @@ export default function FlashCardsPage() {
   const [session, setSession] = useState<StudySession | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [answeredIndices, setAnsweredIndices] = useState<Set<number>>(new Set());
 
   const technologies = Object.keys(TECH_TOPICS);
   const topics = technology ? TECH_TOPICS[technology] || [] : [];
@@ -123,7 +125,7 @@ export default function FlashCardsPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/flashcards/generate", {
+      const response = await apiFetch("/api/flashcards/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ technology, topic, count: 10 }),
@@ -159,11 +161,14 @@ export default function FlashCardsPage() {
     if (!session) return;
 
     const newStats = { ...session.stats };
-    // Always count as reviewed (including skips)
-    newStats.reviewed++;
-    if (wasCorrect === true) newStats.correct++;
-    else if (wasCorrect === false) newStats.incorrect++;
-    // Skip (undefined) = reviewed but neither correct nor incorrect
+    // Only count if not already answered (prevents double-counting on back-navigation)
+    if (!answeredIndices.has(session.currentIndex)) {
+      newStats.reviewed++;
+      if (wasCorrect === true) newStats.correct++;
+      else if (wasCorrect === false) newStats.incorrect++;
+      // Skip (undefined) = reviewed but neither correct nor incorrect
+      setAnsweredIndices(prev => new Set(prev).add(session.currentIndex));
+    }
 
     if (session.currentIndex < session.cards.length - 1) {
       setSession({
@@ -192,6 +197,7 @@ export default function FlashCardsPage() {
       stats: { total: session.cards.length, reviewed: 0, correct: 0, incorrect: 0 },
     });
     setIsFlipped(false);
+    setAnsweredIndices(new Set());
   };
 
   const endSession = () => {

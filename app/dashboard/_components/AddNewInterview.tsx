@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Loader2, FileText, Sparkles } from "lucide-react";
+import { apiFetch } from "@/lib/client/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -68,7 +69,7 @@ export default function AddNewInterview() {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/interview/create", {
+      const response = await apiFetch("/api/interview/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -77,8 +78,7 @@ export default function AddNewInterview() {
           interviewType,
           duration,
           techStack: selectedTechStack.length > 0 ? selectedTechStack : undefined,
-          targetCompany: targetCompany || undefined,
-        }),
+          targetCompany: targetCompany && targetCompany !== "none" ? targetCompany : undefined,        }),
       });
 
       const data = await response.json();

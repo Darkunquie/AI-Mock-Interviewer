@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Loader2, Zap, Eye, EyeOff } from "lucide-react";
+import { apiFetch } from "@/lib/client/api";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function SignInPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/signin", {
+      const res = await apiFetch("/api/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

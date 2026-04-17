@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { apiFetch } from "@/lib/client/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -136,7 +137,7 @@ export default function PdfUploadTab({
 
       setUploadState("parsing");
 
-      const response = await fetch("/api/interview/parse-pdf", {
+      const response = await apiFetch("/api/interview/parse-pdf", {
         method: "POST",
         body: formData,
       });
@@ -194,7 +195,7 @@ export default function PdfUploadTab({
     setUploadState("creating");
 
     try {
-      const response = await fetch("/api/interview/create", {
+      const response = await apiFetch("/api/interview/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -21,6 +21,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/client/api";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { useTimer } from "@/hooks/useTimer";
@@ -213,7 +214,7 @@ export default function InterviewStartPage() {
 
     try {
       const question = data.interview.questions[currentQuestionIndex];
-      const response = await fetch("/api/interview/evaluate", {
+      const response = await apiFetch("/api/interview/evaluate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -268,7 +269,7 @@ export default function InterviewStartPage() {
   const handleFinishInterview = async () => {
     setSubmitting(true);
     try {
-      const response = await fetch("/api/interview/summary", {
+      const response = await apiFetch("/api/interview/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ interviewId }),
@@ -556,11 +557,17 @@ export default function InterviewStartPage() {
           {isListening && (
             <div className="flex items-center gap-0.5 h-8 px-3 bg-zinc-800/50 rounded-full">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="w-0.5 bg-yellow-400 rounded-full animate-pulse" style={{ height: `${6 + Math.random() * 14}px` }} />
+                <div 
+                  key={i} 
+                  className="w-0.5 bg-yellow-400 rounded-full animate-pulse" 
+                  style={{ 
+                    height: `${8 + (i % 3) * 4}px`,
+                    animationDelay: `${i * 0.1}s` 
+                  }} 
+                />
               ))}
             </div>
-          )}
-          {sttError && <span className="text-orange-400 text-xs">{sttError}</span>}
+          )}          {sttError && <span className="text-orange-400 text-xs">{sttError}</span>}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={pauseTimer} className="flex items-center gap-1.5 px-4 h-9 rounded-lg border border-zinc-700 text-zinc-300 font-bold text-xs hover:bg-zinc-800 transition-colors">

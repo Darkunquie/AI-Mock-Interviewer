@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { apiFetch } from "@/lib/client/api";
 
 export interface AuthUser {
   id: number;
@@ -35,7 +36,7 @@ export function useAuth() {
   }, [fetchUser]);
 
   const signIn = async (email: string, password: string) => {
-    const res = await fetch("/api/auth/signin", {
+    const res = await apiFetch("/api/auth/signin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -48,7 +49,7 @@ export function useAuth() {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-    const res = await fetch("/api/auth/signup", {
+    const res = await apiFetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, name }),
@@ -61,8 +62,11 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    await fetch("/api/auth/signout", { method: "POST" });
-    setUser(null);
+    try {
+      await apiFetch("/api/auth/signout", { method: "POST" });
+    } finally {
+      setUser(null);
+    }
   };
 
   return {

@@ -1,15 +1,25 @@
 import Groq from "groq-sdk";
 import { logger } from "./logger";
 
-if (!process.env.GROQ_API_KEY) {
-  console.warn("GROQ_API_KEY not set. AI features will not work.");
+// Lazy-initialized Groq client — throws on first AI call if key missing.
+// Avoids breaking `next build` in CI without GROQ_API_KEY.
+let _groq: Groq | null = null;
+
+function getGroq(): Groq {
+  if (!_groq) {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      throw new Error("GROQ_API_KEY is required for AI features");
+    }
+    _groq = new Groq({
+      apiKey,
+      timeout: 30000,
+      maxRetries: 2,
+    });
+  }
+  return _groq;
 }
 
-export const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || "",
-  timeout: 30000, // 30 second timeout
-  maxRetries: 2, // Retry up to 2 times on transient errors
-});
 
 // Default model configuration
 export const GROQ_MODEL = "llama-3.1-8b-instant"; // Fast and cheap
@@ -102,6 +112,8 @@ export async function generateCompletion(
     throw new GroqCircuitOpenError();
   }
 
+  const groq = getGroq(); // Throws early if API key missing — not a circuit-breaker event
+
   const startTime = Date.now();
   const model = options?.model || GROQ_MODEL;
 
@@ -142,5 +154,3 @@ export async function generateCompletion(
     throw error;
   }
 }
-
-export default groq;

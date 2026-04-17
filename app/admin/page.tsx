@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Users, UserCheck, UserX, Clock, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { apiFetch } from "@/lib/client/api";
 
 interface Stats {
   total: number;
@@ -52,7 +53,7 @@ export default function AdminDashboard() {
   const handleApprove = async (userId: number) => {
     setActionLoading(userId);
     try {
-      const res = await fetch(`/api/admin/users/${userId}/approve`, { method: "POST" });
+      const res = await apiFetch(`/api/admin/users/${userId}/approve`, { method: "POST" });
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) { toast.success(data.message); fetchData(); }
@@ -67,7 +68,7 @@ export default function AdminDashboard() {
   const handleReject = async (userId: number) => {
     setActionLoading(userId);
     try {
-      const res = await fetch(`/api/admin/users/${userId}/reject`, { method: "POST" });
+      const res = await apiFetch(`/api/admin/users/${userId}/reject`, { method: "POST" });
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       if (data.success) { toast.success(data.message); fetchData(); }
@@ -87,7 +88,7 @@ export default function AdminDashboard() {
   }) => {
     const results = await Promise.allSettled(
       pendingUsers.map((user) =>
-        fetch(opts.path(user.id), {
+        apiFetch(opts.path(user.id), {
           method: "POST",
           ...(opts.body !== undefined && {
             headers: { "Content-Type": "application/json" },

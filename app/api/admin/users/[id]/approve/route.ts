@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, invalidateUserStatusCache } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
 import { eq, ne, and } from "drizzle-orm";
@@ -38,6 +38,8 @@ export async function POST(
       .set({ status: "approved" as const, approvedAt: new Date() })
       .where(and(eq(users.id, userId), ne(users.status, "approved")))
       .returning({ id: users.id });
+
+    await invalidateUserStatusCache(userId);
 
     if (result.length === 0) {
       return createErrorResponse(

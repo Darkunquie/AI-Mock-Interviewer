@@ -20,6 +20,7 @@ import {
   Search,
   X,
 } from "lucide-react";
+import { apiFetch } from "@/lib/client/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -205,7 +206,7 @@ export default function PracticePage() {
 
       setLoading(true);
       try {
-        const response = await fetch("/api/interview/create", {
+        const response = await apiFetch("/api/interview/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -223,11 +224,12 @@ export default function PracticePage() {
           }),
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
           throw new Error(data.error || "Failed to create practice session");
         }
+
+        const data = await response.json();
 
         toast.success("Tech Deep Dive session created!");
         router.push(`/dashboard/interview/${data.interviewId}`);
@@ -253,7 +255,7 @@ export default function PracticePage() {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/interview/create", {
+      const response = await apiFetch("/api/interview/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -267,11 +269,12 @@ export default function PracticePage() {
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
         throw new Error(data.error || "Failed to create practice session");
       }
+
+      const data = await response.json();
 
       toast.success("Practice session created!");
       router.push(`/dashboard/interview/${data.interviewId}`);

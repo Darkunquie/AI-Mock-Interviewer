@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { AuthUser } from "@/lib/auth";
+import { apiFetch } from "@/lib/client/api";
 
 const NAV_ITEMS = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -52,7 +53,7 @@ export default function DashboardShell({
     if (isSigningOut) return;
     setIsSigningOut(true);
     try {
-      const res = await fetch("/api/auth/signout", { method: "POST" });
+      const res = await apiFetch("/api/auth/signout", { method: "POST" });
       if (!res.ok) {
         toast.error("Sign out failed. Please try again.");
         return;

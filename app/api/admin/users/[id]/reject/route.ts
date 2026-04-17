@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, invalidateUserStatusCache } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/utils/schema";
 import { eq } from "drizzle-orm";
@@ -37,6 +37,8 @@ export async function POST(
       .update(users)
       .set({ status: "rejected" })
       .where(eq(users.id, userId));
+
+    await invalidateUserStatusCache(userId);
 
     return NextResponse.json({
       success: true,

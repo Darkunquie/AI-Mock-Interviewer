@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, desc, and, like, sql } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviews } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
@@ -39,7 +39,8 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
-      conditions.push(like(interviews.role, `%${search.toLowerCase()}%`));
+      const escapedSearch = search.toLowerCase().replaceAll(/[%_\\]/g, String.raw`\$&`);
+      conditions.push(sql`${interviews.role} ILIKE ${'%' + escapedSearch + '%'} ESCAPE '\\'`);
     }
 
     // Get total count for pagination

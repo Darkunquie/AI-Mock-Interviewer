@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Database,
 } from "lucide-react";
+import { apiFetch } from "@/lib/client/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -116,7 +117,7 @@ export default function ProjectsPage() {
     setGeneratedProjects([]);
 
     try {
-      const response = await fetch("/api/projects/generate", {
+      const response = await apiFetch("/api/projects/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

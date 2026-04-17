@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Loader2, Zap, Eye, EyeOff } from "lucide-react";
+import { apiFetch } from "@/lib/client/api";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -19,14 +20,21 @@ export default function SignUpPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (password.length < 8) {
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    
+    if (password.length < 8 || !hasUppercase || !hasLowercase || !hasNumber) {
       toast.error("Password must be at least 8 characters with uppercase, lowercase, and a number");
+      setIsLoading(false);
+      return;
+    }      toast.error("Password must be at least 8 characters with uppercase, lowercase, and a number");
       setIsLoading(false);
       return;
     }
 
     try {
-      const res = await fetch("/api/auth/signup", {
+      const res = await apiFetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, name, phone }),
