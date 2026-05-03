@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     const groqFormData = new FormData();
     groqFormData.append("file", audioFile, "audio.webm");
     groqFormData.append("model", WHISPER_MODEL);
+    groqFormData.append("language", "en");
     groqFormData.append("response_format", "json");
 
     const response = await fetch(GROQ_WHISPER_URL, {
