@@ -166,6 +166,10 @@ export default function InterviewStartPage() {
     if (data && useVoice && ttsSupported && !showFeedback && hasInteracted) {
       const question = data.interview.questions[currentQuestionIndex];
       if (question) {
+        // Stop mic while TTS speaks to prevent feedback loop
+        if (isListening) {
+          stopListening();
+        }
         speak(question.text);
       }
     }
@@ -439,7 +443,7 @@ export default function InterviewStartPage() {
                 />
 
                 <div className="px-2 py-1 border-t border-white/[0.08] flex items-center justify-end gap-2">
-                  <button onClick={() => setUserAnswer("")} className="text-[9px] font-bold text-zinc-500 hover:text-white uppercase px-2 py-1">
+                  <button onClick={() => { setUserAnswer(""); resetTranscript(); resetMetrics(); }} className="text-[9px] font-bold text-zinc-500 hover:text-white uppercase px-2 py-1">
                     Clear
                   </button>
                   <button
