@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -26,6 +26,13 @@ import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { useTimer } from "@/hooks/useTimer";
 import { useSpeechAnalysis } from "@/hooks/useSpeechAnalysis";
+import dynamic from "next/dynamic";
+
+// WebGL canvas — client-only, no SSR.
+const InterviewerAvatar3D = dynamic(
+  () => import("@/components/interview/InterviewerAvatar3D").then((m) => m.InterviewerAvatar3D),
+  { ssr: false }
+);
 import { Question, AnswerEvaluation, ExperienceLevel } from "@/types";
 
 interface InterviewData {
@@ -114,9 +121,11 @@ export default function InterviewStartPage() {
 
   const {
     speak,
+    prefetch: prefetchSpeech,
     cancel: cancelSpeech,
     isSpeaking,
     isSupported: ttsSupported,
+    audioElementRef,
   } = useTextToSpeech({ rate: speechRate });
 
   const {
@@ -162,18 +171,54 @@ export default function InterviewStartPage() {
     }
   }, [transcript, analyzeTranscript]);
 
+  // Latest mic state/stopper, read via ref so the speak effect never goes stale
+  // yet also never re-fires just because recording toggled.
+  const isListeningRef = useRef(false);
+  const stopListeningRef = useRef(stopListening);
+  useEffect(() => {
+    isListeningRef.current = isListening;
+    stopListeningRef.current = stopListening;
+  }, [isListening, stopListening]);
+
+  // Speak each question once, when it first becomes visible.
+  const spokenIndexRef = useRef<number | null>(null);
   useEffect(() => {
     if (data && useVoice && ttsSupported && !showFeedback && hasInteracted) {
+      if (spokenIndexRef.current === currentQuestionIndex) return;
       const question = data.interview.questions[currentQuestionIndex];
       if (question) {
-        // Stop mic while TTS speaks to prevent feedback loop
-        if (isListening) {
-          stopListening();
+        spokenIndexRef.current = currentQuestionIndex;
+        // Stop mic while TTS speaks to prevent a feedback loop where the mic
+        // transcribes the AI's own voice into the answer.
+        if (isListeningRef.current) {
+          stopListeningRef.current();
         }
         speak(question.text);
       }
     }
   }, [currentQuestionIndex, data, useVoice, ttsSupported, showFeedback, speak, hasInteracted]);
+
+  // Replay the current question on demand (works even if voice is muted).
+  const handleReplayQuestion = () => {
+    if (!data) return;
+    const q = data.interview.questions[currentQuestionIndex];
+    if (!q) return;
+    setHasInteracted(true);
+    if (isListening) stopListening();
+    speak(q.text);
+  };
+
+  // Warm the current + next couple of questions' audio so playback is instant.
+  // Not gated on useVoice: we prefetch the FIRST question on page load so there's
+  // no delay the moment the user enables voice.
+  useEffect(() => {
+    if (!data || !ttsSupported) return;
+    const qs = data.interview.questions;
+    for (let k = 0; k <= 2; k++) {
+      const q = qs[currentQuestionIndex + k];
+      if (q?.text) prefetchSpeech(q.text);
+    }
+  }, [currentQuestionIndex, data, ttsSupported, prefetchSpeech]);
 
   useEffect(() => {
     if (!showFeedback && !loading) {
@@ -330,8 +375,8 @@ export default function InterviewStartPage() {
   return (
     <div className="h-screen bg-[#0f0f0f] text-white flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-white/[0.08] px-6 py-3 bg-[#0f0f0f] shrink-0">
-        <Link href="/dashboard" className="flex items-center gap-2">
+      <header className="flex items-center justify-between gap-3 border-b border-white/[0.08] px-4 sm:px-6 py-3 bg-[#0f0f0f] shrink-0">
+        <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
           <div className="size-6 bg-yellow-400 rounded flex items-center justify-center">
             <Zap className="w-4 h-4 text-[#0f0f0f]" />
           </div>
@@ -339,7 +384,7 @@ export default function InterviewStartPage() {
         </Link>
 
         {/* Progress */}
-        <div className="flex flex-col items-center gap-0.5 min-w-[200px]">
+        <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0 max-w-[280px]">
           <div className="flex justify-between w-full text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
             <span>Q{currentQuestionIndex + 1}/{interview.questions.length}</span>
             <span>{Math.round(progress)}%</span>
@@ -350,116 +395,207 @@ export default function InterviewStartPage() {
         </div>
 
         {/* Timer & Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {!showFeedback && (
-            <div className={`flex items-center gap-1.5 px-2 py-1 rounded border text-sm ${
-              percentageLeft <= 25 ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-zinc-900 border-zinc-700 text-white"
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm ${
+              percentageLeft <= 25 ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-[#161616] border-white/[0.08] text-white"
             }`}>
-              <Clock className="w-3 h-3" />
+              <Clock className="w-3.5 h-3.5" />
               <span className="font-bold tabular-nums">{formatTime(timeLeft)}</span>
             </div>
           )}
           <button
             onClick={() => { setHasInteracted(true); setUseVoice(!useVoice); }}
-            className="size-7 flex items-center justify-center rounded bg-zinc-800 border border-zinc-700 hover:bg-zinc-700"
+            title={useVoice ? "Mute interviewer voice" : "Enable interviewer voice"}
+            className="hidden sm:flex size-8 items-center justify-center rounded-lg bg-[#161616] border border-white/[0.08] hover:bg-zinc-800 transition-colors"
           >
             {useVoice ? <Volume2 className="w-4 h-4 text-yellow-400" /> : <VolumeX className="w-4 h-4 text-zinc-500" />}
+          </button>
+          <div className="hidden sm:block w-px h-6 bg-white/[0.08] mx-0.5" />
+          <button
+            onClick={handleReplayQuestion}
+            disabled={isSpeaking || showFeedback}
+            title="Hear the question again"
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-yellow-400/30 bg-yellow-400/10 text-yellow-400 hover:bg-yellow-400/20 font-bold text-xs disabled:opacity-40 transition-colors"
+          >
+            <Volume2 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{isSpeaking ? "Playing…" : "Repeat"}</span>
+          </button>
+          <button
+            onClick={pauseTimer}
+            title="Pause"
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-white/[0.08] bg-[#161616] text-zinc-300 font-bold text-xs hover:bg-zinc-800 transition-colors"
+          >
+            <Pause className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Pause</span>
+          </button>
+          <button
+            onClick={handleSubmitTest}
+            disabled={submitting}
+            title="End interview"
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-xs disabled:opacity-50 transition-all"
+          >
+            <Flag className="w-3.5 h-3.5" /> <span className="hidden sm:inline">End</span>
           </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex min-h-0">
-        {/* Left Sidebar */}
-        <aside className="hidden lg:flex flex-col w-64 border-r border-white/[0.08] bg-[#0f0f0f]">
-          <div className="p-4 overflow-y-auto">
-            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Transcript</h3>
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-zinc-400">Interviewer</p>
-                <p className="text-sm text-zinc-300 leading-relaxed">"{currentQuestion?.text}"</p>
-              </div>
-              {userAnswer && (
-                <div className="space-y-1 border-l-2 border-yellow-400/30 pl-3">
-                  <p className="text-xs font-bold text-yellow-400">You</p>
-                  <p className="text-sm text-zinc-400 italic">"{userAnswer}"</p>
-                </div>
-              )}
-              {isListening && interimTranscript && (
-                <div className="space-y-1 border-l-2 border-yellow-400 pl-3">
-                  <p className="text-xs font-bold text-yellow-400">You (Live)</p>
-                  <p className="text-lg font-medium text-white leading-snug">"{interimTranscript}"</p>
-                </div>
-              )}
+      <main className="flex-1 flex min-h-0 gap-4 p-4">
+        {/* Left — Interviewer video-call pane (Aria) */}
+        <aside className="hidden lg:flex flex-col w-[320px] shrink-0 gap-3">
+          {/* Video pane */}
+          <div
+            className={`relative flex-1 min-h-0 rounded-2xl overflow-hidden border transition-shadow duration-300 ${
+              isSpeaking
+                ? "border-yellow-400/40 shadow-[0_0_40px_-8px_rgba(250,204,21,0.35)]"
+                : "border-white/[0.08]"
+            }`}
+            style={{ background: "radial-gradient(120% 90% at 50% 28%, #232320 0%, #17170f 46%, #0f0f0f 100%)" }}
+          >
+            {/* The human face (photo → talking video), or SVG fallback */}
+            <InterviewerAvatar3D speaking={isSpeaking} audioRef={audioElementRef} />
+
+            {/* status chip */}
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-2 h-7 px-3 rounded-full bg-black/55 backdrop-blur border border-white/10">
+              <span
+                className={`size-2 rounded-full ${
+                  isSpeaking ? "bg-yellow-400 animate-pulse" : isListening ? "bg-emerald-400 animate-pulse" : "bg-zinc-400"
+                }`}
+              />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-200">
+                {isSpeaking ? "Speaking" : isListening ? "Listening" : "Live"}
+              </span>
             </div>
+            {isListening && (
+              <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 h-7 px-3 rounded-full bg-black/55 backdrop-blur border border-white/10">
+                <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-200">Rec</span>
+              </div>
+            )}
+
+            {/* bottom scrim + name tag (Zoom-style) */}
+            <div className="absolute inset-x-0 bottom-0 z-10 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-10">
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <p className="text-base font-bold text-white leading-tight drop-shadow">Aria</p>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-300">AI Interviewer</p>
+                </div>
+                <span className="text-[11px] font-semibold text-yellow-300 drop-shadow">
+                  {isSpeaking ? "Speaking…" : isListening ? "Listening…" : "Ready"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* live transcript */}
+          <div className="shrink-0 rounded-2xl bg-[#161616] border border-white/[0.08] p-3">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Aria is asking</p>
+            <p className="text-[13px] leading-relaxed text-zinc-300 line-clamp-3">"{currentQuestion?.text}"</p>
+            {isListening && interimTranscript && (
+              <div className="mt-2 pt-2 border-t border-white/[0.08]">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-yellow-400/70 mb-1">You (live)</p>
+                <p className="text-[13px] leading-snug text-white line-clamp-2">"{interimTranscript}"</p>
+              </div>
+            )}
           </div>
         </aside>
 
-        {/* Center Content */}
-        <section className="flex-1 flex flex-col p-4 overflow-hidden">
+        {/* Center — Question + Answer */}
+        <section className="flex-1 flex flex-col overflow-hidden min-w-0">
           <div className="max-w-4xl w-full mx-auto space-y-4 flex-1 flex flex-col">
             {/* Question Card */}
-            <div className="bg-[#161616] rounded-xl p-5 border border-white/[0.08] shadow-sm shrink-0">
-              <div className="flex items-center justify-between mb-1">
-                <span className="px-2 py-0.5 bg-yellow-400/10 text-yellow-400 text-[9px] font-black rounded uppercase tracking-wider border border-yellow-400/20">
+            <div className="bg-[#161616] rounded-2xl p-6 border border-white/[0.08] shadow-lg shadow-black/20 shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <span className="px-2.5 py-1 bg-yellow-400/10 text-yellow-400 text-[10px] font-black rounded-md uppercase tracking-wider border border-yellow-400/20">
                   {currentQuestion?.topic || interview.interviewType}
                 </span>
-                <span className="text-zinc-600 text-[9px] font-bold uppercase">Q{currentQuestionIndex + 1}</span>
-              </div>
-              <h1 className="text-lg font-bold leading-tight text-white">{currentQuestion?.text}</h1>
-              {currentQuestion?.difficulty && (
-                <div className="flex items-center gap-1 pt-1 mt-1 border-t border-white/[0.08]">
-                  <Info className="w-2.5 h-2.5 text-zinc-500" />
-                  <p className="text-[9px] text-zinc-500">Difficulty: <span className="text-zinc-300">{currentQuestion.difficulty}</span></p>
+                <div className="flex items-center gap-3">
+                  {currentQuestion?.difficulty && (
+                    <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                      <Info className="w-3 h-3" />
+                      Difficulty: <span className="text-zinc-300 capitalize">{currentQuestion.difficulty}</span>
+                    </span>
+                  )}
+                  <span className="text-zinc-600 text-[10px] font-bold uppercase">Q{currentQuestionIndex + 1}</span>
                 </div>
-              )}
+              </div>
+              <h1 className="text-2xl font-bold leading-snug text-white">{currentQuestion?.text}</h1>
             </div>
 
             {/* Answer/Feedback Section */}
             {!showFeedback ? (
-              <div className="bg-[#161616] rounded-xl border border-white/[0.08] flex flex-col flex-1 min-h-0">
-                <div className="px-3 py-1 border-b border-white/[0.08] flex items-center justify-between">
+              <div className="bg-[#161616] rounded-2xl border border-white/[0.08] flex flex-col flex-1 min-h-0">
+                <div className="px-4 py-2.5 border-b border-white/[0.08] flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-3 h-3 text-yellow-400" />
+                    <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
                     <span className="text-xs font-bold text-white">Your Answer</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[9px] font-bold uppercase text-zinc-500">
+                  <div className="flex items-center gap-2.5 text-[10px] font-bold uppercase text-zinc-500">
                     {isListening && (
-                      <span className="flex items-center gap-1 text-green-400">
-                        <span className="size-1.5 bg-green-400 rounded-full animate-pulse" />
+                      <span className="flex items-center gap-1 text-red-400">
+                        <span className="size-1.5 bg-red-500 rounded-full animate-pulse" />
                         REC
                       </span>
                     )}
-                    <span>{userAnswer.length}</span>
+                    <span className="tabular-nums">{userAnswer.length} / 2000</span>
                   </div>
                 </div>
 
                 <textarea
                   value={userAnswer + (interimTranscript ? " " + interimTranscript : "")}
                   onChange={(e) => setUserAnswer(e.target.value)}
-                  placeholder="Type your answer or click mic to speak..."
-                  className="p-4 bg-transparent border-none focus:ring-0 focus:outline-none text-base leading-relaxed text-white placeholder:text-zinc-600 resize-none flex-1"
+                  placeholder="Type your answer or click the mic to speak…"
+                  className="px-4 py-3 bg-transparent border-none focus:ring-0 focus:outline-none text-base leading-relaxed text-white placeholder:text-zinc-600 resize-none flex-1"
                   disabled={isListening || submitting}
                 />
 
-                <div className="px-2 py-1 border-t border-white/[0.08] flex items-center justify-end gap-2">
-                  <button onClick={() => { setUserAnswer(""); resetTranscript(); resetMetrics(); }} className="text-[9px] font-bold text-zinc-500 hover:text-white uppercase px-2 py-1">
-                    Clear
-                  </button>
-                  <button
-                    onClick={handleNextQuestion}
-                    disabled={submitting}
-                    className="text-[9px] font-bold text-zinc-400 hover:text-white uppercase px-2 py-1 flex items-center gap-1 border border-zinc-700 rounded"
-                  >
-                    <SkipForward className="w-3 h-3" /> Skip
-                  </button>
-                  <button
-                    onClick={handleSubmitAnswer}
-                    disabled={!userAnswer.trim() || submitting}
-                    className="bg-yellow-400 hover:bg-yellow-300 text-[#0f0f0f] text-[9px] font-black uppercase px-3 py-1.5 rounded disabled:opacity-50 flex items-center gap-1"
-                  >
-                    {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <>Submit <ArrowRight className="w-3 h-3" /></>}
-                  </button>
+                <div className="px-3 py-2.5 border-t border-white/[0.08] flex items-center justify-between gap-2">
+                  {/* inline mic + waveform */}
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={handleToggleRecording}
+                      disabled={submitting || permissionStatus === "denied"}
+                      title={isListening ? "Stop recording" : "Record answer"}
+                      className={`size-10 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                        isListening ? "bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30" : "bg-yellow-400 hover:bg-yellow-300 shadow-lg shadow-yellow-400/20"
+                      } disabled:opacity-50`}
+                    >
+                      {isListening ? <MicOff className="w-5 h-5 text-white" /> : <Mic className="w-5 h-5 text-[#0f0f0f]" />}
+                    </button>
+                    {isListening ? (
+                      <div className="flex items-center gap-0.5 h-6">
+                        {[...Array(9)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="w-0.5 bg-yellow-400 rounded-full animate-pulse"
+                            style={{ height: `${6 + (i % 4) * 5}px`, animationDelay: `${i * 0.08}s` }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-medium text-zinc-500">Tap to speak</span>
+                    )}
+                    {sttError && <span className="text-orange-400 text-[10px]">{sttError}</span>}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => { setUserAnswer(""); resetTranscript(); resetMetrics(); }} className="text-[10px] font-bold text-zinc-500 hover:text-white uppercase px-2.5 py-1.5">
+                      Clear
+                    </button>
+                    <button
+                      onClick={handleNextQuestion}
+                      disabled={submitting}
+                      className="text-[10px] font-bold text-zinc-400 hover:text-white uppercase px-2.5 py-1.5 flex items-center gap-1 border border-white/[0.08] rounded-lg hover:bg-zinc-800 transition-colors"
+                    >
+                      <SkipForward className="w-3 h-3" /> Skip
+                    </button>
+                    <button
+                      onClick={handleSubmitAnswer}
+                      disabled={!userAnswer.trim() || submitting}
+                      className="bg-yellow-400 hover:bg-yellow-300 text-[#0f0f0f] text-[10px] font-black uppercase px-4 py-2 rounded-lg disabled:opacity-50 flex items-center gap-1 transition-colors"
+                    >
+                      {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>Submit <ArrowRight className="w-3.5 h-3.5" /></>}
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -510,82 +646,36 @@ export default function InterviewStartPage() {
           </div>
         </section>
 
-        {/* Right Sidebar */}
-        <aside className="hidden xl:flex flex-col w-56 border-l border-white/[0.08] bg-[#0f0f0f]">
-          <div className="p-4 overflow-y-auto">
-            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Feedback</h3>
-            <div className="space-y-3">
-              <div className="p-3 rounded-lg bg-[#161616] border border-white/[0.08]">
-                <div className="flex justify-between items-center mb-1">
-                  <p className="text-zinc-500 text-[10px] font-bold uppercase">Pace</p>
-                  <Zap className="w-4 h-4 text-yellow-400" />
-                </div>
-                <p className="text-white text-2xl font-bold tabular-nums">{speechMetrics.averageWPM || 0} <span className="text-xs font-normal text-zinc-400">WPM</span></p>
-              </div>
-              <div className="p-3 rounded-lg bg-[#161616] border border-white/[0.08]">
-                <div className="flex justify-between items-center mb-1">
-                  <p className="text-zinc-500 text-[10px] font-bold uppercase">Fillers</p>
-                  {speechMetrics.fillerWords.total > 3 ? <AlertTriangle className="w-4 h-4 text-orange-500" /> : <CheckCircle className="w-4 h-4 text-green-500" />}
-                </div>
-                <p className="text-white text-2xl font-bold tabular-nums">{speechMetrics.fillerWords.total}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-yellow-400/5 border border-yellow-400/10">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Sparkles className="w-3 h-3 text-yellow-400" />
-                  <p className="text-[10px] font-bold text-yellow-400 uppercase">AI Tip</p>
-                </div>
-                <p className="text-[11px] leading-relaxed text-zinc-400">{isListening ? "Speak clearly." : "Click mic to speak."}</p>
-              </div>
+        {/* Right — Metrics rail */}
+        <aside className="hidden xl:flex flex-col w-[240px] shrink-0 gap-3 overflow-y-auto">
+          <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">Live Feedback</h3>
+          <div className="p-4 rounded-2xl bg-[#161616] border border-white/[0.08]">
+            <div className="flex justify-between items-center mb-1.5">
+              <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Pace</p>
+              <Zap className="w-4 h-4 text-yellow-400" />
             </div>
+            <p className="text-white text-3xl font-bold tabular-nums">{speechMetrics.averageWPM || 0} <span className="text-xs font-normal text-zinc-500">WPM</span></p>
+            <p className="text-[10px] text-zinc-600 mt-1">{isListening ? "Measuring…" : "Start speaking to measure"}</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-[#161616] border border-white/[0.08]">
+            <div className="flex justify-between items-center mb-1.5">
+              <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Fillers</p>
+              {speechMetrics.fillerWords.total > 3 ? <AlertTriangle className="w-4 h-4 text-orange-500" /> : <CheckCircle className="w-4 h-4 text-emerald-500" />}
+            </div>
+            <p className="text-white text-3xl font-bold tabular-nums">{speechMetrics.fillerWords.total}</p>
+            <p className="text-[10px] text-zinc-600 mt-1">{speechMetrics.fillerWords.total > 3 ? "Try to reduce these" : "Clean so far"}</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-yellow-400/5 border border-yellow-400/15">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+              <p className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">AI Tip</p>
+            </div>
+            <p className="text-[12px] leading-relaxed text-zinc-300">
+              {isListening ? "Speak clearly and at a steady pace. Structure: definition, then an example." : "Click the mic to answer aloud — I'll transcribe it in real time."}
+            </p>
           </div>
         </aside>
       </main>
-
-      {/* Footer */}
-      <footer className="h-20 shrink-0 bg-[#161616] border-t border-white/[0.08] px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4 flex-1">
-          <div className="flex flex-col items-center gap-0.5">
-            <button
-              onClick={handleToggleRecording}
-              disabled={submitting || showFeedback || permissionStatus === 'denied'}
-              className={`size-12 rounded-full flex items-center justify-center transition-all ${
-                isListening ? "bg-red-500 hover:bg-red-600 animate-pulse" : "bg-yellow-400 hover:bg-yellow-300"
-              } disabled:opacity-50`}
-            >
-              {isListening ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-[#0f0f0f]" />}
-            </button>
-            <span className={`text-[8px] font-black uppercase ${isListening ? "text-red-400" : "text-yellow-400"}`}>
-              {isListening ? "REC" : "MIC"}
-            </span>
-          </div>
-          {isListening && (
-            <div className="flex items-center gap-0.5 h-8 px-3 bg-zinc-800/50 rounded-full">
-              {[...Array(8)].map((_, i) => (
-                <div 
-                  key={i} 
-                  className="w-0.5 bg-yellow-400 rounded-full animate-pulse" 
-                  style={{ 
-                    height: `${8 + (i % 3) * 4}px`,
-                    animationDelay: `${i * 0.1}s` 
-                  }} 
-                />
-              ))}
-            </div>
-          )}          {sttError && <span className="text-orange-400 text-xs">{sttError}</span>}
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={pauseTimer} className="flex items-center gap-1.5 px-4 h-9 rounded-lg border border-zinc-700 text-zinc-300 font-bold text-xs hover:bg-zinc-800 transition-colors">
-            <Pause className="w-3.5 h-3.5" /> Pause
-          </button>
-          <button
-            onClick={handleSubmitTest}
-            disabled={submitting}
-            className="flex items-center gap-1.5 px-4 h-9 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-xs disabled:opacity-50 transition-all"
-          >
-            <Flag className="w-3.5 h-3.5" /> End
-          </button>
-        </div>
-      </footer>
 
       {/* Dialog */}
       {showSubmitDialog && (

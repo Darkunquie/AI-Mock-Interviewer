@@ -6,6 +6,7 @@ import { logger } from "./logger";
 // Using a module-level singleton avoids connection churn under load.
 // When running under pm2 cluster mode, each worker has its own connection.
 let client: Redis | null = null;
+let initialized = false;
 
 function createClient(): Redis {
   const url = process.env.REDIS_URL || "redis://localhost:6379";
@@ -18,9 +19,20 @@ function createClient(): Redis {
     retryStrategy: (times) => Math.min(times * 200, 2000),
   });
 
+  // Throttle the error log: ioredis emits on every reconnect attempt, which
+  // floods the console when Redis is absent (common in local dev). Log the
+  // first error, then at most once per minute.
+  let lastErrorLoggedAt = 0;
   redis.on("error", (err) => {
-    // Log once per error kind but don't throw — callers must handle misses.
-    logger.error("Redis client error", err instanceof Error ? err : new Error(String(err)));
+    // Connection failure is non-fatal — cache fails open, callers handle misses.
+    // Log at warn (not error) so it never triggers the Next.js dev error overlay.
+    const now = performance.now();
+    if (now - lastErrorLoggedAt > 60_000 || lastErrorLoggedAt === 0) {
+      lastErrorLoggedAt = now;
+      logger.warn("Redis client error", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   });
 
   redis.on("connect", () => {
@@ -31,12 +43,20 @@ function createClient(): Redis {
 }
 
 /**
- * Returns the shared Redis client. Creates it on first use.
- * Callers should handle connection errors (fail-open or fail-closed per context).
+ * Returns the shared Redis client, or null when Redis is not configured.
+ *
+ * Redis is optional: cache and rate-limiting fail open without it. To avoid
+ * flooding the console with connection errors in local dev, we only connect
+ * when REDIS_URL is explicitly set. Callers must handle a null return.
  */
-export function getRedis(): Redis {
-  if (!client) {
-    client = createClient();
+export function getRedis(): Redis | null {
+  if (!initialized) {
+    initialized = true;
+    if (process.env.REDIS_URL) {
+      client = createClient();
+    } else {
+      logger.info("Redis not configured (REDIS_URL unset) — cache disabled");
+    }
   }
   return client;
 }
@@ -45,8 +65,10 @@ export function getRedis(): Redis {
  * Safe GET — returns null on any Redis error. Never throws.
  */
 export async function cacheGet<T = unknown>(key: string): Promise<T | null> {
+  const redis = getRedis();
+  if (!redis) return null;
   try {
-    const raw = await getRedis().get(key);
+    const raw = await redis.get(key);
     if (raw === null) return null;
     return JSON.parse(raw) as T;
   } catch (err) {
@@ -64,8 +86,10 @@ export async function cacheSet(key: string, value: unknown, ttlSeconds: number):
     logger.warn("cacheSet called with invalid TTL", { key, ttlSeconds });
     return;
   }
+  const redis = getRedis();
+  if (!redis) return;
   try {
-    await getRedis().set(key, JSON.stringify(value), "EX", ttlSeconds);
+    await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
   } catch (err) {
     logger.warn("Redis SET failed", { key, error: err instanceof Error ? err.message : String(err) });
   }
@@ -76,8 +100,10 @@ export async function cacheSet(key: string, value: unknown, ttlSeconds: number):
  */
 export async function cacheDel(...keys: string[]): Promise<void> {
   if (keys.length === 0) return;
+  const redis = getRedis();
+  if (!redis) return;
   try {
-    await getRedis().del(...keys);
+    await redis.del(...keys);
   } catch (err) {
     logger.warn("Redis DEL failed", { keys, error: err instanceof Error ? err.message : String(err) });
   }

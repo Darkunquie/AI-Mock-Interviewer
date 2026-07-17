@@ -92,11 +92,12 @@ export async function GET(request: NextRequest) {
           .where(
             and(
               eq(interviews.status, "completed"),
-              inArray(sql<number>`${interviews.userId}`, userIds)
+              inArray(sql<number>`${interviews.userId}`, userIds),
+              ...(timeFilter ? [timeFilter] : []),
+              ...(role ? [eq(interviews.role, role)] : [])
             )
           )
           .groupBy(interviews.userId, interviews.role);
-
         const userRoleCounts: Record<number, { role: string; count: number }> = {};
         roleCounts.forEach((rc) => {
           if (rc.userId === null) return;

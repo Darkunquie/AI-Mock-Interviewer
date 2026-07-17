@@ -89,8 +89,20 @@ export async function checkRateLimit(
   const nowSeconds = Math.floor(Date.now() / 1000);
   const resetEpochSeconds = (Math.floor(nowSeconds / windowSeconds) + 1) * windowSeconds;
 
+  const redis = getRedis();
+  if (!redis) {
+    // Redis not configured — fail open (rate limiting disabled).
+    return {
+      allowed: true,
+      count: 0,
+      remaining: limit,
+      resetEpochSeconds,
+      degraded: true,
+    };
+  }
+
   try {
-    const result = (await getRedis().eval(
+    const result = (await redis.eval(
       SLIDING_WINDOW_COUNTER_LUA,
       1,
       key,

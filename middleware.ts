@@ -57,6 +57,7 @@ const securityHeaders = {
   "X-Frame-Options": "DENY",
   "X-XSS-Protection": "1; mode=block",
   "Referrer-Policy": "strict-origin-when-cross-origin",
+  // microphone=(self): required for voice answers (STT).
   "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
 };
 
