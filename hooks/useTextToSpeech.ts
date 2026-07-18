@@ -79,9 +79,10 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
   useEffect(() => {
     if (!isSupported) return;
 
-    // Named FEMALE voices across platforms (matches the female avatar).
-    const isFemaleVoice = (v: SpeechSynthesisVoice) =>
-      /\bfemale\b|zira|heera|neerja|ananya|sapna|swara|priya|kavya|woman|aria|jenny|sonia|susan|hazel|eva|linda|zoe|woman\b/i.test(
+    // Named MALE voices across platforms — matches the male interviewer avatar
+    // and the server neural default (en-IN-PrabhatNeural in /api/tts).
+    const isMaleVoice = (v: SpeechSynthesisVoice) =>
+      /\bmale\b|prabhat|ravi|hemant|madhur|gaurav|david|mark|guy|christopher|ryan|william|george|roger|eric|alex|daniel|fred|tom|aaron|arthur|\bman\b/i.test(
         v.name
       );
     // Higher-quality engines (neural / online) — avoid the robotic legacy SAPI voices.
@@ -89,16 +90,16 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
       /natural|neural|google|online|premium|enhanced/i.test(v.name);
 
     const selectBestVoice = (availableVoices: SpeechSynthesisVoice[]) => {
-      const female = availableVoices.filter(isFemaleVoice);
-      const femaleEn = female.filter((v) => v.lang.startsWith("en"));
+      const male = availableVoices.filter(isMaleVoice);
+      const maleEn = male.filter((v) => v.lang.startsWith("en"));
       return (
-        // Priority 1: Natural/neural female English voice (most human)
-        femaleEn.find(isNaturalVoice) ||
-        // Priority 2: Natural/neural female any language
-        female.find(isNaturalVoice) ||
-        // Priority 3: Female en-IN (matches accent), else any female English
-        femaleEn.find((v) => v.lang === "en-IN") ||
-        femaleEn[0] ||
+        // Priority 1: Natural/neural male English voice (most human)
+        maleEn.find(isNaturalVoice) ||
+        // Priority 2: Natural/neural male any language
+        male.find(isNaturalVoice) ||
+        // Priority 3: Male en-IN (matches Prabhat accent), else any male English
+        maleEn.find((v) => v.lang === "en-IN") ||
+        maleEn[0] ||
         // Priority 4: Any natural English voice (even if gender unknown)
         availableVoices.find((v) => v.lang.startsWith("en") && isNaturalVoice(v)) ||
         // Priority 5: Any English voice
