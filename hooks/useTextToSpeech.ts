@@ -310,6 +310,7 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
           if (token === speakTokenRef.current) setIsSpeaking(false);
         };
         audio.onerror = () => {
+          if (token !== speakTokenRef.current) return; // superseded — ignore
           setIsSpeaking(false);
           speakBrowser(cleanedText);
         };
@@ -317,8 +318,9 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
         audio.currentTime = 0;
         await audio.play();
       } catch {
-        // Network error / non-OK / autoplay block → browser voice.
-        speakBrowser(cleanedText);
+        // Network error / non-OK / autoplay block → browser voice, unless a
+        // newer speak() already superseded this one.
+        if (token === speakTokenRef.current) speakBrowser(cleanedText);
       }
     },
     [stopAll, fetchAudio, speakBrowser]

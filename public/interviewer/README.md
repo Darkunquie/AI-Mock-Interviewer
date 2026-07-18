@@ -23,4 +23,6 @@ ARKit-only avatars (jawOpen/mouthClose) will render but not lip-sync.
    tweak the camera `position` / group `position` in `InterviewerAvatar3D.tsx`.
 
 The voice is set separately in `app/api/tts/route.ts` (`DEFAULT_VOICE`) — keep it
-matching the avatar's apparent gender.
+matching the avatar's apparent gender. The current avatar is male, so the default
+voice is `en-IN-PrabhatNeural` (male); swap to a female voice there if you change
+the avatar.

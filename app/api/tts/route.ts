@@ -10,20 +10,21 @@ export const runtime = "nodejs";
 
 // Natural male neural voice. Kept server-side so the client can't request an
 // arbitrary one. Add more here if you want to offer a picker later.
+// Default is male to match the current male interviewer avatar (avatarsdk).
 const DEFAULT_VOICE = "en-IN-PrabhatNeural";
 const ALLOWED_VOICES = new Set([
-  // female (default matches the female avatar)
-  "en-IN-NeerjaNeural",
-  "en-IN-AnanyaNeural",
-  "en-US-JennyNeural",
-  "en-US-AriaNeural",
-  "en-GB-SoniaNeural",
-  // male (kept selectable)
+  // male (default)
   "en-IN-PrabhatNeural",
   "en-US-ChristopherNeural",
   "en-US-GuyNeural",
   "en-GB-RyanNeural",
   "en-AU-WilliamNeural",
+  // female (selectable — use if you swap to a female avatar)
+  "en-IN-NeerjaNeural",
+  "en-IN-AnanyaNeural",
+  "en-US-JennyNeural",
+  "en-US-AriaNeural",
+  "en-GB-SoniaNeural",
 ]);
 const MAX_LEN = 2000;
 const TTS_TIMEOUT_MS = 15_000;
@@ -53,27 +54,29 @@ export async function POST(request: Request) {
     const voice = typeof reqVoice === "string" && ALLOWED_VOICES.has(reqVoice) ? reqVoice : DEFAULT_VOICE;
 
     const tts = new MsEdgeTTS();
-    await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-    const { audioStream } = tts.toStream(text.slice(0, MAX_LEN));
-
     const chunks: Buffer[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("TTS timeout")), TTS_TIMEOUT_MS);
-      audioStream.on("data", (c: Buffer) => chunks.push(Buffer.from(c)));
-      audioStream.on("end", () => {
-        clearTimeout(timer);
-        resolve();
-      });
-      audioStream.on("error", (err: Error) => {
-        clearTimeout(timer);
-        reject(err);
-      });
-    });
-
     try {
-      tts.close();
-    } catch {
-      // ignore
+      await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+      const { audioStream } = tts.toStream(text.slice(0, MAX_LEN));
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("TTS timeout")), TTS_TIMEOUT_MS);
+        audioStream.on("data", (c: Buffer) => chunks.push(Buffer.from(c)));
+        audioStream.on("end", () => {
+          clearTimeout(timer);
+          resolve();
+        });
+        audioStream.on("error", (err: Error) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+      });
+    } finally {
+      // Always close the WebSocket — even on timeout / stream error.
+      try {
+        tts.close();
+      } catch {
+        // ignore
+      }
     }
 
     const audio = Buffer.concat(chunks);

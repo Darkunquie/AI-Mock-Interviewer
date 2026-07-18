@@ -239,6 +239,8 @@ export default function InterviewStartPage() {
       stopListening();
       stopTracking();
     } else {
+      // Stop any interviewer speech first so the mic can't record it.
+      cancelSpeech();
       resetTranscript();
       setUserAnswer("");
       resetMetrics();
@@ -405,7 +407,12 @@ export default function InterviewStartPage() {
             </div>
           )}
           <button
-            onClick={() => { setHasInteracted(true); setUseVoice(!useVoice); }}
+            onClick={() => {
+              setHasInteracted(true);
+              const next = !useVoice;
+              setUseVoice(next);
+              if (!next) cancelSpeech(); // muting → stop current playback
+            }}
             title={useVoice ? "Mute interviewer voice" : "Enable interviewer voice"}
             className="hidden sm:flex size-8 items-center justify-center rounded-lg bg-[#161616] border border-white/[0.08] hover:bg-zinc-800 transition-colors"
           >
@@ -489,7 +496,7 @@ export default function InterviewStartPage() {
           {/* live transcript */}
           <div className="shrink-0 rounded-2xl bg-[#161616] border border-white/[0.08] p-3">
             <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Aria is asking</p>
-            <p className="text-[13px] leading-relaxed text-zinc-300 line-clamp-3">"{currentQuestion?.text}"</p>
+            <p className="text-[13px] leading-relaxed text-zinc-300 line-clamp-3">&ldquo;{currentQuestion?.text}&rdquo;</p>
             {isListening && interimTranscript && (
               <div className="mt-2 pt-2 border-t border-white/[0.08]">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-yellow-400/70 mb-1">You (live)</p>
