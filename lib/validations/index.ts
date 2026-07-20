@@ -117,8 +117,18 @@ export const techDeepDiveSchema = z.object({
   targetCompany: z.string().max(100).optional(),
 });
 
+// The role is a categorization label; practice/learning-path flows can pass
+// values outside the canonical list (e.g. a tech-stack id), and question
+// generation is driven by `specificRole` + `topics` anyway. So accept any
+// reasonable string and coerce anything unknown to a safe default rather than
+// hard-rejecting the whole request with "Invalid role".
+const KNOWN_ROLES = new Set<string>(interviewRoles);
 export const createInterviewSchema = z.object({
-  role: z.enum(interviewRoles, { message: "Invalid role" }),
+  role: z
+    .string()
+    .min(1, { message: "Role is required" })
+    .max(60)
+    .transform((r) => (KNOWN_ROLES.has(r) ? r : "fullstack")),
   experienceLevel: z.enum(experienceLevels, { message: "Invalid experience level" }),
   interviewType: z.enum(interviewTypes, { message: "Invalid interview type" }),
   mode: z.enum(interviewModes).optional().default("interview"),

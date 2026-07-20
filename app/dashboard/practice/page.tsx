@@ -259,13 +259,13 @@ export default function PracticePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          role: role.includes("_") ? role.split("_")[0] : role, // Map to base role for API
+          role, // send as-is; the server accepts known roles and coerces others
           experienceLevel: experience,
           interviewType: "technical",
           duration,
           mode: "practice",
           topics: selectedTopics,
-          specificRole: role, // Send the specific role for better question generation
+          specificRole: role, // the specific role drives better question generation
         }),
       });
 
