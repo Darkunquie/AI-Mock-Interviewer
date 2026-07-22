@@ -1,7 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
 import { groqCircuit } from "@/lib/groq";
+
+// The detailed `checks` block (DB latency, circuit failure counts, version)
+// is internal telemetry — useful for our monitors, but reconnaissance for an
+// attacker. Expose it only to callers presenting HEALTH_STATUS_TOKEN
+// (?token=… or Authorization: Bearer …). Anonymous callers still get the
+// coarse up/down status a public uptime monitor needs.
+function isAuthorizedForDetail(request: NextRequest): boolean {
+  const expected = process.env.HEALTH_STATUS_TOKEN;
+  if (!expected) return false;
+  const provided =
+    request.nextUrl.searchParams.get("token") ||
+    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  return provided === expected;
+}
 
 interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
@@ -28,7 +42,7 @@ interface HealthStatus {
 
 const startTime = Date.now();
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const timestamp = new Date().toISOString();
   const uptime = Math.floor((Date.now() - startTime) / 1000);
 
@@ -65,27 +79,33 @@ export async function GET() {
   } else {
     status = "healthy";
   }
+  const detailed = isAuthorizedForDetail(request);
+
   const healthResponse: HealthStatus = {
     status,
     timestamp,
-    version: process.env.npm_package_version || "1.0.0",
+    // Version is a fingerprint — only for authorized callers.
+    version: detailed ? process.env.npm_package_version || "1.0.0" : "",
     uptime,
     services: {
       database: dbStatus,
       api: "up",
       groq: groqHealth,
     },
-    checks: {
-      database: {
-        status: dbStatus,
-        latency: dbLatency,
-        error: process.env.NODE_ENV === "production" ? undefined : dbError,
-      },
-      groq: {
-        state: circuit.state,
-        consecutiveFailures: circuit.failures,
-      },
-    },
+    // Internal telemetry only when authorized.
+    checks: detailed
+      ? {
+          database: {
+            status: dbStatus,
+            latency: dbLatency,
+            error: process.env.NODE_ENV === "production" ? undefined : dbError,
+          },
+          groq: {
+            state: circuit.state,
+            consecutiveFailures: circuit.failures,
+          },
+        }
+      : undefined,
   };
 
   // Return appropriate status code

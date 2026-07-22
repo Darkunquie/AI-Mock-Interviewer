@@ -100,15 +100,79 @@ export class GroqCircuitOpenError extends Error {
   }
 }
 
+interface CompletionOptions {
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+// Google Gemini fallback via REST (no SDK dependency). Returns the completion
+// text, or null if unavailable/failed so the caller can decide what to do.
+// Used when Groq is down (circuit open) or a Groq call throws, so a Groq
+// outage degrades to Gemini instead of failing the request. No-op (null) when
+// GOOGLE_GEMINI_API_KEY is unset.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+
+async function tryGemini(messages: ChatMessage[], options?: CompletionOptions): Promise<string | null> {
+  const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const startTime = Date.now();
+  try {
+    // Gemini takes a system instruction separately and uses role "model" for
+    // assistant turns.
+    const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+    const contents = messages
+      .filter((m) => m.role !== "system")
+      .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents,
+        ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+        generationConfig: {
+          temperature: options?.temperature ?? 0.7,
+          maxOutputTokens: options?.maxTokens ?? 2048,
+          responseMimeType: "application/json",
+        },
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    if (!res.ok) {
+      logger.error("Gemini fallback HTTP error", new Error(`HTTP ${res.status}: ${await res.text()}`));
+      return null;
+    }
+
+    const data = await res.json();
+    const text: string =
+      data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+    if (!text) {
+      logger.warn("Gemini fallback returned empty content");
+      return null;
+    }
+
+    logger.info("AI completion via Gemini fallback", { model: GEMINI_MODEL, duration: Date.now() - startTime });
+    return text;
+  } catch (err) {
+    logger.error("Gemini fallback error", err instanceof Error ? err : new Error(String(err)), {
+      duration: Date.now() - startTime,
+    });
+    return null;
+  }
+}
+
 export async function generateCompletion(
   messages: ChatMessage[],
-  options?: {
-    model?: string;
-    temperature?: number;
-    maxTokens?: number;
-  }
+  options?: CompletionOptions
 ): Promise<string> {
+  // Circuit open — skip Groq entirely and try the fallback before failing.
   if (!groqCircuit.canRequest()) {
+    const fallback = await tryGemini(messages, options);
+    if (fallback !== null) return fallback;
     throw new GroqCircuitOpenError();
   }
 
@@ -151,6 +215,9 @@ export async function generateCompletion(
       error instanceof Error ? error : new Error(String(error)),
       { model, duration }
     );
+    // Degrade to Gemini before surfacing the error.
+    const fallback = await tryGemini(messages, options);
+    if (fallback !== null) return fallback;
     throw error;
   }
 }
