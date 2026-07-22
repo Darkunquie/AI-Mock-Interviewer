@@ -1,0 +1,23 @@
+# gitleaks config for ai-mock-interview
+# Extends the built-in ruleset and allowlists known placeholder secrets so the
+# gate stays green on example/docs while still catching real committed secrets.
+
+title = "ai-mock-interview gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholder / example secrets that are not real credentials"
+paths = [
+  '''\.env\.example$''',
+  '''README\.md$''',
+  '''\.github/workflows/.*\.yml$''',
+]
+regexes = [
+  '''your-super-secret-jwt-key''',
+  '''your-jwt-secret''',
+  '''gsk_your_key_here''',
+  '''ci-test-secret-key-not-for-production''',
+  '''postgresql://(user|fake):(password|fake)@''',
+]

@@ -1,0 +1,139 @@
+name: Security Gate
+
+# Runs on every PR + push to main, weekly (to catch newly-disclosed CVEs on
+# unchanged code), and on-demand. Keep this separate from ci.yml so a security
+# finding is a distinct, obvious signal.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+# Least privilege by default. Jobs that need more opt in explicitly.
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Dependency vulnerabilities (npm audit)
+  #    Blocks on HIGH/CRITICAL in *production* deps. Dev-only vulns (vitest,
+  #    vite, etc.) are reported but don't block a deploy — they aren't shipped.
+  #    Green this job with:  npm audit fix   +   bump `next` to the latest 16.x
+  # ---------------------------------------------------------------------------
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies (blocking)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Full audit report (non-blocking, includes dev)
+        if: always()
+        run: npm audit || true
+
+  # ---------------------------------------------------------------------------
+  # 2. Secret scanning (gitleaks)
+  #    Scans the full history + the diff. This is the guard that would have
+  #    caught a committed .env. Placeholder secrets in .env.example are
+  #    allowlisted via .gitleaks.toml.
+  # ---------------------------------------------------------------------------
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so historical leaks are caught
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+          # GITLEAKS_LICENSE only needed for GitHub *orgs*. Personal repos are free.
+
+  # ---------------------------------------------------------------------------
+  # 3. Static analysis (Semgrep SAST)
+  #    OWASP Top Ten + Next.js + TypeScript + secret rules. Blocks on ERROR
+  #    severity only (keeps the gate low-noise); WARN/INFO are reported.
+  # ---------------------------------------------------------------------------
+  sast:
+    name: SAST (semgrep)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # for SARIF upload to the Security tab (optional)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install semgrep
+        run: pip install semgrep
+
+      - name: Run semgrep (blocking on ERROR)
+        run: |
+          semgrep scan \
+            --config p/owasp-top-ten \
+            --config p/nextjs \
+            --config p/typescript \
+            --config p/secrets \
+            --error \
+            --severity ERROR \
+            --sarif --output semgrep.sarif .
+
+      - name: Full semgrep report (non-blocking)
+        if: always()
+        run: semgrep scan --config p/owasp-top-ten --config p/nextjs --config p/typescript . || true
+
+      - name: Upload SARIF to Security tab
+        if: always()
+        continue-on-error: true # no-op on private repos without GH Advanced Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+
+  # ---------------------------------------------------------------------------
+  # 4. CodeQL (deep dataflow analysis for JS/TS)
+  #    Native GitHub scanner. Free on public repos; private repos need GitHub
+  #    Advanced Security. If you don't have GHAS on a private repo, delete this
+  #    job — the three above are the core gate.
+  # ---------------------------------------------------------------------------
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
