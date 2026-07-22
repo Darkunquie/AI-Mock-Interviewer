@@ -30,11 +30,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.pending) {
-      logger.info("New user signup (pending)", { email });
+      logger.info("New user signup (pending email verification)", { email });
       return NextResponse.json({
         success: true,
         pending: true,
-        message: "Account created. Awaiting admin approval.",
+        message: "Account created. Check your email to verify your account.",
       });
     }
 

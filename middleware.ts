@@ -22,6 +22,9 @@ export const runtime = "nodejs";
 const rateLimitConfig: Record<string, { limit: number; windowMs: number; failMode?: FailMode }> = {
   "/api/auth/signin": { limit: 10, windowMs: 60000, failMode: "fallback" }, // 10 requests per minute
   "/api/auth/signup": { limit: 5, windowMs: 60000, failMode: "fallback" },  // 5 requests per minute
+  "/api/auth/forgot-password": { limit: 5, windowMs: 60000, failMode: "fallback" },  // email spam guard
+  "/api/auth/reset-password": { limit: 10, windowMs: 60000, failMode: "fallback" },  // token brute-force guard
+  "/api/auth/verify-email": { limit: 20, windowMs: 60000, failMode: "fallback" },
   "/api/interview": { limit: 30, windowMs: 60000 },       // 30 requests per minute
   "/api/transcribe": { limit: 60, windowMs: 60000 },      // 60 requests per minute (for real-time transcription)
   "/api/flashcards": { limit: 20, windowMs: 60000 },      // 20 requests per minute
@@ -160,6 +163,11 @@ const CSRF_HEADER_NAME = "x-csrf-token";
 const CSRF_EXEMPT_PATHS = [
   "/api/auth/signin",
   "/api/auth/signup",
+  // Pre-auth flows: the client has no session yet to carry a CSRF token, and
+  // each is protected by an unguessable single-use token and/or rate limits.
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/auth/verify-email",
 ];
 
 function isSafeMethod(method: string): boolean {

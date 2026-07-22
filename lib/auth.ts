@@ -2,9 +2,12 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { db } from "./db";
-import { users } from "@/utils/schema";
-import { eq } from "drizzle-orm";
+import { users, emailVerifications, passwordResets } from "@/utils/schema";
+import { eq, and, gt, isNull } from "drizzle-orm";
 import { cacheGet, cacheSet, cacheDel } from "./cache";
+import { generateToken as generateOpaqueToken, hashToken } from "./tokens";
+import { sendVerificationEmail, sendPasswordResetEmail, appUrl } from "./email";
+import { logger } from "./logger";
 
 // JWT Secret - validated at runtime (first use), not at module load.
 // Throwing at import time breaks `next build` in CI environments without JWT_SECRET set.
@@ -160,6 +163,7 @@ export async function signUp(email: string, password: string, name: string, phon
     phone: phone || null,
     role: isAdmin ? "admin" : "user",
     status: isAdmin ? "approved" : "pending",
+    emailVerified: !!isAdmin, // admin is trusted; others verify via email
   }).returning();
 
   const authUser: AuthUser = {
@@ -170,14 +174,122 @@ export async function signUp(email: string, password: string, name: string, phon
     status: newUser.status,
   };
 
-  // Admin gets auto-login, regular users stay pending
+  // Admin gets auto-login; regular users must verify their email first.
   if (isAdmin) {
     const token = generateToken(authUser);
     await setAuthCookie(token);
     return { success: true, user: authUser };
   }
 
+  await createEmailVerification(newUser.id, normalizedEmail);
   return { success: true, pending: true };
+}
+
+// Token lifetimes.
+const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1h
+
+/**
+ * Issue a single-use email-verification token and send the link. Best-effort:
+ * failures are logged, not thrown (a signup shouldn't 500 because email is
+ * flaky — the user can request a resend).
+ */
+export async function createEmailVerification(userId: number, email: string): Promise<void> {
+  try {
+    const { raw, hash } = generateOpaqueToken();
+    await db.insert(emailVerifications).values({
+      userId,
+      tokenHash: hash,
+      expiresAt: new Date(Date.now() + EMAIL_VERIFY_TTL_MS),
+    });
+    await sendVerificationEmail(email, `${appUrl()}/verify-email?token=${raw}`);
+  } catch (err) {
+    logger.error("Failed to create/send email verification", err instanceof Error ? err : new Error(String(err)), { userId });
+  }
+}
+
+/**
+ * Consume an email-verification token: approve + mark the user verified.
+ * Returns the user on success, or null if the token is invalid/expired/used.
+ */
+export async function verifyEmailToken(raw: string): Promise<AuthUser | null> {
+  const hash = hashToken(raw);
+  const [row] = await db
+    .select()
+    .from(emailVerifications)
+    .where(
+      and(
+        eq(emailVerifications.tokenHash, hash),
+        isNull(emailVerifications.consumedAt),
+        gt(emailVerifications.expiresAt, new Date())
+      )
+    )
+    .limit(1);
+
+  if (!row) return null;
+
+  await db.update(emailVerifications).set({ consumedAt: new Date() }).where(eq(emailVerifications.id, row.id));
+
+  const [user] = await db
+    .update(users)
+    .set({ status: "approved", emailVerified: true, approvedAt: new Date() })
+    .where(eq(users.id, row.userId))
+    .returning();
+
+  if (!user) return null;
+  await invalidateUserStatusCache(user.id);
+
+  return { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status };
+}
+
+/**
+ * Start a password reset. Always resolves the same way regardless of whether
+ * the email exists (no user enumeration). Sends a link only if it matches a user.
+ */
+export async function createPasswordReset(email: string): Promise<void> {
+  const normalizedEmail = email.toLowerCase();
+  const [user] = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
+  if (!user) return; // silently no-op — don't reveal non-existence
+
+  try {
+    const { raw, hash } = generateOpaqueToken();
+    await db.insert(passwordResets).values({
+      userId: user.id,
+      tokenHash: hash,
+      expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
+    });
+    await sendPasswordResetEmail(normalizedEmail, `${appUrl()}/reset-password?token=${raw}`);
+  } catch (err) {
+    logger.error("Failed to create/send password reset", err instanceof Error ? err : new Error(String(err)), { userId: user.id });
+  }
+}
+
+/**
+ * Consume a password-reset token and set the new password. Returns true on
+ * success. Invalidates the cached status so any state change takes effect.
+ */
+export async function resetPassword(raw: string, newPassword: string): Promise<boolean> {
+  const hash = hashToken(raw);
+  const [row] = await db
+    .select()
+    .from(passwordResets)
+    .where(
+      and(
+        eq(passwordResets.tokenHash, hash),
+        isNull(passwordResets.consumedAt),
+        gt(passwordResets.expiresAt, new Date())
+      )
+    )
+    .limit(1);
+
+  if (!row) return false;
+
+  const hashedPassword = await hashPassword(newPassword);
+  await db.update(passwordResets).set({ consumedAt: new Date() }).where(eq(passwordResets.id, row.id));
+  await db.update(users).set({ password: hashedPassword }).where(eq(users.id, row.userId));
+  await invalidateUserStatusCache(row.userId);
+
+  return true;
 }
 
 // Sign in a user — throws on unexpected errors (route handler catches via handleUnexpectedError)
@@ -195,7 +307,9 @@ export async function signIn(email: string, password: string): Promise<{ success
   }
 
   if (user.status === "pending") {
-    return { success: false, error: "Your account is pending admin approval", pending: true };
+    // With email-verify as the gate, a pending account means the email hasn't
+    // been verified yet (admin approval was replaced by verification).
+    return { success: false, error: "Please verify your email before signing in. Check your inbox for the link.", pending: true };
   }
 
   if (user.status === "rejected") {

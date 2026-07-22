@@ -31,8 +31,8 @@ export default function SignInPage() {
         toast.success("Signed in successfully!");
         router.push("/dashboard");
       } else if (data.pending) {
-        toast.error("Your account is pending admin approval");
-        router.push("/pending-approval");
+        toast.error(typeof data.error === "string" ? data.error : "Please verify your email before signing in");
+        router.push("/check-email");
       } else {
         const errorMsg = typeof data.error === "string" ? data.error : data.error?.message || "Failed to sign in";
         toast.error(errorMsg);
@@ -97,6 +97,11 @@ export default function SignInPage() {
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
+            </div>
+            <div className="text-right">
+              <Link href="/forgot-password" className="text-zinc-500 text-[11px] uppercase tracking-wider hover:text-yellow-400 transition-colors">
+                Forgot password?
+              </Link>
             </div>
           </div>
 

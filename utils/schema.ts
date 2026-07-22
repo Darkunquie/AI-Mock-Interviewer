@@ -9,6 +9,7 @@ import {
   index,
   uniqueIndex,
   jsonb,
+  boolean,
 } from "drizzle-orm/pg-core";
 import type { Question } from "@/types";
 import type { ProjectSpecification } from "@/types/project";
@@ -37,9 +38,37 @@ export const users = pgTable("users", {
   imageUrl: text("image_url"),
   role: userRoleEnum("role").default("user").notNull(),
   status: userStatusEnum("status").default("pending").notNull(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   approvedAt: timestamp("approved_at"),
 });
+
+// Single-use email-verification tokens. We store only the SHA-256 hash of the
+// token; the raw token lives only in the emailed link. On verify we set the
+// user's status to approved + email_verified true (email-verify replaces the
+// manual admin-approval gate).
+export const emailVerifications = pgTable("email_verifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  tokenHash: varchar("token_hash", { length: 64 }).unique().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  consumedAt: timestamp("consumed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => [
+  index("idx_email_verifications_user").on(t.userId),
+]);
+
+// Single-use password-reset tokens (hash stored, raw emailed). Short TTL.
+export const passwordResets = pgTable("password_resets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  tokenHash: varchar("token_hash", { length: 64 }).unique().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  consumedAt: timestamp("consumed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => [
+  index("idx_password_resets_user").on(t.userId),
+]);
 
 // Interviews table
 export const interviews = pgTable("interviews", {
@@ -128,3 +157,7 @@ export type InterviewSummary = typeof interviewSummaries.$inferSelect;
 export type NewInterviewSummary = typeof interviewSummaries.$inferInsert;
 export type GeneratedProject = typeof generatedProjects.$inferSelect;
 export type NewGeneratedProject = typeof generatedProjects.$inferInsert;
+export type EmailVerification = typeof emailVerifications.$inferSelect;
+export type NewEmailVerification = typeof emailVerifications.$inferInsert;
+export type PasswordReset = typeof passwordResets.$inferSelect;
+export type NewPasswordReset = typeof passwordResets.$inferInsert;
