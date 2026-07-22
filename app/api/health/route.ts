@@ -5,22 +5,24 @@ import { groqCircuit } from "@/lib/groq";
 
 // The detailed `checks` block (DB latency, circuit failure counts, version)
 // is internal telemetry — useful for our monitors, but reconnaissance for an
-// attacker. Expose it only to callers presenting HEALTH_STATUS_TOKEN
-// (?token=… or Authorization: Bearer …). Anonymous callers still get the
-// coarse up/down status a public uptime monitor needs.
+// attacker. Expose it only to callers presenting HEALTH_STATUS_TOKEN via the
+// Authorization: Bearer header. The token is NOT accepted as a ?token= query
+// param — request URLs leak into proxy/access logs, browser history, and APM
+// traces, any of which would disclose the secret. Anonymous callers still get
+// the coarse up/down status a public uptime monitor needs.
 function isAuthorizedForDetail(request: NextRequest): boolean {
   const expected = process.env.HEALTH_STATUS_TOKEN;
   if (!expected) return false;
-  const provided =
-    request.nextUrl.searchParams.get("token") ||
-    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const provided = request.headers
+    .get("authorization")
+    ?.replace(/^Bearer\s+/i, "");
   return provided === expected;
 }
 
 interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
   timestamp: string;
-  version: string;
+  version?: string;
   uptime: number;
   services: {
     database: "up" | "down";
@@ -84,8 +86,8 @@ export async function GET(request: NextRequest) {
   const healthResponse: HealthStatus = {
     status,
     timestamp,
-    // Version is a fingerprint — only for authorized callers.
-    version: detailed ? process.env.npm_package_version || "1.0.0" : "",
+    // Version is a fingerprint — omit the key entirely for anonymous callers.
+    ...(detailed ? { version: process.env.npm_package_version || "1.0.0" } : {}),
     uptime,
     services: {
       database: dbStatus,
