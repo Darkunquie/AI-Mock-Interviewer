@@ -7,8 +7,15 @@ title = "ai-mock-interview gitleaks config"
 [extend]
 useDefault = true
 
-[allowlist]
+# AND: a finding is allowlisted only when it matches BOTH an approved path AND a
+# placeholder pattern. regexTarget = "line" matches the placeholder against the
+# whole line. Without this, listing a path would ignore *every* secret in that
+# file — so a real credential committed to .env.example/README/a workflow would
+# slip through.
+[[allowlists]]
 description = "Placeholder / example secrets that are not real credentials"
+condition = "AND"
+regexTarget = "line"
 paths = [
   '''\.env\.example$''',
   '''README\.md$''',

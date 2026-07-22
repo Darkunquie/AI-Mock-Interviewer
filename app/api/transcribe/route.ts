@@ -23,14 +23,14 @@ export async function POST(request: Request) {
     const user = await getCurrentUser();
     if (!user) return Errors.unauthorized();
 
+    // Config check
+    if (!GROQ_API_KEY) return Errors.aiServiceError();
+
     // Per-user daily cap (separate high-frequency bucket)
     const quota = await checkAiQuota(user.id, { bucket: "transcribe", limit: TRANSCRIBE_DAILY_QUOTA });
     if (!quota.allowed) {
       return Errors.quotaExceeded(quota.disabled ? "AI features are temporarily disabled." : undefined);
     }
-
-    // Config check
-    if (!GROQ_API_KEY) return Errors.aiServiceError();
 
     // Parse request
     const formData = await request.formData();

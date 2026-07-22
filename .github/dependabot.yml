@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Keep SHA-pinned GitHub Actions current. Dependabot rewrites the pinned
+  # commit SHA (and the trailing # vX.Y.Z comment) when a new release ships,
+  # so pinning stays safe without going stale.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]

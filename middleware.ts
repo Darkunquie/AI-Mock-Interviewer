@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { checkRateLimit } from "@/lib/ratelimit";
+import { checkRateLimit, type FailMode } from "@/lib/ratelimit";
 import crypto from "crypto";
 
 // Middleware runs on Node.js runtime (not Edge) so that ioredis (TCP-based)
@@ -14,9 +14,14 @@ export const runtime = "nodejs";
 // Moved to Redis-backed sliding-window-counter — see lib/ratelimit.ts.
 // The in-memory Map was non-functional under pm2 cluster (each worker had
 // its own Map; attackers could bypass by hammering across workers).
-const rateLimitConfig: Record<string, { limit: number; windowMs: number }> = {
-  "/api/auth/signin": { limit: 10, windowMs: 60000 },     // 10 requests per minute
-  "/api/auth/signup": { limit: 5, windowMs: 60000 },      // 5 requests per minute
+// failMode is colocated with each entry so the fail-closed decision lives next to
+// the limit it protects — no second source of truth to keep in sync. Auth routes
+// set failMode: "fallback" (fail CLOSED via the in-memory limiter on a Redis
+// outage) so a cache blip can't open unlimited credential stuffing. Omitted =
+// "open" (fail open) for everything else.
+const rateLimitConfig: Record<string, { limit: number; windowMs: number; failMode?: FailMode }> = {
+  "/api/auth/signin": { limit: 10, windowMs: 60000, failMode: "fallback" }, // 10 requests per minute
+  "/api/auth/signup": { limit: 5, windowMs: 60000, failMode: "fallback" },  // 5 requests per minute
   "/api/interview": { limit: 30, windowMs: 60000 },       // 30 requests per minute
   "/api/transcribe": { limit: 60, windowMs: 60000 },      // 60 requests per minute (for real-time transcription)
   "/api/flashcards": { limit: 20, windowMs: 60000 },      // 20 requests per minute
@@ -84,7 +89,7 @@ function normalizeApiPath(pathname: string): string {
   return pathname.replace(/^\/api\/v1(?=\/|$)/, "/api");
 }
 
-function getRateLimitConfig(pathname: string): { pattern: string; limit: number; windowMs: number } {
+function getRateLimitConfig(pathname: string): { pattern: string; limit: number; windowMs: number; failMode?: FailMode } {
   for (const [pattern, config] of Object.entries(rateLimitConfig)) {
     if (pattern !== "default" && pathname.startsWith(pattern)) {
       return { pattern, ...config };
@@ -262,12 +267,10 @@ export async function middleware(request: NextRequest) {
     // coincidentally but is harder to reason about.
     const rateLimitKey = `rl:${clientIP}:${config.pattern}`;
 
-    // Auth buckets fail CLOSED (in-memory fallback) on a Redis outage so a cache
-    // blip can't open unlimited credential stuffing. Others fail open.
-    const failMode =
-      config.pattern === "/api/auth/signin" || config.pattern === "/api/auth/signup"
-        ? "fallback"
-        : "open";
+    // Fail mode is carried on the matched config entry (auth = "fallback",
+    // everything else defaults to "open"). Colocating it there means adding or
+    // renaming an auth route can't silently regress to fail-open.
+    const failMode: FailMode = config.failMode ?? "open";
 
     const { allowed, remaining, resetEpochSeconds } = await checkRateLimit(
       rateLimitKey,

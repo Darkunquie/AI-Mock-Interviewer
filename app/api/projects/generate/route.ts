@@ -39,14 +39,15 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user) return Errors.unauthorized();
 
-    const quota = await checkAiQuota(user.id);
-    if (!quota.allowed) {
-      return Errors.quotaExceeded(quota.disabled ? "AI features are temporarily disabled." : undefined);
-    }
-
+    // Config check (free — before spending quota so a missing key can't burn budget)
     if (!process.env.GROQ_API_KEY) {
       logger.error(`${LOG_PREFIX} GROQ_API_KEY not configured`);
       return Errors.aiServiceError();
+    }
+
+    const quota = await checkAiQuota(user.id);
+    if (!quota.allowed) {
+      return Errors.quotaExceeded(quota.disabled ? "AI features are temporarily disabled." : undefined);
     }
 
     const body = await request.json();
