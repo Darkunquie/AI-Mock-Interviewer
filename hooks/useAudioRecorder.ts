@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { apiFetch } from "@/lib/client/api";
 
 // Configuration
 const DEFAULT_CHUNK_INTERVAL = 4000; // How often to re-transcribe while recording
@@ -116,7 +117,7 @@ export function useAudioRecorder(
       formData.append("audio", blob, "recording.webm");
       formData.append("language", language);
 
-      const response = await fetch("/api/transcribe", {
+      const response = await apiFetch("/api/transcribe", {
         method: "POST",
         body: formData,
       });

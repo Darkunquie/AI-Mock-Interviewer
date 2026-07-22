@@ -52,6 +52,45 @@ else
 end
 `;
 
+/**
+ * In-process fixed-window fallback used when Redis is unavailable AND the caller
+ * asked to fail closed (failMode="fallback"). Per pm2 worker, so it's weaker than
+ * the shared Redis limiter (an attacker spread across N workers gets N× the
+ * limit) — but N× is vastly better than the ∞ that fail-open gives on auth
+ * routes during a Redis outage. Intended for signin/signup only.
+ */
+type MemBucket = { count: number; resetAt: number };
+const memBuckets = new Map<string, MemBucket>();
+
+function memoryRateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
+  const now = Date.now();
+
+  // Opportunistic sweep so the map can't grow unbounded under a spoofed-key flood.
+  if (memBuckets.size > 5000) {
+    for (const [k, b] of memBuckets) {
+      if (b.resetAt <= now) memBuckets.delete(k);
+    }
+  }
+
+  let bucket = memBuckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    bucket = { count: 0, resetAt: now + windowMs };
+    memBuckets.set(key, bucket);
+  }
+  bucket.count += 1;
+
+  return {
+    allowed: bucket.count <= limit,
+    count: bucket.count,
+    remaining: Math.max(0, limit - bucket.count),
+    resetEpochSeconds: Math.ceil(bucket.resetAt / 1000),
+    degraded: true,
+  };
+}
+
+/** How a bucket behaves when Redis is unreachable. */
+export type FailMode = "open" | "fallback";
+
 export interface RateLimitResult {
   allowed: boolean;
   /** Number of requests attributed to this bucket in the current window. */
@@ -70,11 +109,14 @@ export interface RateLimitResult {
  * @param key Bucket key (already namespaced, e.g. `rl:1.2.3.4:/api/auth/signin`).
  * @param limit Max requests per window.
  * @param windowMs Window size in milliseconds.
+ * @param failMode On Redis outage: "open" (allow — default, anti-abuse routes)
+ *   or "fallback" (use the per-worker in-memory limiter — auth routes).
  */
 export async function checkRateLimit(
   key: string,
   limit: number,
-  windowMs: number
+  windowMs: number,
+  failMode: FailMode = "open"
 ): Promise<RateLimitResult> {
   // Guard against misconfiguration. windowMs <= 0 divides by zero in the
   // Lua script; limit <= 0 would block every request silently. NaN/Infinity
@@ -91,7 +133,9 @@ export async function checkRateLimit(
 
   const redis = getRedis();
   if (!redis) {
-    // Redis not configured — fail open (rate limiting disabled).
+    // Redis not configured. Auth routes fall back to the in-memory limiter;
+    // everything else fails open (rate limiting disabled).
+    if (failMode === "fallback") return memoryRateLimit(key, limit, windowMs);
     return {
       allowed: true,
       count: 0,
@@ -119,12 +163,14 @@ export async function checkRateLimit(
       resetEpochSeconds,
     };
   } catch (err) {
-    // Fail-open: log loudly and allow. See module docstring.
+    // Redis errored. Auth routes fail closed via the in-memory fallback;
+    // everything else fails open. See module docstring.
     logger.error(
-      "Rate limiter Redis failure — failing open",
+      `Rate limiter Redis failure — failing ${failMode === "fallback" ? "closed (in-memory)" : "open"}`,
       err instanceof Error ? err : new Error(String(err)),
       { key, limit, windowMs }
     );
+    if (failMode === "fallback") return memoryRateLimit(key, limit, windowMs);
     return {
       allowed: true,
       count: 0,

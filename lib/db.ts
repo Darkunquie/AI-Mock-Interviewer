@@ -13,9 +13,19 @@ const poolMax = Number.isNaN(parsedPoolMax) || parsedPoolMax <= 0 ? 5 : parsedPo
 // node-postgres (TCP) driver — the proven production path. `keepAlive` keeps the
 // socket warm so an idle serverless DB is less likely to drop the connection,
 // and a slightly longer connect timeout gives a cold compute time to wake.
+// TLS: when DATABASE_SSL=true we verify the server certificate by default
+// (rejectUnauthorized: true) so the DB link can't be silently MITM'd. Neon's
+// certs chain to a public CA in Node's default trust store, so no custom CA is
+// needed. Escape hatch: set DATABASE_SSL_INSECURE=true ONLY if a proxy/self-
+// signed cert makes verification impossible — it disables MITM protection.
+const sslConfig =
+  process.env.DATABASE_SSL === "true"
+    ? { rejectUnauthorized: process.env.DATABASE_SSL_INSECURE !== "true" }
+    : false;
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
+  ssl: sslConfig,
   max: poolMax,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,

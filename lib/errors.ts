@@ -199,6 +199,9 @@ export const Errors = {
       429
     ),
 
+  quotaExceeded: (message: string = "Daily AI usage limit reached. Please try again tomorrow.") =>
+    createErrorResponse(ErrorCodes.AI_QUOTA_EXCEEDED, message, 429),
+
   notFound: (resource: string = "Resource") =>
     createErrorResponse(ErrorCodes.NOT_FOUND, `${resource} not found`, 404),
 

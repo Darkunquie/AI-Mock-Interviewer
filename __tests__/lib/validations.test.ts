@@ -131,9 +131,36 @@ describe("createInterviewSchema", () => {
     }
   });
 
-  it("rejects invalid role", () => {
+  it("coerces an unknown role to the safe default instead of rejecting", () => {
+    // Practice/learning-path flows can pass tech-stack ids (e.g. "agile-scrum")
+    // that aren't canonical roles; the schema accepts them and coerces to a
+    // safe default so the request isn't hard-rejected with "Invalid role".
     const result = createInterviewSchema.safeParse({
       role: "nonexistent",
+      experienceLevel: "1-3",
+      interviewType: "technical",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.role).toBe("fullstack");
+    }
+  });
+
+  it("preserves a known extended role", () => {
+    const result = createInterviewSchema.safeParse({
+      role: "sap_abap",
+      experienceLevel: "1-3",
+      interviewType: "technical",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.role).toBe("sap_abap");
+    }
+  });
+
+  it("rejects an empty role", () => {
+    const result = createInterviewSchema.safeParse({
+      role: "",
       experienceLevel: "1-3",
       interviewType: "technical",
     });

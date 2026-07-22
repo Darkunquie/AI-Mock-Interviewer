@@ -4,6 +4,7 @@ import { FlashCardGenerator, LOG_PREFIX } from "@/lib/flashcards";
 import { generateFlashCardsSchema, validateRequest } from "@/lib/validations";
 import { logger } from "@/lib/logger";
 import { Errors, handleZodError, handleUnexpectedError } from "@/lib/errors";
+import { checkAiQuota } from "@/lib/quota";
 
 /**
  * POST - Generate flash cards for a technology + topic
@@ -12,6 +13,11 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return Errors.unauthorized();
+
+    const quota = await checkAiQuota(user.id);
+    if (!quota.allowed) {
+      return Errors.quotaExceeded(quota.disabled ? "AI features are temporarily disabled." : undefined);
+    }
 
     if (!process.env.GROQ_API_KEY) {
       logger.error(`${LOG_PREFIX} GROQ_API_KEY not configured`);

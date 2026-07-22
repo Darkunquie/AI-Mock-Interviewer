@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { RefObject } from "react";
+import { apiFetch } from "@/lib/client/api";
 
 interface UseTextToSpeechOptions {
   lang?: string;
@@ -200,7 +201,7 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
     if (inflight) return inflight;
 
     const p = (async () => {
-      const res = await fetch("/api/tts", {
+      const res = await apiFetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: cleanedText }),

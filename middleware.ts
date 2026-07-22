@@ -36,10 +36,52 @@ const V0_SUNSET_DATE = (() => {
   return new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toUTCString();
 })();
 
+// Number of trusted reverse-proxy hops in front of the app (e.g. nginx = 1).
+// Set via TRUSTED_PROXY_HOPS in the deploy env. When > 0 we treat X-Forwarded-For
+// / X-Real-IP as trustworthy *only* to the extent the trusted proxy stamped them.
+const TRUSTED_PROXY_HOPS = (() => {
+  const n = Number.parseInt(process.env.TRUSTED_PROXY_HOPS || "0", 10);
+  return Number.isNaN(n) || n < 0 ? 0 : n;
+})();
+
+// Resolve the real client IP for rate-limit bucketing.
+//
+// The leftmost X-Forwarded-For entry is CLIENT-CONTROLLED — trusting it lets an
+// attacker mint a fresh rate-limit bucket per request and bypass all limits.
+// Behind a trusted proxy (TRUSTED_PROXY_HOPS > 0) the reliable value is:
+//   - X-Real-IP, which our nginx overrides with $remote_addr (the true peer), or
+//   - the XFF entry `hops` positions from the RIGHT (each proxy appends the peer
+//     it saw, so the rightmost `hops` entries are proxy-stamped, not spoofable).
+// Requires nginx to set `proxy_set_header X-Real-IP $remote_addr;` and
+// `X-Forwarded-For $proxy_add_x_forwarded_for;` (see Phase 2 nginx config).
+//
+// With no trusted proxy (local dev, TRUSTED_PROXY_HOPS unset) we fall back to the
+// leftmost XFF — spoofable, but there is no proxy boundary to protect anyway.
 function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const realIP = request.headers.get("x-real-ip");
-  return forwarded?.split(",")[0].trim() || realIP || "unknown";
+  const xff = request.headers.get("x-forwarded-for");
+
+  if (TRUSTED_PROXY_HOPS > 0) {
+    const realIP = request.headers.get("x-real-ip")?.trim();
+    if (realIP) return realIP;
+
+    if (xff) {
+      const ips = xff.split(",").map((s) => s.trim()).filter(Boolean);
+      const idx = ips.length - TRUSTED_PROXY_HOPS;
+      if (idx >= 0 && ips[idx]) return ips[idx];
+    }
+    // Header shorter than expected → likely stripped/spoofed. Deny a stable
+    // bucket rather than trust attacker input.
+    return "unknown";
+  }
+
+  return xff?.split(",")[0].trim() || request.headers.get("x-real-ip")?.trim() || "unknown";
+}
+
+// Collapse the versioned API prefix so /api/v1/foo shares rate-limit + CSRF
+// treatment with /api/foo. Without this, /api/v1/auth/signin (a live re-export
+// of the v0 handler) misses the strict auth bucket and falls to default 100/min.
+function normalizeApiPath(pathname: string): string {
+  return pathname.replace(/^\/api\/v1(?=\/|$)/, "/api");
 }
 
 function getRateLimitConfig(pathname: string): { pattern: string; limit: number; windowMs: number } {
@@ -51,6 +93,33 @@ function getRateLimitConfig(pathname: string): { pattern: string; limit: number;
   return { pattern: "default", ...rateLimitConfig.default };
 }
 
+// Content-Security-Policy. Built once at module load.
+// script-src keeps 'unsafe-inline' because Next's App Router injects inline
+// hydration/bootstrap scripts (and the static ld+json in layout.tsx) that have
+// no nonce today — a nonce rollout is tracked as a follow-up. The high-value
+// directives here are frame-ancestors/object-src/base-uri/form-action, which
+// close clickjacking, plugin, base-tag, and form-hijack vectors with zero
+// breakage. connect-src is 'self' because Groq/Deepgram are called server-side.
+const buildCSP = (): string => {
+  const isDev = process.env.NODE_ENV !== "production";
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    `connect-src 'self'${isDev ? " ws: wss:" : ""}`,
+    "media-src 'self' blob: data:",
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    ...(isDev ? [] : ["upgrade-insecure-requests"]),
+  ].join("; ");
+};
+
 // Security headers
 const securityHeaders = {
   "X-Content-Type-Options": "nosniff",
@@ -59,6 +128,7 @@ const securityHeaders = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // microphone=(self): required for voice answers (STT).
   "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
+  "Content-Security-Policy": buildCSP(),
 };
 
 // CORS configuration
@@ -166,11 +236,14 @@ export async function middleware(request: NextRequest) {
   // Gated via CSRF_ENFORCE env var so the rollout is safe — cookie is seeded
   // unconditionally (see below), then enforcement flipped on once all client
   // code has been migrated to use apiFetch() from lib/client/api.ts.
+  // Normalize the versioned prefix so v0 and v1 share CSRF + rate-limit rules.
+  const normalizedPath = normalizeApiPath(pathname);
+
   if (
     process.env.CSRF_ENFORCE === "true" &&
     pathname.startsWith("/api") &&
     !isSafeMethod(request.method) &&
-    !isCsrfExempt(pathname)
+    !isCsrfExempt(normalizedPath)
   ) {
     const cookie = request.cookies.get(CSRF_COOKIE_NAME)?.value;
     const header = request.headers.get(CSRF_HEADER_NAME);
@@ -182,17 +255,25 @@ export async function middleware(request: NextRequest) {
   // Only apply rate limiting to API routes
   if (pathname.startsWith("/api")) {
     const clientIP = getClientIP(request);
-    const config = getRateLimitConfig(pathname);
+    const config = getRateLimitConfig(normalizedPath);
     // Key by the matched pattern (not the request path prefix). This means
     // /api/auth/signup and /api/auth/signin get distinct buckets, matching
     // the rateLimitConfig entries. The prior slice(0,3) approach worked
     // coincidentally but is harder to reason about.
     const rateLimitKey = `rl:${clientIP}:${config.pattern}`;
 
+    // Auth buckets fail CLOSED (in-memory fallback) on a Redis outage so a cache
+    // blip can't open unlimited credential stuffing. Others fail open.
+    const failMode =
+      config.pattern === "/api/auth/signin" || config.pattern === "/api/auth/signup"
+        ? "fallback"
+        : "open";
+
     const { allowed, remaining, resetEpochSeconds } = await checkRateLimit(
       rateLimitKey,
       config.limit,
-      config.windowMs
+      config.windowMs,
+      failMode
     );
 
     if (!allowed) {
