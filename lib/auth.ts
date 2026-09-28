@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import { db } from "./db";
 import { users, emailVerifications, passwordResets } from "@/utils/schema";
 import { eq, and, gt, isNull } from "drizzle-orm";
-import { cacheGet, cacheSet, cacheDel } from "./cache";
 import { generateToken as generateOpaqueToken, hashToken } from "./tokens";
 import { sendVerificationEmail, sendPasswordResetEmail, appUrl } from "./email";
 import { logger } from "./logger";
@@ -48,19 +47,24 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword);
 }
 
+// Claims beyond AuthUser. `iatMs` is a millisecond issue time: the standard
+// `iat` is whole seconds, too coarse to revoke a token minted in the same
+// second as a logout while still accepting one minted just after it.
+type TokenClaims = AuthUser & { iat?: number; iatMs?: number };
+
 // Generate JWT token
 export function generateToken(user: AuthUser): string {
   return jwt.sign(
-    { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status },
+    { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status, iatMs: Date.now() },
     getJwtSecret(),
     { expiresIn: "7d" }
   );
 }
 
 // Verify JWT token — uses jsonwebtoken, verifies signature and expiry.
-export function verifyToken(token: string): (AuthUser & { iat?: number }) | null {
+export function verifyToken(token: string): TokenClaims | null {
   try {
-    const decoded = jwt.verify(token, getJwtSecret()) as unknown as AuthUser & { iat?: number };
+    const decoded = jwt.verify(token, getJwtSecret()) as unknown as TokenClaims;
     return decoded;
   } catch {
     return null;
@@ -99,47 +103,29 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     const claims = verifyToken(token);
     if (!claims) return null;
 
-    // Verify current role/status/revocation from DB (cached 60s in Redis;
-    // revoking callers drop the cache so it takes effect immediately)
-    const cacheKey = `user:status:${claims.id}`;
-    let dbUser: { role: string; status: string; validAfterSec?: number } | null = null;
-    try {
-      dbUser = await cacheGet<{ role: string; status: string; validAfterSec?: number }>(cacheKey);
-    } catch {
-      // Cache unavailable, fall through to DB lookup
-    }
-    if (!dbUser) {
-      const [row] = await db
-        .select({ role: users.role, status: users.status, tokensValidAfter: users.tokensValidAfter })
-        .from(users)
-        .where(eq(users.id, claims.id))
-        .limit(1);
-      if (!row) return null;
-      dbUser = {
-        role: row.role,
-        status: row.status,
-        validAfterSec: row.tokensValidAfter ? Math.floor(row.tokensValidAfter.getTime() / 1000) : 0,
-      };
-      try {
-        await cacheSet(cacheKey, dbUser, 60);
-      } catch {
-        // Cache unavailable, continue without caching
-      }
-    }
+    // Current role/status/revocation straight from the DB on every request.
+    // Deliberately uncached: a cached copy can be re-written stale by a
+    // concurrent request, or survive a failed delete while Redis is down,
+    // either of which would resurrect a revoked session. A PK lookup on
+    // local Postgres is well under a millisecond.
+    const [dbUser] = await db
+      .select({ role: users.role, status: users.status, tokensValidAfter: users.tokensValidAfter })
+      .from(users)
+      .where(eq(users.id, claims.id))
+      .limit(1);
+    if (!dbUser) return null;
     // Reject if user no longer approved
     if (dbUser.status !== "approved") return null;
-    // Reject tokens issued before the last logout / password reset
-    if ((claims.iat ?? 0) < (dbUser.validAfterSec ?? 0)) return null;
+    // Reject tokens issued before the last logout / password reset. Tokens
+    // minted before iatMs existed fall back to `iat` (floored, so a token from
+    // the revocation second is conservatively rejected).
+    const issuedMs = claims.iatMs ?? (claims.iat ?? 0) * 1000;
+    if (dbUser.tokensValidAfter && issuedMs < dbUser.tokensValidAfter.getTime()) return null;
 
     return { ...claims, role: dbUser.role, status: dbUser.status };
   } catch {
     return null;
   }
-}
-
-// Invalidate cached user status (call after admin approve/reject)
-export async function invalidateUserStatusCache(userId: number): Promise<void> {
-  await cacheDel(`user:status:${userId}`);
 }
 
 // Check if user is authenticated
@@ -246,7 +232,6 @@ export async function verifyEmailToken(raw: string): Promise<AuthUser | null> {
     .returning();
 
   if (!user) return null;
-  await invalidateUserStatusCache(user.id);
 
   return { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status };
 }
@@ -299,7 +284,6 @@ export async function resetPassword(raw: string, newPassword: string): Promise<b
     .update(users)
     .set({ password: hashedPassword, tokensValidAfter: new Date() })
     .where(eq(users.id, row.userId));
-  await invalidateUserStatusCache(row.userId);
 
   return true;
 }
@@ -350,7 +334,6 @@ export async function signOut(): Promise<void> {
   const claims = token ? verifyToken(token) : null;
   if (claims) {
     await db.update(users).set({ tokensValidAfter: new Date() }).where(eq(users.id, claims.id));
-    await invalidateUserStatusCache(claims.id);
   }
   await removeAuthCookie();
 }

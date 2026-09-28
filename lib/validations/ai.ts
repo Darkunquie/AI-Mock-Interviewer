@@ -78,7 +78,11 @@ export const projectOutSchema = z.looseObject({
   prerequisites: arr,
   industryRelevance: z.string().catch(""),
   techStack: obj,
-  workflowDiagrams: arr,
+  // Elements are dereferenced (diagram.mermaidCode) during sanitizing, so
+  // drop null/primitive entries rather than letting them throw.
+  workflowDiagrams: arr.transform((ds) =>
+    ds.filter((d): d is Record<string, unknown> => typeof d === "object" && d !== null)
+  ),
   features: arr,
   databaseSchema: arr,
   apiEndpoints: arr,
