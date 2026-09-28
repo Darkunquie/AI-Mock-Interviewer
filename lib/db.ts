@@ -36,10 +36,13 @@ pool.on("error", (err) => {
   logger.error("PostgreSQL pool error", err);
 });
 
-// Verify DB is reachable at startup
-pool.query("SELECT 1").catch((err) => {
-  logger.error("PostgreSQL unreachable at startup", err);
-});
+// Verify DB is reachable at startup. Skipped during `next build`, which only
+// imports route modules (with a placeholder DATABASE_URL in Docker/CI).
+if (process.env.NEXT_PHASE !== "phase-production-build") {
+  pool.query("SELECT 1").catch((err) => {
+    logger.error("PostgreSQL unreachable at startup", err);
+  });
+}
 
 export const db = drizzle(pool, { schema });
 

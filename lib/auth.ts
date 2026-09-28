@@ -20,6 +20,11 @@ function getJwtSecret(): string {
       "Generate one with: node -e \"console.log(require('crypto').randomBytes(64).toString('hex'))\""
     );
   }
+  // A short HS256 secret is brute-forceable offline from any issued token,
+  // which means forgeable admin sessions. Refuse to run prod with one.
+  if (process.env.NODE_ENV === "production" && secret.length < 32) {
+    throw new Error("JWT_SECRET must be at least 32 characters in production (use 64 random bytes).");
+  }
   return secret;
 }
 

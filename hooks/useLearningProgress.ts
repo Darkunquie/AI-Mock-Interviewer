@@ -46,6 +46,9 @@ export function useLearningProgress() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
+          // Post-hydration sync from localStorage: reading it during render
+          // would mismatch the server HTML, so an effect is the correct place.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setProgress(JSON.parse(stored));
         } catch (e) {
           console.error("Failed to parse learning progress:", e);
@@ -272,7 +275,8 @@ export function useLearningProgress() {
   // Reset progress for a role
   const resetRoleProgress = useCallback((roleId: string) => {
     setProgress((prev) => {
-      const { [roleId]: _, ...remainingRoles } = prev.roles;
+      const remainingRoles = { ...prev.roles };
+      delete remainingRoles[roleId];
       return {
         ...prev,
         roles: remainingRoles,

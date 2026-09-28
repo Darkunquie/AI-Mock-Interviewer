@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CheckCircle, XCircle, Search } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/client/api";
@@ -24,7 +24,7 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const url = filter === "all" ? "/api/admin/users" : `/api/admin/users?status=${filter}`;
       const res = await fetch(url);
@@ -37,9 +37,9 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
-  useEffect(() => { setLoading(true); fetchUsers(); }, [filter]);
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   const handleApprove = async (userId: number) => {
     setActionLoading(userId);
@@ -112,7 +112,7 @@ export default function AdminUsersPage() {
           {tabs.map((tab) => (
             <button
               key={tab.value}
-              onClick={() => setFilter(tab.value)}
+              onClick={() => { setLoading(true); setFilter(tab.value); }}
               className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
                 filter === tab.value
                   ? "bg-yellow-400 text-[#0f0f0f]"

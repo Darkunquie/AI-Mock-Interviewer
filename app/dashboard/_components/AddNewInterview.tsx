@@ -293,7 +293,7 @@ export default function AddNewInterview() {
                   {targetCompany && targetCompany !== "none" && (
                     <div className="bg-orange-500/10 border border-orange-500/20 p-2">
                       <p className="text-xs text-orange-400">
-                        ✨ Questions will match {targetCompany.charAt(0).toUpperCase() + targetCompany.slice(1)}'s interview style
+                        ✨ Questions will match {targetCompany.charAt(0).toUpperCase() + targetCompany.slice(1)}&apos;s interview style
                       </p>
                     </div>
                   )}

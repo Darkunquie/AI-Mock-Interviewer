@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getMermaidImageUrl } from "@/lib/mermaid";
 import { ProjectSpecification } from "@/types/project";
 import { LOG_PREFIX } from "./constants";
+import { projectOutSchema } from "@/lib/validations/ai";
 
 /**
  * Clean JSON response from AI (remove markdown code blocks)
@@ -23,7 +24,7 @@ export function parseProjectsResponse(jsonString: string): Record<string, unknow
   let parsed;
   try {
     parsed = JSON.parse(cleaned);
-  } catch (error) {
+  } catch {
     console.error(`${LOG_PREFIX} JSON parse failed. First 500 chars:`, cleaned.slice(0, 500));
     throw new Error("Failed to parse AI response as JSON");
   }
@@ -72,7 +73,16 @@ export function validateAndTransformProjects(
 ): ProjectSpecification[] {
   console.log(`${LOG_PREFIX} Validating ${rawProjects.length} projects`);
 
-  const projects = rawProjects.map((project) =>
+  // Drop projects missing core fields; never cache an empty result (the
+  // caller only persists on success, so throwing keeps the cache clean).
+  const valid = rawProjects.flatMap((p) => {
+    const r = projectOutSchema.safeParse(p);
+    if (!r.success) console.warn(`${LOG_PREFIX} Dropping invalid project:`, r.error.issues[0]);
+    return r.success ? [r.data] : [];
+  });
+  if (valid.length === 0) throw new Error("AI returned no valid projects");
+
+  const projects = valid.map((project) =>
     sanitizeProject(project, technology, domain)
   );
 

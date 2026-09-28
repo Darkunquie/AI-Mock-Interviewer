@@ -1,7 +1,5 @@
 // AI Model Configuration
 export const AI_CONFIG = {
-  primaryModel: "llama-3.3-70b-versatile",
-  fallbackModel: "llama-3.1-8b-instant",
   primaryMaxTokens: 30000,
   fallbackMaxTokens: 8000,
   temperature: 0.6,

@@ -22,7 +22,7 @@ export function parseFlashCardsResponse(jsonString: string): Record<string, unkn
   let parsed;
   try {
     parsed = JSON.parse(cleaned);
-  } catch (error) {
+  } catch {
     console.error(`${LOG_PREFIX} JSON parse failed. First 500 chars:`, cleaned.slice(0, 500));
     throw new Error("Failed to parse AI response as JSON");
   }

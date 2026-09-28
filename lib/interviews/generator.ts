@@ -13,7 +13,7 @@ import {
 } from "./constants";
 import { parseQuestionsJson } from "./validator";
 
-export interface GenerateQuestionsInput extends QuestionGeneratorInput {}
+export type GenerateQuestionsInput = QuestionGeneratorInput;
 
 export interface GenerateQuestionsResult {
   questions: Question[];

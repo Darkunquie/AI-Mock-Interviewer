@@ -14,7 +14,7 @@ import {
   LOG_PREFIX,
   computeAnswerOverall,
 } from "./constants";
-import { parseEvaluationJson } from "./validator";
+import { parseEvaluationJson, parseStoredQuestions } from "./validator";
 import type { InterviewRow } from "./validator";
 
 export interface SpeechMetrics {
@@ -117,8 +117,12 @@ function injectKeywordValidation(
 export async function evaluateAnswer(
   input: EvaluateAnswerInput,
 ): Promise<AnswerEvaluation> {
-  const { interview, questionIndex, questionText, userAnswer, speechMetrics, questionKeywords } =
-    input;
+  const { interview, questionIndex, userAnswer, speechMetrics, questionKeywords } = input;
+  // Grade the server-stored question, never the client-supplied text — otherwise
+  // a caller can swap in an easier question and inflate their leaderboard score.
+  // Client text is only a fallback for legacy interviews with no stored questions.
+  const questionText =
+    parseStoredQuestions(interview.questionsJson)[questionIndex]?.text ?? input.questionText;
 
   // Status transition
   if (interview.status === "pending") {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -78,6 +78,7 @@ function MermaidDiagram({ diagram }: { diagram: WorkflowDiagram }) {
   if (diagram.imageUrl && !imageError) {
     return (
       <div className="bg-slate-900 rounded-lg p-4 overflow-x-auto">
+        {/* eslint-disable-next-line @next/next/no-img-element -- remote mermaid.ink SVG; next/image would need a loader for dynamic SVGs */}
         <img
           src={diagram.imageUrl}
           alt={diagram.title}

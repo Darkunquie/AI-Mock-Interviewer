@@ -20,12 +20,12 @@ export default function VerifyEmailPage() {
     ranRef.current = true;
 
     const token = new URLSearchParams(window.location.search).get("token");
-    if (!token) {
-      setState("error");
-      return;
-    }
 
     (async () => {
+      if (!token) {
+        setState("error");
+        return;
+      }
       try {
         const res = await apiFetch("/api/auth/verify-email", {
           method: "POST",

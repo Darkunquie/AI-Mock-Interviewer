@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { interviews, answers, interviewSummaries } from "@/utils/schema";
+import { answers, interviewSummaries } from "@/utils/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { Errors, handleUnexpectedError } from "@/lib/errors";
 import { getOwnedInterview, parseStoredQuestions } from "@/lib/interviews";

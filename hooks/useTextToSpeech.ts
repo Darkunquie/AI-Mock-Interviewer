@@ -303,8 +303,8 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
         // Reuse one persistent <audio> element so the 3D avatar can attach a
         // Web Audio analyser once (a MediaElementSource can only be created per
         // element a single time).
-        const audio = audioRef.current ?? new Audio();
-        audioRef.current = audio;
+        const audio = audioRef.current;
+        if (!audio) throw new Error("Audio element unavailable"); // caught below → browser voice
         audio.onplay = () => {
           if (token === speakTokenRef.current) setIsSpeaking(true);
         };

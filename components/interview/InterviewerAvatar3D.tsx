@@ -77,8 +77,11 @@ function AvatarModel({ speaking, lipsyncRef }: AvatarModelProps) {
     });
   }, [scene]);
 
-  // Meshes that carry viseme morph targets (RPM head + teeth).
-  const faceMeshes = useMemo(() => {
+  // Meshes that carry viseme morph targets (RPM head + teeth). Held in a ref,
+  // not useMemo: useFrame writes their morph influences every frame, and
+  // memoized values must stay immutable under the React compiler.
+  const faceMeshes = useRef<THREE.Mesh[]>([]);
+  useEffect(() => {
     const meshes: THREE.Mesh[] = [];
     scene.traverse((o) => {
       const m = o as THREE.Mesh;
@@ -88,7 +91,7 @@ function AvatarModel({ speaking, lipsyncRef }: AvatarModelProps) {
         }
       }
     });
-    return meshes;
+    faceMeshes.current = meshes;
   }, [scene]);
 
   const headBone = useMemo(() => scene.getObjectByName("Head") ?? null, [scene]);
@@ -101,7 +104,7 @@ function AvatarModel({ speaking, lipsyncRef }: AvatarModelProps) {
   useFrame((state, delta) => {
     // Set a morph target by name across all face meshes, eased toward a value.
     const setMorph = (name: string, value: number, rate = 0.3) => {
-      for (const mesh of faceMeshes) {
+      for (const mesh of faceMeshes.current) {
         const idx = mesh.morphTargetDictionary![name];
         if (idx !== undefined) {
           const infl = mesh.morphTargetInfluences!;
@@ -148,14 +151,7 @@ function AvatarModel({ speaking, lipsyncRef }: AvatarModelProps) {
       b.closing -= delta;
       blinkTarget = 1;
     }
-    for (const mesh of faceMeshes) {
-      const dict = mesh.morphTargetDictionary!;
-      const infl = mesh.morphTargetInfluences!;
-      for (const name of BLINK_NAMES) {
-        const idx = dict[name];
-        if (idx !== undefined) infl[idx] = THREE.MathUtils.lerp(infl[idx], blinkTarget, 0.5);
-      }
-    }
+    for (const name of BLINK_NAMES) setMorph(name, blinkTarget, 0.5);
 
     // ---- Natural head motion: organic sway + occasional nods ----
     if (headBone) {
@@ -236,8 +232,11 @@ function AvatarModel({ speaking, lipsyncRef }: AvatarModelProps) {
 // download. This is the big realism win: soft, directionally-varied light gives
 // PBR skin real sheen and puts catchlights in the eyes (vs flat/cartoon look).
 function StudioEnv() {
-  const { gl, scene } = useThree();
+  // Read gl/scene via get() inside the effect: hook return values are treated
+  // as immutable, but assigning scene.environment is the point of this effect.
+  const get = useThree((s) => s.get);
   useEffect(() => {
+    const { gl, scene } = get();
     const pmrem = new THREE.PMREMGenerator(gl);
     const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = envTex;
@@ -245,7 +244,7 @@ function StudioEnv() {
       envTex.dispose();
       pmrem.dispose();
     };
-  }, [gl, scene]);
+  }, [get]);
   return null;
 }
 

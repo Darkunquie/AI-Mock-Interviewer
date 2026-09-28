@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     createdAt: Date | null;
   }> = [];
 
-  let stats = {
+  const stats = {
     totalInterviews: 0,
     averageScore: 0,
     thisWeekCount: 0,

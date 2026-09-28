@@ -73,7 +73,7 @@ export function useAudioRecorder(
     return () => {
       stopRecordingInternal();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const checkMicrophonePermission = async () => {
@@ -114,7 +114,7 @@ export function useAudioRecorder(
 
     try {
       const formData = new FormData();
-      formData.append("audio", blob, "recording.webm");
+      formData.append("audio", blob, mimeTypeRef.current.includes("mp4") ? "recording.mp4" : "recording.webm");
       formData.append("language", language);
 
       const response = await apiFetch("/api/transcribe", {
@@ -166,12 +166,14 @@ export function useAudioRecorder(
       streamRef.current = stream;
       chunksRef.current = [];
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
-      mimeTypeRef.current = mimeType;
+      // WebM isn't recordable everywhere (older iOS Safari only does mp4), and
+      // forcing an unsupported mimeType makes the constructor throw.
+      const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((t) =>
+        MediaRecorder.isTypeSupported(t)
+      );
 
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mimeTypeRef.current = recorder.mimeType || mimeType || "audio/webm";
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };

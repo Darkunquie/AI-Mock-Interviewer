@@ -33,9 +33,13 @@ export default function AdminLayout({
     }
   }, [user, isLoading, isAdmin, router]);
 
-  useEffect(() => {
+  // Close the mobile sidebar on navigation. Adjusting state during render on a
+  // prop change is React's recommended alternative to a setState-in-effect.
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
     setSidebarOpen(false);
-  }, [pathname]);
+  }
 
   const handleSignOut = async () => {
     await signOut();
