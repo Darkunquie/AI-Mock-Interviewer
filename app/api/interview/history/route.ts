@@ -26,16 +26,20 @@ export async function GET(req: NextRequest) {
     // Build conditions
     const conditions = [eq(interviews.userId, user.id)];
 
-    if (status && status !== "all") {
-      conditions.push(eq(interviews.status, status as "pending" | "in_progress" | "completed"));
+    // Whitelist against the pgEnum values: casting an arbitrary string into the
+    // enum column makes Postgres throw (500). Unknown values are ignored, as in v1.
+    const statusValue = interviews.status.enumValues.find((s) => s === status);
+    if (statusValue) {
+      conditions.push(eq(interviews.status, statusValue));
     }
 
     if (role && role !== "all") {
       conditions.push(eq(interviews.role, role));
     }
 
-    if (type && type !== "all") {
-      conditions.push(eq(interviews.interviewType, type as "technical" | "hr" | "behavioral"));
+    const typeValue = interviews.interviewType.enumValues.find((t) => t === type);
+    if (typeValue) {
+      conditions.push(eq(interviews.interviewType, typeValue));
     }
 
     if (search) {

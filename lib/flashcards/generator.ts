@@ -1,4 +1,4 @@
-import { generateCompletion } from "@/lib/groq";
+import { generateCompletion, GROQ_MODEL, GROQ_MODEL_QUALITY } from "@/lib/groq";
 import { FlashCard, GenerateFlashCardsResponse } from "@/types/flashcard";
 import { FLASHCARD_CONFIG, LOG_PREFIX } from "./constants";
 import { buildSystemPrompt, buildUserPrompt } from "./prompts";
@@ -25,14 +25,14 @@ export class FlashCardGenerator {
 
     // Try primary model first
     try {
-      console.log(`${LOG_PREFIX} Trying primary model (${FLASHCARD_CONFIG.model})...`);
+      console.log(`${LOG_PREFIX} Trying primary model (${GROQ_MODEL_QUALITY})...`);
       cardsJson = await generateCompletion(
         [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
         {
-          model: FLASHCARD_CONFIG.model,
+          model: GROQ_MODEL_QUALITY,
           maxTokens: FLASHCARD_CONFIG.maxTokens,
           temperature: FLASHCARD_CONFIG.temperature,
         }
@@ -42,14 +42,14 @@ export class FlashCardGenerator {
 
       // Try fallback model
       try {
-        console.log(`${LOG_PREFIX} Trying fallback model (${FLASHCARD_CONFIG.fallbackModel})...`);
+        console.log(`${LOG_PREFIX} Trying fallback model (${GROQ_MODEL})...`);
         cardsJson = await generateCompletion(
           [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
           {
-            model: FLASHCARD_CONFIG.fallbackModel,
+            model: GROQ_MODEL,
             maxTokens: FLASHCARD_CONFIG.maxTokens,
             temperature: FLASHCARD_CONFIG.temperature,
           }

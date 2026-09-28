@@ -1,12 +1,12 @@
 # ==================== Dependencies ====================
-FROM node:20-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
 RUN npm ci --ignore-scripts
 
 # ==================== Build ====================
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -17,10 +17,13 @@ COPY . .
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
-RUN npm run build
+ENV NEXT_OUTPUT_STANDALONE=true
+# lib/db.ts requires DATABASE_URL at import; build only loads modules (never
+# connects for real), so a placeholder suffices. Real value comes at runtime.
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm run build
 
 # ==================== Production ====================
-FROM node:20-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

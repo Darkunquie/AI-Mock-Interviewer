@@ -21,9 +21,11 @@ function getGroq(): Groq {
 }
 
 
-// Default model configuration
-export const GROQ_MODEL = "llama-3.1-8b-instant"; // Fast and cheap
-export const GROQ_MODEL_QUALITY = "llama-3.3-70b-versatile"; // Better quality
+// Default model configuration — the single source of truth for Groq model IDs.
+// Groq retires models periodically (llama-3.1-8b-instant / llama-3.3-70b-versatile
+// were pulled), so both are env-overridable: swap via .env, no code change.
+export const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-20b"; // Fast and cheap
+export const GROQ_MODEL_QUALITY = process.env.GROQ_MODEL_QUALITY || "openai/gpt-oss-120b"; // Better quality
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";

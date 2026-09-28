@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { generatedProjects } from "@/utils/schema";
 import { eq, and } from "drizzle-orm";
-import { generateCompletion } from "@/lib/groq";
+import { generateCompletion, GROQ_MODEL, GROQ_MODEL_QUALITY } from "@/lib/groq";
 import { ProjectSpecification, GenerateProjectsResponse } from "@/types/project";
 import { AI_CONFIG, LOG_PREFIX } from "./constants";
 import { buildSystemPrompt, buildUserPrompt } from "./prompts";
@@ -79,14 +79,14 @@ export class ProjectGenerator {
 
     // Try primary model first
     try {
-      console.log(`${LOG_PREFIX} Trying primary model (${AI_CONFIG.primaryModel})...`);
+      console.log(`${LOG_PREFIX} Trying primary model (${GROQ_MODEL_QUALITY})...`);
       projectsJson = await generateCompletion(
         [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
         {
-          model: AI_CONFIG.primaryModel,
+          model: GROQ_MODEL_QUALITY,
           maxTokens: AI_CONFIG.primaryMaxTokens,
           temperature: AI_CONFIG.temperature,
         }
@@ -96,14 +96,14 @@ export class ProjectGenerator {
 
       // Try fallback model
       try {
-        console.log(`${LOG_PREFIX} Trying fallback model (${AI_CONFIG.fallbackModel})...`);
+        console.log(`${LOG_PREFIX} Trying fallback model (${GROQ_MODEL})...`);
         projectsJson = await generateCompletion(
           [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
           {
-            model: AI_CONFIG.fallbackModel,
+            model: GROQ_MODEL,
             maxTokens: AI_CONFIG.fallbackMaxTokens,
             temperature: AI_CONFIG.temperature,
           }

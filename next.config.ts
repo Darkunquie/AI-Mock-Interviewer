@@ -11,7 +11,12 @@ const nextConfig: NextConfig = {
     root: __dirname,
   },
 
-  // Security headers are applied in middleware.ts for all routes
+  // Standalone bundle only for the Docker image (Dockerfile sets
+  // NEXT_OUTPUT_STANDALONE). PM2 on the VPS runs `next start`, which doesn't
+  // support standalone output.
+  output: process.env.NEXT_OUTPUT_STANDALONE === "true" ? "standalone" : undefined,
+
+  // Security headers are applied in proxy.ts for all routes
   poweredByHeader: false,
   reactStrictMode: true,
 };

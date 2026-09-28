@@ -4,11 +4,8 @@ import type { NextRequest } from "next/server";
 import { checkRateLimit, type FailMode } from "@/lib/ratelimit";
 import crypto from "crypto";
 
-// Middleware runs on Node.js runtime (not Edge) so that ioredis (TCP-based)
-// can connect to the local Redis instance. This is the default on self-hosted
-// deployments; explicit here for clarity and to prevent accidental Edge
-// deployment breaking rate limits.
-export const runtime = "nodejs";
+// Proxy (formerly middleware) always runs on the Node.js runtime in Next 16,
+// so ioredis (TCP-based) can connect to the local Redis instance.
 
 // Rate limit configurations per route pattern.
 // Moved to Redis-backed sliding-window-counter — see lib/ratelimit.ts.
@@ -107,16 +104,18 @@ function getRateLimitConfig(pathname: string): { pattern: string; limit: number;
 // no nonce today — a nonce rollout is tracked as a follow-up. The high-value
 // directives here are frame-ancestors/object-src/base-uri/form-action, which
 // close clickjacking, plugin, base-tag, and form-hijack vectors with zero
-// breakage. connect-src is 'self' because Groq/Deepgram are called server-side.
+// breakage. connect-src is 'self' because Groq/Deepgram are called server-side;
+// blob:/data: are added because three.js GLTFLoader decodes embedded GLB
+// textures via fetch(blob:) (ImageBitmapLoader), which connect-src governs.
 const buildCSP = (): string => {
   const isDev = process.env.NODE_ENV !== "production";
   return [
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://mermaid.ink", // mermaid.ink: project architecture diagrams
     "font-src 'self' data:",
-    `connect-src 'self'${isDev ? " ws: wss:" : ""}`,
+    `connect-src 'self' blob: data:${isDev ? " ws: wss:" : ""}`,
     "media-src 'self' blob: data:",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
@@ -225,7 +224,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   return headers;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const origin = request.headers.get("origin");
 

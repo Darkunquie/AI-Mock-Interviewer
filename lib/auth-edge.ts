@@ -14,6 +14,9 @@ function getJwtSecretEdge(): string {
       "Set it in .env.local for development or in your deployment environment for production."
     );
   }
+  if (process.env.NODE_ENV === "production" && secret.length < 32) {
+    throw new Error("JWT_SECRET must be at least 32 characters in production (use 64 random bytes).");
+  }
   return secret;
 }
 

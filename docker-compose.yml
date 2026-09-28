@@ -1,12 +1,52 @@
+# Self-contained stack: app + Postgres + Redis.
+#   POSTGRES_PASSWORD=<strong-pw> docker compose up -d --build
+#   DATABASE_URL=postgresql://postgres:<pw>@localhost:5435/skillforge npm run db:push
+# Production on the VPS uses PM2 + host Postgres (docs/DEPLOY_POSTGRES.md);
+# this file runs the whole stack in containers.
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
     env_file:
       - .env.local
     environment:
-      - NODE_ENV=production
+      NODE_ENV: production
+      # Override .env.local's host-side URLs: inside the network the services
+      # are reached by name, not localhost.
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/skillforge
+      DATABASE_SSL: "false"
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: skillforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5435:5432" # host access for db:push; loopback only (5434 = dev container)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d skillforge"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -50,9 +50,16 @@ export async function POST(request: Request) {
       return Errors.fileTooLarge("10MB");
     }
 
-    // Call Groq Whisper API
+    // Only forward audio. Some browsers label audio-only recordings video/webm|mp4.
+    const type = audioFile.type;
+    if (!/^(audio\/|video\/(webm|mp4))/.test(type)) {
+      return Errors.badRequest("Unsupported audio format");
+    }
+
+    // Call Groq Whisper API. Whisper detects the codec from the filename, so the
+    // extension must match the real container (Safari records mp4, not webm).
     const groqFormData = new FormData();
-    groqFormData.append("file", audioFile, "audio.webm");
+    groqFormData.append("file", audioFile, type.includes("mp4") ? "audio.mp4" : "audio.webm");
     groqFormData.append("model", WHISPER_MODEL);
     groqFormData.append("language", "en");
     groqFormData.append("response_format", "json");
@@ -63,6 +70,8 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${GROQ_API_KEY}`,
       },
       body: groqFormData,
+      // A stalled upstream must not pin this request (and its worker) open.
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (!response.ok) {
@@ -78,6 +87,10 @@ export async function POST(request: Request) {
       text: result.text || "",
     });
   } catch (error) {
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      logger.warn("[Transcribe] Groq Whisper timed out");
+      return Errors.aiServiceError();
+    }
     return handleUnexpectedError(error, "transcribe");
   }
 }

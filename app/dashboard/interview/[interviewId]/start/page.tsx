@@ -79,14 +79,16 @@ export default function InterviewStartPage() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
 
-  const handleTimeUp = useCallback(() => {
+  // Plain function, not useCallback: useTimer holds the latest onTimeUp in a
+  // ref, so this always sees current question/answer state (no stale closure).
+  const handleTimeUp = () => {
     toast.warning("Time's up! Moving to the next question.");
     if (userAnswer.trim()) {
       handleSubmitAnswer();
     } else {
       handleNextQuestion();
     }
-  }, [userAnswer]);
+  };
 
   const {
     timeLeft,
@@ -104,7 +106,6 @@ export default function InterviewStartPage() {
     transcript,
     interimTranscript,
     isRecording: isListening,
-    isTranscribing,
     error: sttError,
     permissionStatus,
     startRecording: startListening,
@@ -115,7 +116,6 @@ export default function InterviewStartPage() {
     language: "en",
   });
 
-  const sttSupported = typeof window !== "undefined" && !!navigator.mediaDevices;
 
   const speechRate = data ? getSpeedForExperience(data.interview.experienceLevel) : 1.0;
 
@@ -225,7 +225,7 @@ export default function InterviewStartPage() {
       resetTimer();
       startTimer();
     }
-  }, [currentQuestionIndex, showFeedback, loading]);
+  }, [currentQuestionIndex, showFeedback, loading, resetTimer, startTimer]);
 
   useEffect(() => {
     if (showFeedback) {
@@ -500,7 +500,7 @@ export default function InterviewStartPage() {
             {isListening && interimTranscript && (
               <div className="mt-2 pt-2 border-t border-white/[0.08]">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-yellow-400/70 mb-1">You (live)</p>
-                <p className="text-[13px] leading-snug text-white line-clamp-2">"{interimTranscript}"</p>
+                <p className="text-[13px] leading-snug text-white line-clamp-2">&ldquo;{interimTranscript}&rdquo;</p>
               </div>
             )}
           </div>

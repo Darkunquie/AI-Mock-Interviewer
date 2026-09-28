@@ -60,3 +60,27 @@ export type QuestionOut = z.infer<typeof questionOutSchema>;
 export type QuestionsOut = z.infer<typeof questionsOutSchema>;
 export type EvalOut = z.infer<typeof evalOutSchema>;
 export type SummaryOut = z.infer<typeof summaryOutSchema>;
+
+// Generated project specs are cached globally (one row per technology+domain),
+// so a malformed shape would break the projects page for every user. Core
+// fields are required; collections the UI iterates are coerced to empty
+// instead of crashing. Unknown fields pass through untouched.
+const arr = z.array(z.unknown()).catch([]);
+const obj = z.record(z.string(), z.unknown()).catch({});
+
+export const projectOutSchema = z.looseObject({
+  title: z.string().min(1).max(300),
+  description: z.string().min(1).max(5000),
+  difficulty: z.enum(["beginner", "intermediate", "advanced"]).catch("intermediate"),
+  estimatedDays: z.coerce.number().int().positive().max(365).catch(14),
+  projectExplanation: obj,
+  learningOutcomes: arr,
+  prerequisites: arr,
+  industryRelevance: z.string().catch(""),
+  techStack: obj,
+  workflowDiagrams: arr,
+  features: arr,
+  databaseSchema: arr,
+  apiEndpoints: arr,
+  implementationGuide: arr,
+});

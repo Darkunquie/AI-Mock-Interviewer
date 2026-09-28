@@ -1,8 +1,6 @@
 // Flash Cards AI Configuration
 
 export const FLASHCARD_CONFIG = {
-  model: "llama-3.3-70b-versatile",
-  fallbackModel: "llama-3.1-8b-instant",
   maxTokens: 8000,
   temperature: 0.7,
   defaultCount: 10,

@@ -40,12 +40,11 @@ export function useTimer({
     if (isRunning && timeLeft > 0) {
       intervalRef.current = setInterval(() => {
         setTimeLeft((prev) => {
+          // Updaters must stay pure (Strict Mode runs them twice) — onTimeUp
+          // fires from the isTimeUp effect below, exactly once per expiry.
           if (prev <= 1) {
             setIsRunning(false);
             setIsTimeUp(true);
-            if (onTimeUpRef.current) {
-              onTimeUpRef.current();
-            }
             return 0;
           }
           return prev - 1;
@@ -60,12 +59,16 @@ export function useTimer({
     };
   }, [isRunning, timeLeft]);
 
+  useEffect(() => {
+    if (isTimeUp) onTimeUpRef.current?.();
+  }, [isTimeUp]);
+
+  // Stable identity (no timeLeft dep): the tick effect already ignores
+  // isRunning when timeLeft is 0, so callers can list start() as a dependency.
   const start = useCallback(() => {
-    if (timeLeft > 0) {
-      setIsRunning(true);
-      setIsTimeUp(false);
-    }
-  }, [timeLeft]);
+    setIsRunning(true);
+    setIsTimeUp(false);
+  }, []);
 
   const pause = useCallback(() => {
     setIsRunning(false);

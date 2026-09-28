@@ -43,7 +43,8 @@ function createClient(): Redis {
 }
 
 /**
- * Returns the shared Redis client, or null when Redis is not configured.
+ * Returns the shared Redis client, or null when Redis is not configured or
+ * not yet connected.
  *
  * Redis is optional: cache and rate-limiting fail open without it. To avoid
  * flooding the console with connection errors in local dev, we only connect
@@ -58,7 +59,10 @@ export function getRedis(): Redis | null {
       logger.info("Redis not configured (REDIS_URL unset) — cache disabled");
     }
   }
-  return client;
+  // With enableOfflineQueue: false, any command sent before the socket is
+  // ready (first requests after boot, or mid-reconnect) throws. Treat
+  // not-ready the same as not-configured so every caller degrades cleanly.
+  return client?.status === "ready" ? client : null;
 }
 
 /**

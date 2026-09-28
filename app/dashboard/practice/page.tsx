@@ -642,7 +642,7 @@ export default function PracticePage() {
                     <p className="text-zinc-500 text-sm">
                       Learning path not available for this role yet.
                       <br />
-                      Use the "All Topics" tab to select topics manually.
+                      Use the &quot;All Topics&quot; tab to select topics manually.
                     </p>
                   )}
                 </CardContent>
@@ -670,7 +670,7 @@ export default function PracticePage() {
                   Tech Stack for {EXTENDED_ROLE_NAMES[role]}
                 </CardTitle>
                 <CardDescription className="text-zinc-500">
-                  Select topics from your role's tech stack. Questions will be tailored to these areas.
+                  Select topics from your role&apos;s tech stack. Questions will be tailored to these areas.
                 </CardDescription>
               </CardHeader>
               <CardContent>
