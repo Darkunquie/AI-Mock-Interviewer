@@ -18,6 +18,16 @@ describe("validateAndTransformProjects (AI output boundary)", () => {
     expect(p.technology).toBe("React");
   });
 
+  it("drops null/primitive workflow diagrams instead of crashing", () => {
+    const [p] = validateAndTransformProjects(
+      [{ title: "t", description: "d", workflowDiagrams: [null, "x", { mermaidCode: "graph TD; A-->B" }] }],
+      "React",
+      "Social"
+    );
+    expect(p.workflowDiagrams).toHaveLength(1);
+    expect(p.workflowDiagrams[0].imageUrl).toContain("mermaid.ink");
+  });
+
   it("drops projects missing core fields", () => {
     const out = validateAndTransformProjects(
       [{ title: "ok", description: "fine" }, { description: "no title" }],

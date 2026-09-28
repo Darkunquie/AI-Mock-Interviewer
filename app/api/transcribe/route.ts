@@ -13,6 +13,23 @@ const MIN_FILE_SIZE = 1000; // 1KB
 // daily bucket than the generation quota.
 const TRANSCRIBE_DAILY_QUOTA = Number.parseInt(process.env.AI_TRANSCRIBE_DAILY_QUOTA || "600", 10);
 
+// MIME essence (parameters like ";codecs=opus" stripped) -> Whisper file extension.
+const AUDIO_EXTENSIONS: Record<string, string> = {
+  "audio/webm": "webm",
+  "video/webm": "webm",
+  "audio/mp4": "mp4",
+  "video/mp4": "mp4",
+  "audio/x-m4a": "m4a",
+  "audio/ogg": "ogg",
+  "audio/mpeg": "mp3",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+};
+
+function audioExtension(mimeType: string): string | undefined {
+  return AUDIO_EXTENSIONS[mimeType.split(";")[0].trim().toLowerCase()];
+}
+
 /**
  * POST /api/transcribe
  * Transcribes audio using Groq Whisper API
@@ -50,16 +67,16 @@ export async function POST(request: Request) {
       return Errors.fileTooLarge("10MB");
     }
 
-    // Only forward audio. Some browsers label audio-only recordings video/webm|mp4.
-    const type = audioFile.type;
-    if (!/^(audio\/|video\/(webm|mp4))/.test(type)) {
+    // Whisper detects the codec from the filename, so only accept containers we
+    // can name correctly. Some browsers label audio-only recordings video/*.
+    const ext = audioExtension(audioFile.type);
+    if (!ext) {
       return Errors.badRequest("Unsupported audio format");
     }
 
-    // Call Groq Whisper API. Whisper detects the codec from the filename, so the
-    // extension must match the real container (Safari records mp4, not webm).
+    // Call Groq Whisper API
     const groqFormData = new FormData();
-    groqFormData.append("file", audioFile, type.includes("mp4") ? "audio.mp4" : "audio.webm");
+    groqFormData.append("file", audioFile, `audio.${ext}`);
     groqFormData.append("model", WHISPER_MODEL);
     groqFormData.append("language", "en");
     groqFormData.append("response_format", "json");
