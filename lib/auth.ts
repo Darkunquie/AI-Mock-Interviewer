@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { db } from "./db";
 import { users, emailVerifications, passwordResets } from "@/utils/schema";
-import { eq, and, gt, isNull } from "drizzle-orm";
+import { eq, and, gt, isNull, lt, or } from "drizzle-orm";
 import { generateToken as generateOpaqueToken, hashToken } from "./tokens";
 import { sendVerificationEmail, sendPasswordResetEmail, appUrl } from "./email";
 import { logger } from "./logger";
@@ -71,6 +71,13 @@ export function verifyToken(token: string): TokenClaims | null {
   }
 }
 
+// Token issue time in ms. Tokens minted before iatMs existed fall back to
+// `iat` (floored, so a token from the revocation second is conservatively
+// rejected).
+function issuedAtMs(claims: TokenClaims): number {
+  return claims.iatMs ?? (claims.iat ?? 0) * 1000;
+}
+
 // Set auth cookie
 export async function setAuthCookie(token: string): Promise<void> {
   const cookieStore = await cookies();
@@ -116,11 +123,10 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     if (!dbUser) return null;
     // Reject if user no longer approved
     if (dbUser.status !== "approved") return null;
-    // Reject tokens issued before the last logout / password reset. Tokens
-    // minted before iatMs existed fall back to `iat` (floored, so a token from
-    // the revocation second is conservatively rejected).
-    const issuedMs = claims.iatMs ?? (claims.iat ?? 0) * 1000;
-    if (dbUser.tokensValidAfter && issuedMs < dbUser.tokensValidAfter.getTime()) return null;
+    // Reject tokens issued at or before the last logout / password reset. `<=`
+    // because a token minted in the revocation's millisecond can't be ordered
+    // against it; one minted just after in that same ms is rejected too.
+    if (dbUser.tokensValidAfter && issuedAtMs(claims) <= dbUser.tokensValidAfter.getTime()) return null;
 
     return { ...claims, role: dbUser.role, status: dbUser.status };
   } catch {
@@ -333,7 +339,19 @@ export async function signOut(): Promise<void> {
   const token = (await cookies()).get(COOKIE_NAME)?.value;
   const claims = token ? verifyToken(token) : null;
   if (claims) {
-    await db.update(users).set({ tokensValidAfter: new Date() }).where(eq(users.id, claims.id));
+    // Only a still-valid token may revoke. Otherwise an already-revoked (but
+    // unexpired) token could keep advancing tokensValidAfter and kill newer
+    // sessions. Checked in the WHERE so it's atomic with the update.
+    await db
+      .update(users)
+      .set({ tokensValidAfter: new Date() })
+      .where(
+        and(
+          eq(users.id, claims.id),
+          // Same cutoff as getCurrentUser: valid only if issued strictly after.
+          or(isNull(users.tokensValidAfter), lt(users.tokensValidAfter, new Date(issuedAtMs(claims))))
+        )
+      );
   }
   await removeAuthCookie();
 }

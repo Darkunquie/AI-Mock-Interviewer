@@ -24,6 +24,8 @@ const AUDIO_EXTENSIONS: Record<string, string> = {
   "audio/mpeg": "mp3",
   "audio/wav": "wav",
   "audio/x-wav": "wav",
+  "audio/flac": "flac",
+  "audio/x-flac": "flac",
 };
 
 function audioExtension(mimeType: string): string | undefined {
