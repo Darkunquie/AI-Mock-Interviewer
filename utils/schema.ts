@@ -41,6 +41,9 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   approvedAt: timestamp("approved_at"),
+  // JWTs issued before this instant are rejected. Set on logout and password
+  // reset so a stolen token dies immediately instead of living out its 7 days.
+  tokensValidAfter: timestamp("tokens_valid_after"),
 });
 
 // Single-use email-verification tokens. We store only the SHA-256 hash of the

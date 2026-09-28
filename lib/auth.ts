@@ -57,13 +57,10 @@ export function generateToken(user: AuthUser): string {
   );
 }
 
-// Verify JWT token (Node runtime) — uses jsonwebtoken, verifies signature.
-// For Edge runtime (middleware), use verifyTokenEdge from lib/auth-edge.ts
-// instead — jsonwebtoken depends on Node's crypto module and won't run
-// in Next.js middleware.
-export function verifyToken(token: string): AuthUser | null {
+// Verify JWT token — uses jsonwebtoken, verifies signature and expiry.
+export function verifyToken(token: string): (AuthUser & { iat?: number }) | null {
   try {
-    const decoded = jwt.verify(token, getJwtSecret()) as unknown as AuthUser;
+    const decoded = jwt.verify(token, getJwtSecret()) as unknown as AuthUser & { iat?: number };
     return decoded;
   } catch {
     return null;
@@ -102,22 +99,27 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     const claims = verifyToken(token);
     if (!claims) return null;
 
-    // Verify current role/status from DB (cached 60s in Redis)
+    // Verify current role/status/revocation from DB (cached 60s in Redis;
+    // revoking callers drop the cache so it takes effect immediately)
     const cacheKey = `user:status:${claims.id}`;
-    let dbUser: { role: string; status: string } | null = null;
+    let dbUser: { role: string; status: string; validAfterSec?: number } | null = null;
     try {
-      dbUser = await cacheGet<{ role: string; status: string }>(cacheKey);
+      dbUser = await cacheGet<{ role: string; status: string; validAfterSec?: number }>(cacheKey);
     } catch {
       // Cache unavailable, fall through to DB lookup
     }
     if (!dbUser) {
       const [row] = await db
-        .select({ role: users.role, status: users.status })
+        .select({ role: users.role, status: users.status, tokensValidAfter: users.tokensValidAfter })
         .from(users)
         .where(eq(users.id, claims.id))
         .limit(1);
       if (!row) return null;
-      dbUser = { role: row.role, status: row.status };
+      dbUser = {
+        role: row.role,
+        status: row.status,
+        validAfterSec: row.tokensValidAfter ? Math.floor(row.tokensValidAfter.getTime() / 1000) : 0,
+      };
       try {
         await cacheSet(cacheKey, dbUser, 60);
       } catch {
@@ -126,6 +128,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     }
     // Reject if user no longer approved
     if (dbUser.status !== "approved") return null;
+    // Reject tokens issued before the last logout / password reset
+    if ((claims.iat ?? 0) < (dbUser.validAfterSec ?? 0)) return null;
 
     return { ...claims, role: dbUser.role, status: dbUser.status };
   } catch {
@@ -291,7 +295,10 @@ export async function resetPassword(raw: string, newPassword: string): Promise<b
 
   const hashedPassword = await hashPassword(newPassword);
   await db.update(passwordResets).set({ consumedAt: new Date() }).where(eq(passwordResets.id, row.id));
-  await db.update(users).set({ password: hashedPassword }).where(eq(users.id, row.userId));
+  await db
+    .update(users)
+    .set({ password: hashedPassword, tokensValidAfter: new Date() })
+    .where(eq(users.id, row.userId));
   await invalidateUserStatusCache(row.userId);
 
   return true;
@@ -336,7 +343,15 @@ export async function signIn(email: string, password: string): Promise<{ success
 }
 
 // Sign out
+// Revokes every token for the account (all devices), not just this cookie —
+// otherwise a copied token keeps working until it expires.
 export async function signOut(): Promise<void> {
+  const token = (await cookies()).get(COOKIE_NAME)?.value;
+  const claims = token ? verifyToken(token) : null;
+  if (claims) {
+    await db.update(users).set({ tokensValidAfter: new Date() }).where(eq(users.id, claims.id));
+    await invalidateUserStatusCache(claims.id);
+  }
   await removeAuthCookie();
 }
 
