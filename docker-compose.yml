@@ -1,6 +1,7 @@
 # Self-contained stack: app + Postgres + Redis.
+#   cp .env.example .env.local   # then fill in API keys; required by app's env_file
 #   POSTGRES_PASSWORD=<strong-pw> docker compose up -d --build
-#   DATABASE_URL=postgresql://postgres:<pw>@localhost:5435/skillforge npm run db:push
+#   PGPASSWORD=<pw> DATABASE_URL=postgresql://postgres@localhost:5435/skillforge npm run db:push
 # Production on the VPS uses PM2 + host Postgres (docs/DEPLOY_POSTGRES.md);
 # this file runs the whole stack in containers.
 services:
@@ -18,7 +19,10 @@ services:
       NODE_ENV: production
       # Override .env.local's host-side URLs: inside the network the services
       # are reached by name, not localhost.
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/skillforge
+      # Password goes via PGPASSWORD (pg's fallback when the URL omits it), so
+      # characters like @ / # never need URL-encoding.
+      DATABASE_URL: postgresql://postgres@db:5432/skillforge
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       DATABASE_SSL: "false"
       REDIS_URL: redis://redis:6379
     depends_on:

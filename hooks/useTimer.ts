@@ -63,9 +63,16 @@ export function useTimer({
     if (isTimeUp) onTimeUpRef.current?.();
   }, [isTimeUp]);
 
-  // Stable identity (no timeLeft dep): the tick effect already ignores
-  // isRunning when timeLeft is 0, so callers can list start() as a dependency.
+  // Read via ref so start() keeps a stable identity (no timeLeft dep) and
+  // callers can list it as a dependency.
+  const timeLeftRef = useRef(timeLeft);
+  useEffect(() => {
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
   const start = useCallback(() => {
+    // Expired: stay stopped and time-up; caller must reset() first.
+    if (timeLeftRef.current <= 0) return;
     setIsRunning(true);
     setIsTimeUp(false);
   }, []);
@@ -75,6 +82,9 @@ export function useTimer({
   }, []);
 
   const reset = useCallback(() => {
+    // Sync the ref now: callers do reset(); start() in one handler, before
+    // the timeLeft effect runs.
+    timeLeftRef.current = initialTime;
     setTimeLeft(initialTime);
     setIsRunning(false);
     setIsTimeUp(false);

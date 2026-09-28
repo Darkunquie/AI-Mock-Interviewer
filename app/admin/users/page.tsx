@@ -112,7 +112,11 @@ export default function AdminUsersPage() {
           {tabs.map((tab) => (
             <button
               key={tab.value}
-              onClick={() => { setLoading(true); setFilter(tab.value); }}
+              onClick={() => {
+                if (tab.value === filter) return; // same tab: no refetch would clear loading
+                setLoading(true);
+                setFilter(tab.value);
+              }}
               className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
                 filter === tab.value
                   ? "bg-yellow-400 text-[#0f0f0f]"
